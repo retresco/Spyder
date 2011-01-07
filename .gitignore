@@ -9,3 +9,4 @@ downloads
 eggs
 parts
 src/*.egg-info
+docs
