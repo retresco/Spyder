@@ -89,4 +89,8 @@ class ZmqMgmt(object):
         """
         Remove a callback from the specified topic.
         """
-        pass
+        if topic in self._callbacks and callback in self._callbacks[topic]:
+            self._callbacks[topic].remove(callback)
+
+            if len(self._callbacks[topic]) == 0:
+                del self._callbacks[topic]

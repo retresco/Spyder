@@ -32,12 +32,12 @@ from spyder.core.constants import *
 class ManagementTest(unittest.TestCase):
 
 
-    def callMe(self, msg):
+    def call_me(self, msg):
         self.assertEqual( [ self._topic, 'test' ], msg )
         self._master_pub.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
 
 
-    def onEnd(self, msg):
+    def on_end(self, msg):
         self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT, msg)
         self._ioloop.stop()
 
@@ -63,15 +63,15 @@ class ManagementTest(unittest.TestCase):
         self._topic = ZMQ_SPYDER_MGMT_WORKER + 'testtopic'
 
         mgmt = ZmqMgmt( worker_sub, worker_pub, ioloop=self._ioloop)
-        mgmt.addCallback(self._topic, self.callMe)
-        mgmt.addCallback(ZMQ_SPYDER_MGMT_WORKER, self.onEnd)
+        mgmt.add_callback(self._topic, self.call_me)
+        mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
 
         self._master_pub.send_multipart( [ self._topic, 'test'.encode() ] )
+        master_sub.setsockopt(zmq.SUBSCRIBE, "")
 
         self._ioloop.start()
 
-        master_sub.setsockopt(zmq.SUBSCRIBE, "")
         self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, master_sub.recv_multipart())
-
-if __name__ == '__main__':
-    unittest.main()
+        mgmt.remove_callback(self._topic, self.call_me)
+        mgmt.remove_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
+        self.assertEqual({}, mgmt._callbacks)
