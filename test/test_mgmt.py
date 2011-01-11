@@ -63,6 +63,9 @@ class ManagementTest(unittest.TestCase):
         self._topic = ZMQ_SPYDER_MGMT_WORKER + 'testtopic'
 
         mgmt = ZmqMgmt( worker_sub, worker_pub, ioloop=self._ioloop)
+
+        self.assertRaises(ValueError, mgmt.add_callback, "test", "test")
+
         mgmt.add_callback(self._topic, self.call_me)
         mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
 
