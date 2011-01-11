@@ -37,7 +37,7 @@ class ZmqMgmt(object):
         commands to the workers. The publisher socket is used to send commands
         to the Master.
         """
-        self._masterTopic = kwargs.get('topic', ZMQ_SPYDER_MGMT_WORKER)
+        self._masterTopic = kwargs.get('topic', ZMQ_SPYDER_TOPIC)
         self._io_loop = kwargs.get('io_loop', IOLoop.instance())
 
         self._subscriber = subscriber
