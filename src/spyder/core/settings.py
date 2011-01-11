@@ -17,8 +17,14 @@
 # under the License.
 #
 #
+"""
+Simple class for working with settings.
+
+Adopted from the Django based settings system.
+"""
 
 from spyder import defaultsettings
+
 
 class Settings(object):
     """
@@ -35,10 +41,8 @@ class Settings(object):
             if setting == setting.upper():
                 setattr(self, setting, getattr(defaultsettings, setting))
 
-
         # now override with user settings
         if settings is not None:
             for setting in dir(settings):
                 if setting == setting.upper():
                     setattr(self, setting, getattr(settings, setting))
-

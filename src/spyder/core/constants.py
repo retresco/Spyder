@@ -17,25 +17,15 @@
 # under the License.
 #
 #
+"""
+Serveral constants mainly for ZeroMQ topics and messages.
+"""
 
 
 ZMQ_SPYDER_TOPIC = 'spyder.'
-"""
-Base name for `zmq.PUB` sockets. Used for message filtering.
-"""
 
 ZMQ_SPYDER_MGMT_WORKER = ZMQ_SPYDER_TOPIC + 'worker.'
-"""
-Base name for messages to workers.
-"""
 
-ZMQ_SPYDER_MGMT_WORKER_QUIT = [ ZMQ_SPYDER_MGMT_WORKER, 'quit'.encode() ]
-"""
-Command for quiting the workers.
-"""
+ZMQ_SPYDER_MGMT_WORKER_QUIT = [ZMQ_SPYDER_MGMT_WORKER, 'quit'.encode()]
 
 ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK = [ZMQ_SPYDER_MGMT_WORKER, 'quit.ack'.encode()]
-"""
-Acknowledge that the worker is going to quit.
-"""
-

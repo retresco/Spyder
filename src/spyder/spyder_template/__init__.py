@@ -17,5 +17,9 @@
 # under the License.
 #
 #
+"""
+The Spyder skeleton directory.
 
-
+When a new spyder project is being created this directory will mark the basis
+of the new project.
+"""

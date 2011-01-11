@@ -17,10 +17,10 @@
 # under the License.
 #
 #
-
-# module for the default spyder settings
+"""
+Module for the default spyder settings.
+"""
 
 # ZeroMQ
 
-ZEROMQ_WORKER_SOCKET="ipc:///tmp/spyder-zmq-worker.sock"
-
+ZEROMQ_WORKER_SOCKET = "ipc:///tmp/spyder-zmq-worker.sock"

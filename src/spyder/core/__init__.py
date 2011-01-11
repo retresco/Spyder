@@ -17,5 +17,6 @@
 # under the License.
 #
 #
-
-
+"""
+Core modules used in the spyder.
+"""

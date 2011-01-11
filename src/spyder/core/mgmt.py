@@ -17,12 +17,17 @@
 # under the License.
 #
 #
+"""
+A management module for managing components via ZeroMQ.
+"""
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
 
-from spyder.core.constants import *
+from spyder.core.constants import ZMQ_SPYDER_TOPIC, ZMQ_SPYDER_MGMT_WORKER_QUIT
+from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
+
 
 class ZmqMgmt(object):
     """
@@ -37,19 +42,18 @@ class ZmqMgmt(object):
         commands to the workers. The publisher socket is used to send commands
         to the Master.
         """
-        self._masterTopic = kwargs.get('topic', ZMQ_SPYDER_TOPIC)
+        self._master_topic = kwargs.get('topic', ZMQ_SPYDER_TOPIC)
         self._io_loop = kwargs.get('io_loop', IOLoop.instance())
 
         self._subscriber = subscriber
-        self._subscriber.setsockopt(zmq.SUBSCRIBE, self._masterTopic)
+        self._subscriber.setsockopt(zmq.SUBSCRIBE, self._master_topic)
 
         self._publisher = publisher
 
         self._callbacks = {}
 
         self._stream = ZMQStream(self._subscriber, self._io_loop)
-        self._stream.on_recv( self._receive )
-
+        self._stream.on_recv(self._receive)
 
     def _receive(self, message):
         """
@@ -60,26 +64,29 @@ class ZmqMgmt(object):
         """
         topic = message[0]
 
-        if self._callbacks.has_key( topic ):
-            for cb in self._callbacks[ topic ]:
-                if callable(cb):
-                    cb( message )
+        if topic in self._callbacks:
+            for callback in self._callbacks[topic]:
+                if callable(callback):
+                    callback(message)
 
         if message == ZMQ_SPYDER_MGMT_WORKER_QUIT:
             self._stream.stop_on_recv()
             self._publisher.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
 
-
-    def addCallback(self, topic, callback):
+    def add_callback(self, topic, callback):
         """
         Add a callback to the specified topic.
         """
         if not callable(callback):
             raise ValueError('callback must be callable')
 
-        if not self._callbacks.has_key( topic ):
-            self._callbacks[ topic ] = []
+        if topic not in self._callbacks:
+            self._callbacks[topic] = []
 
-        self._callbacks[topic].append( callback )
+        self._callbacks[topic].append(callback)
 
-
+    def remove_callback(self, topic, callback):
+        """
+        Remove a callback from the specified topic.
+        """
+        pass
