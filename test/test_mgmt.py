@@ -29,8 +29,34 @@ from spyder.core.mgmt import ZmqMgmt
 from spyder.core.constants import *
 
 
-class ManagementTest(unittest.TestCase):
+class ManagementIntegrationTest(unittest.TestCase):
 
+
+    def setUp(self):
+        self._context = zmq.Context(1)
+
+        self._master_pub = self._context.socket(zmq.PUB)
+        self._master_pub.bind( 'inproc://master/worker/coordination' )
+
+        self._worker_sub = self._context.socket(zmq.SUB)
+        self._worker_sub.connect( 'inproc://master/worker/coordination' )
+
+        self._worker_pub = self._context.socket(zmq.PUB)
+        self._worker_pub.bind( 'inproc://worker/master/coordination' )
+
+        self._master_sub = self._context.socket(zmq.SUB)
+        self._master_sub.connect( 'inproc://worker/master/coordination' )
+        self._master_sub.setsockopt(zmq.SUBSCRIBE, "")
+
+        self._ioloop = IOLoop.instance()
+        self._topic = ZMQ_SPYDER_MGMT_WORKER + 'testtopic'
+
+    def tearDown(self):
+        self._master_pub.close()
+        self._worker_sub.close()
+        self._worker_pub.close()
+        self._master_sub.close()
+        self._context.term()
 
     def call_me(self, msg):
         self.assertEqual( [ self._topic, 'test' ], msg )
@@ -44,25 +70,8 @@ class ManagementTest(unittest.TestCase):
 
     def test_simple_mgmg_session(self):
         
-        context = zmq.Context(1)
-
-        self._master_pub = context.socket(zmq.PUB)
-        self._master_pub.bind( 'inproc://master/worker/coordination' )
-
-        worker_sub = context.socket(zmq.SUB)
-        worker_sub.connect( 'inproc://master/worker/coordination' )
-
-        worker_pub = context.socket(zmq.PUB)
-        worker_pub.bind( 'inproc://worker/master/coordination' )
-
-        master_sub = context.socket(zmq.SUB)
-        master_sub.connect( 'inproc://worker/master/coordination' )
-
-        self._ioloop = IOLoop.instance()
-
-        self._topic = ZMQ_SPYDER_MGMT_WORKER + 'testtopic'
-
-        mgmt = ZmqMgmt( worker_sub, worker_pub, ioloop=self._ioloop)
+        mgmt = ZmqMgmt( self._worker_sub, self._worker_pub, ioloop=self._ioloop)
+        mgmt.start()
 
         self.assertRaises(ValueError, mgmt.add_callback, "test", "test")
 
@@ -70,11 +79,15 @@ class ManagementTest(unittest.TestCase):
         mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
 
         self._master_pub.send_multipart( [ self._topic, 'test'.encode() ] )
-        master_sub.setsockopt(zmq.SUBSCRIBE, "")
 
         self._ioloop.start()
 
-        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, master_sub.recv_multipart())
+        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, self._master_sub.recv_multipart())
         mgmt.remove_callback(self._topic, self.call_me)
         mgmt.remove_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
         self.assertEqual({}, mgmt._callbacks)
+        mgmt.stop()
+
+
+if __name__ == '__main__':
+    unittest.main()

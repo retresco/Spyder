@@ -53,7 +53,6 @@ class ZmqMgmt(object):
         self._callbacks = {}
 
         self._stream = ZMQStream(self._subscriber, self._io_loop)
-        self._stream.on_recv(self._receive)
 
     def _receive(self, message):
         """
@@ -72,6 +71,18 @@ class ZmqMgmt(object):
         if message == ZMQ_SPYDER_MGMT_WORKER_QUIT:
             self._stream.stop_on_recv()
             self._publisher.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
+
+    def start(self):
+        """
+        Start the MGMT interface.
+        """
+        self._stream.on_recv(self._receive)
+
+    def stop(self):
+        """
+        Stop the MGMT interface.
+        """
+        self._stream.stop_on_recv()
 
     def add_callback(self, topic, callback):
         """
