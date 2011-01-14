@@ -1,27 +1,32 @@
 #
-# Copyright (c) 2008 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
 #
-# test_worker.py 11-Jan-2011
+# test_async_worker.py 14-Jan-2011
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# All programs in this directory and
+# subdirectories are published under the GNU General Public License as
+# described below.
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# under the License.
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+# USA
+#
+# Further information about the GNU GPL is available at:
+# http://www.gnu.org/copyleft/gpl.html
 #
 #
-
 import unittest
-from mockito import mock, verify, verifyZeroInteractions
-from mockito import verifyNoMoreInteractions
-from mockito import when, any
 
 import time
 
@@ -37,66 +42,6 @@ from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import ZmqWorker, AsyncZmqWorker
 from spyder.core.messages import DataMessage, MgmtMessage
 from spyder.thrift.gen.ttypes import CrawlUri
-
-
-class ZmqWorkerTest(unittest.TestCase):
-
-    def test_start_stop_works(self):
-
-        in_socket_mock = mock(Socket)
-        out_socket_mock = mock(Socket)
-        mgmt_mock = mock()
-        processing_mock = mock()
-        stream_mock = mock(ZMQStream)
-        io_loop = mock(IOLoop)
-
-        worker = ZmqWorker(in_socket_mock, out_socket_mock, mgmt_mock,
-            processing_mock, io_loop)
-        real_stream = worker._stream
-        worker._stream = stream_mock
-
-        worker.start()
-        verify(mgmt_mock).add_callback(ZMQ_SPYDER_MGMT_WORKER,
-            worker._quit)
-        verify(stream_mock).on_recv(worker._receive)
-        verify(io_loop).add_handler(in_socket_mock, real_stream._handle_events,
-            zmq.POLLERR)
-
-        worker.stop()
-        verify(mgmt_mock).remove_callback(ZMQ_SPYDER_MGMT_WORKER,
-            worker._quit)
-        verify(stream_mock).stop_on_recv()
-
-        verifyZeroInteractions(in_socket_mock)
-        verifyZeroInteractions(out_socket_mock)
-        verifyZeroInteractions(io_loop)
-        verifyNoMoreInteractions(mgmt_mock)
-        verifyNoMoreInteractions(stream_mock)
-
-    def test_that_receiving_works(self):
-
-        def processing(curi):
-            curi.begin_processing = 123456789
-            return curi
-
-        in_socket_mock = mock(Socket)
-        out_socket_mock = mock(Socket)
-        mgmt_mock = mock()
-        stream_mock = mock(ZMQStream)
-        io_loop = mock(IOLoop)
-
-        worker = ZmqWorker(in_socket_mock, out_socket_mock, mgmt_mock,
-            processing, io_loop)
-        real_stream = worker._stream
-        worker._stream = stream_mock
-
-        curi = CrawlUri(url="http://localhost", host_identifier="127.0.0.1")
-        msg = DataMessage(curi=curi)
-        curi.begin_processing = 123456789
-        msg2 = DataMessage(curi=curi)
-
-        worker._receive(msg.serialize())
-        verify(out_socket_mock).send_multipart(msg2.serialize())
 
 
 class ZmqWorkerIntegrationTestBase(unittest.TestCase):
@@ -168,15 +113,14 @@ class ZmqWorkerIntegrationTestBase(unittest.TestCase):
         self._ioloop.stop()
 
 
-class ZmqWorkerIntegrationTest(ZmqWorkerIntegrationTestBase):
-    
-    def echo_processing(self, crawl_uri):
+class AsyncZmqWorkerIntegrationTest(ZmqWorkerIntegrationTestBase):
+
+    def echo_processing(self, data_message, out_socket):
         self._mgmt_sockets['master_pub'].send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
-        return crawl_uri
+        out_socket.send_multipart(data_message.serialize())
 
-    def test_that_stopping_worker_via_mgmt_works(self):
-
-        worker = ZmqWorker( self._worker_sockets['worker_pull'],
+    def test_that_async_worker_works(self):
+        worker = AsyncZmqWorker( self._worker_sockets['worker_pull'],
             self._worker_sockets['worker_pub'],
             self._mgmt,
             self.echo_processing,
@@ -195,7 +139,7 @@ class ZmqWorkerIntegrationTest(ZmqWorkerIntegrationTestBase):
         worker._stream.flush()
 
         msg2 = DataMessage(self._worker_sockets['master_sub'].recv_multipart())
-        self.assertEqual(msg, msg2)
+        self.assertEquals(msg, msg2)
         self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK,
             self._mgmt_sockets['master_sub'].recv_multipart())
 

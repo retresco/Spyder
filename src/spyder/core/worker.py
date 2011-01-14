@@ -24,14 +24,12 @@ The `ZmqWorker` class expects an incoming and one outgoing `zmq.socket` as well
 as an instance of the `spyder.core.mgmt.ZmqMgmt` class.
 """
 
-from  thrift import TSerialization
-
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
-from spyder.thrift.gen.ttypes import CrawlUri
+from spyder.core.messages import DataMessage
 
 
 class ZmqWorker(object):
@@ -80,15 +78,14 @@ class ZmqWorker(object):
         The `msg` has to have only one part: a serialized version of
         `spyder.thrift.gen.ttype.CrawlUri`.
         """
-
-        crawl_uri = deserialize_crawl_uri(msg[0])
+        message = DataMessage(msg)
 
         # this is the real work we want to do
-        crawl_uri = self._processing(crawl_uri)
+        curi = self._processing(message.curi)
 
         # finished, now send the result back to the master
-        msg = [serialize_crawl_uri(crawl_uri)]
-        self._outsocket.send_multipart(msg)
+        message.curi = curi
+        self._outsocket.send_multipart(message.serialize())
 
     def start(self):
         """
@@ -121,19 +118,5 @@ class AsyncZmqWorker(ZmqWorker):
         sending the result to the `self._outsocket`. This will be handled by
         the `self._processing` method.
         """
-        crawl_uri = deserialize_crawl_uri(msg[0])
-        self._processing(crawl_uri, self._outsocket)
-
-
-def deserialize_crawl_uri(serialized):
-    """
-    Deserialize a `CrawlUri` that has been serialized using Thrift.
-    """
-    return TSerialization.deserialize(CrawlUri(), serialized)
-
-
-def serialize_crawl_uri(crawl_uri):
-    """
-    Serialize a `CrawlUri` using Thrift.
-    """
-    return TSerialization.serialize(crawl_uri)
+        message = DataMessage(msg)
+        self._processing(message, self._outsocket)
