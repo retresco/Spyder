@@ -48,6 +48,7 @@ setup(
         'supervisor>=3.0a9',
         'supervisor_twiddler>=0.2',
         'thrift>=0.5.0',
+        'pycurl>=7.19.0',
     ],
     tests_require = tests_require,
     extras_require = {'test': tests_require},
