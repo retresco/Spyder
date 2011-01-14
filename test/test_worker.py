@@ -35,8 +35,8 @@ from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
 from spyder.core.mgmt import ZmqMgmt
-from spyder.core.worker import ZmqWorker, deserialize_crawl_uri
-from spyder.core.worker import serialize_crawl_uri
+from spyder.core.worker import ZmqWorker, AsyncZmqWorker
+from spyder.core.worker import serialize_crawl_uri, deserialize_crawl_uri
 from spyder.thrift.gen.ttypes import CrawlUri
 
 
@@ -109,8 +109,8 @@ class ZmqWorkerTest(unittest.TestCase):
         verify(out_socket_mock).send_multipart([curi_ser2])
 
 
-class ZmqWorkerIntegrationTest(unittest.TestCase):
-    
+class ZmqWorkerIntegrationTestBase(unittest.TestCase):
+
     def setUp(self):
         
         # create context
@@ -168,6 +168,9 @@ class ZmqWorkerIntegrationTest(unittest.TestCase):
     def on_mgmt_end(self, _msg):
         self._ioloop.stop()
 
+
+class ZmqWorkerIntegrationTest(ZmqWorkerIntegrationTestBase):
+    
     def echo_processing(self, crawl_uri):
         self._mgmt_sockets['master_pub'].send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
         return crawl_uri
@@ -194,6 +197,37 @@ class ZmqWorkerIntegrationTest(unittest.TestCase):
         self.assertEquals(curi,curi2)
         self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK,
             self._mgmt_sockets['master_sub'].recv_multipart())
+
+
+class AsyncZmqWorkerIntegrationTest(ZmqWorkerIntegrationTestBase):
+
+    def echo_processing(self, crawl_uri, out_socket):
+        ser = serialize_crawl_uri(crawl_uri)
+        self._mgmt_sockets['master_pub'].send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        out_socket.send(ser)
+
+    def test_that_async_worker_works(self):
+        worker = AsyncZmqWorker( self._worker_sockets['worker_pull'],
+            self._worker_sockets['worker_pub'],
+            self._mgmt,
+            self.echo_processing,
+            self._ioloop)
+
+        worker.start()
+
+        curi = CrawlUri(url="http://localhost", host_identifier="127.0.0.1")
+        curi_ser = serialize_crawl_uri(curi)
+
+        self._worker_sockets['master_push'].send_multipart([curi_ser])
+
+        self._ioloop.start()
+
+        msg = self._worker_sockets['master_sub'].recv_multipart()
+        curi2 = deserialize_crawl_uri(msg[0])
+        self.assertEquals(curi,curi2)
+        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK,
+            self._mgmt_sockets['master_sub'].recv_multipart())
+
 
 if __name__ == '__main__':
     unittest.main()

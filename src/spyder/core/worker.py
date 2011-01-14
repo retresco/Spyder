@@ -105,6 +105,26 @@ class ZmqWorker(object):
         self._stream.stop_on_recv()
 
 
+class AsyncZmqWorker(ZmqWorker):
+    """
+    Asynchronous version of the `ZmqWorker`.
+
+    This worker differs in that the _processing method should ahve two
+    arguments: the message and the socket where the result should be sen to!
+    """
+
+    def _receive(self, msg):
+        """
+        We have a message!
+
+        Instead of the synchronous version we do not handle serializing and
+        sending the result to the `self._outsocket`. This will be handled by
+        the `self._processing` method.
+        """
+        crawl_uri = deserialize_crawl_uri(msg[0])
+        self._processing(crawl_uri, self._outsocket)
+
+
 def deserialize_crawl_uri(serialized):
     """
     Deserialize a `CrawlUri` that has been serialized using Thrift.
