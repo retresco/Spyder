@@ -30,6 +30,7 @@ class CrawlUri(object):
    - req_header
    - rep_header
    - content_body
+   - status_code
    - optional_vars
   """
 
@@ -43,10 +44,11 @@ class CrawlUri(object):
     (6, TType.MAP, 'req_header', (TType.STRING,None,TType.STRING,None), None, ), # 6
     (7, TType.MAP, 'rep_header', (TType.STRING,None,TType.STRING,None), None, ), # 7
     (8, TType.STRING, 'content_body', None, None, ), # 8
-    (9, TType.MAP, 'optional_vars', (TType.STRING,None,TType.STRING,None), None, ), # 9
+    (9, TType.I16, 'status_code', None, None, ), # 9
+    (10, TType.MAP, 'optional_vars', (TType.STRING,None,TType.STRING,None), None, ), # 10
   )
 
-  def __init__(self, url=None, effective_url=None, host_identifier=None, begin_processing=None, end_processing=None, req_header=None, rep_header=None, content_body=None, optional_vars=None,):
+  def __init__(self, url=None, effective_url=None, host_identifier=None, begin_processing=None, end_processing=None, req_header=None, rep_header=None, content_body=None, status_code=None, optional_vars=None,):
     self.url = url
     self.effective_url = effective_url
     self.host_identifier = host_identifier
@@ -55,6 +57,7 @@ class CrawlUri(object):
     self.req_header = req_header
     self.rep_header = rep_header
     self.content_body = content_body
+    self.status_code = status_code
     self.optional_vars = optional_vars
 
   def read(self, iprot):
@@ -119,6 +122,11 @@ class CrawlUri(object):
         else:
           iprot.skip(ftype)
       elif fid == 9:
+        if ftype == TType.I16:
+          self.status_code = iprot.readI16();
+        else:
+          iprot.skip(ftype)
+      elif fid == 10:
         if ftype == TType.MAP:
           self.optional_vars = {}
           (_ktype15, _vtype16, _size14 ) = iprot.readMapBegin() 
@@ -179,8 +187,12 @@ class CrawlUri(object):
       oprot.writeFieldBegin('content_body', TType.STRING, 8)
       oprot.writeString(self.content_body)
       oprot.writeFieldEnd()
+    if self.status_code != None:
+      oprot.writeFieldBegin('status_code', TType.I16, 9)
+      oprot.writeI16(self.status_code)
+      oprot.writeFieldEnd()
     if self.optional_vars != None:
-      oprot.writeFieldBegin('optional_vars', TType.MAP, 9)
+      oprot.writeFieldBegin('optional_vars', TType.MAP, 10)
       oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.optional_vars))
       for kiter25,viter26 in self.optional_vars.items():
         oprot.writeString(kiter25)

@@ -42,7 +42,10 @@ struct CrawlUri {
     // the saved content body
     8: string               content_body,
 
+    // the servers status code
+    9: i16                  status_code,
+
     // additional values from other processors
-    9: key_value   optional_vars
+    10: key_value   optional_vars
 }
 
