@@ -31,6 +31,8 @@ class CrawlUri(object):
    - rep_header
    - content_body
    - status_code
+   - req_time
+   - queue_time
    - optional_vars
   """
 
@@ -45,10 +47,12 @@ class CrawlUri(object):
     (7, TType.MAP, 'rep_header', (TType.STRING,None,TType.STRING,None), None, ), # 7
     (8, TType.STRING, 'content_body', None, None, ), # 8
     (9, TType.I16, 'status_code', None, None, ), # 9
-    (10, TType.MAP, 'optional_vars', (TType.STRING,None,TType.STRING,None), None, ), # 10
+    (10, TType.DOUBLE, 'req_time', None, None, ), # 10
+    (11, TType.DOUBLE, 'queue_time', None, None, ), # 11
+    (12, TType.MAP, 'optional_vars', (TType.STRING,None,TType.STRING,None), None, ), # 12
   )
 
-  def __init__(self, url=None, effective_url=None, host_identifier=None, begin_processing=None, end_processing=None, req_header=None, rep_header=None, content_body=None, status_code=None, optional_vars=None,):
+  def __init__(self, url=None, effective_url=None, host_identifier=None, begin_processing=None, end_processing=None, req_header=None, rep_header=None, content_body=None, status_code=None, req_time=None, queue_time=None, optional_vars=None,):
     self.url = url
     self.effective_url = effective_url
     self.host_identifier = host_identifier
@@ -58,6 +62,8 @@ class CrawlUri(object):
     self.rep_header = rep_header
     self.content_body = content_body
     self.status_code = status_code
+    self.req_time = req_time
+    self.queue_time = queue_time
     self.optional_vars = optional_vars
 
   def read(self, iprot):
@@ -127,6 +133,16 @@ class CrawlUri(object):
         else:
           iprot.skip(ftype)
       elif fid == 10:
+        if ftype == TType.DOUBLE:
+          self.req_time = iprot.readDouble();
+        else:
+          iprot.skip(ftype)
+      elif fid == 11:
+        if ftype == TType.DOUBLE:
+          self.queue_time = iprot.readDouble();
+        else:
+          iprot.skip(ftype)
+      elif fid == 12:
         if ftype == TType.MAP:
           self.optional_vars = {}
           (_ktype15, _vtype16, _size14 ) = iprot.readMapBegin() 
@@ -191,8 +207,16 @@ class CrawlUri(object):
       oprot.writeFieldBegin('status_code', TType.I16, 9)
       oprot.writeI16(self.status_code)
       oprot.writeFieldEnd()
+    if self.req_time != None:
+      oprot.writeFieldBegin('req_time', TType.DOUBLE, 10)
+      oprot.writeDouble(self.req_time)
+      oprot.writeFieldEnd()
+    if self.queue_time != None:
+      oprot.writeFieldBegin('queue_time', TType.DOUBLE, 11)
+      oprot.writeDouble(self.queue_time)
+      oprot.writeFieldEnd()
     if self.optional_vars != None:
-      oprot.writeFieldBegin('optional_vars', TType.MAP, 10)
+      oprot.writeFieldBegin('optional_vars', TType.MAP, 12)
       oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.optional_vars))
       for kiter25,viter26 in self.optional_vars.items():
         oprot.writeString(kiter25)

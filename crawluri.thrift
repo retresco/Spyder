@@ -45,7 +45,13 @@ struct CrawlUri {
     // the servers status code
     9: i16                  status_code,
 
+    // request time
+    10: double              req_time,
+
+    // queue time
+    11: double              queue_time,
+
     // additional values from other processors
-    10: key_value   optional_vars
+    12: key_value   optional_vars
 }
 
