@@ -27,6 +27,8 @@
 #
 #
 
+from datetime import datetime
+
 from  thrift import TSerialization
 
 from spyder.thrift.gen.ttypes import CrawlUri
@@ -106,3 +108,20 @@ def serialize_crawl_uri(crawl_uri):
     Serialize a `CrawlUri` using Thrift.
     """
     return TSerialization.serialize(crawl_uri)
+
+
+SERVER_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
+
+
+def serialize_date_time(dt):
+    """
+    Create a string of the datetime.
+    """
+    return dt.strftime(SERVER_TIME_FORMAT)
+
+
+def deserialize_date_time(date_string):
+    """
+    Read a string as a datetime.
+    """
+    return datetime.strptime(date_string, SERVER_TIME_FORMAT)
