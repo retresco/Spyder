@@ -137,7 +137,7 @@ class AsyncZmqWorkerIntegrationTest(ZmqWorkerIntegrationTestBase):
         worker._stream.flush()
 
         msg2 = DataMessage(self._worker_sockets['master_sub'].recv_multipart())
-        self.assertEquals(msg, msg2)
+        self.assertEqual(msg, msg2)
         self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK,
             self._mgmt_sockets['master_sub'].recv_multipart())
 

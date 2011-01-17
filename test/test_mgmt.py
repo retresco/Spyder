@@ -68,7 +68,7 @@ class ManagementIntegrationTest(unittest.TestCase):
         self._ioloop.stop()
 
 
-    def test_simple_mgmg_session(self):
+    def test_simple_mgmt_session(self):
         
         mgmt = ZmqMgmt( self._worker_sub, self._worker_pub, ioloop=self._ioloop)
         mgmt.start()
