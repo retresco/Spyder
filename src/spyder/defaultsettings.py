@@ -24,3 +24,13 @@ Module for the default spyder settings.
 # ZeroMQ
 
 ZEROMQ_WORKER_SOCKET = "ipc:///tmp/spyder-zmq-worker.sock"
+
+
+# Fetch Processor
+USER_AGENT = "Mozilla/5.0 (compatible; spyder/0.1; " + \
+    "+http://github.com/retresco/spyder)"
+MAX_CLIENTS = 10
+MAX_SIMULTANEOUS_CONNECTIONS = 1
+FOLLOW_REDIRECTS = True
+MAX_REDIRECTS = 1
+USE_GZIP = True
