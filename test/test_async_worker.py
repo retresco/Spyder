@@ -31,16 +31,14 @@ import unittest
 import time
 
 import zmq
-from zmq import Socket
 from zmq.eventloop.ioloop import IOLoop
-from zmq.eventloop.zmqstream import ZMQStream
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
 from spyder.core.mgmt import ZmqMgmt
-from spyder.core.worker import ZmqWorker, AsyncZmqWorker
-from spyder.core.messages import DataMessage, MgmtMessage
+from spyder.core.worker import AsyncZmqWorker
+from spyder.core.messages import DataMessage
 from spyder.thrift.gen.ttypes import CrawlUri
 
 
