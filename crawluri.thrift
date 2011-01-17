@@ -18,28 +18,31 @@ typedef map<string,string> key_value
  * This contains some metadata and if possible the saved web page.
  */
 struct CrawlUri {
-    // the url to crawl
+    // readable version of the url to crawl
     1: string               url,
 
+    // the effective url used for downloading the content (i.e.: IP instead of hostname)
+    2: string               effective_url,
+
     // the host identifier used for queue selection
-    2: string               host_identifier,
+    3: string               host_identifier,
 
     // when processing has been started
-    3: timestamp            begin_processing,
+    4: timestamp            begin_processing,
 
     // when processing is finished
-    4: timestamp            end_processing,
+    5: timestamp            end_processing,
 
     // the http request headers
-    5: header               req_header,
+    6: header               req_header,
 
     // the http response headers
-    6: header               rep_header
+    7: header               rep_header
 
     // the saved content body
-    7: string               content_body,
+    8: string               content_body,
 
     // additional values from other processors
-    8: key_value   optional_vars
+    9: key_value   optional_vars
 }
 

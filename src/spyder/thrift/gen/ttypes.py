@@ -23,6 +23,7 @@ class CrawlUri(object):
 
   Attributes:
    - url
+   - effective_url
    - host_identifier
    - begin_processing
    - end_processing
@@ -35,17 +36,19 @@ class CrawlUri(object):
   thrift_spec = (
     None, # 0
     (1, TType.STRING, 'url', None, None, ), # 1
-    (2, TType.STRING, 'host_identifier', None, None, ), # 2
-    (3, TType.I64, 'begin_processing', None, None, ), # 3
-    (4, TType.I64, 'end_processing', None, None, ), # 4
-    (5, TType.MAP, 'req_header', (TType.STRING,None,TType.STRING,None), None, ), # 5
-    (6, TType.MAP, 'rep_header', (TType.STRING,None,TType.STRING,None), None, ), # 6
-    (7, TType.STRING, 'content_body', None, None, ), # 7
-    (8, TType.MAP, 'optional_vars', (TType.STRING,None,TType.STRING,None), None, ), # 8
+    (2, TType.STRING, 'effective_url', None, None, ), # 2
+    (3, TType.STRING, 'host_identifier', None, None, ), # 3
+    (4, TType.I64, 'begin_processing', None, None, ), # 4
+    (5, TType.I64, 'end_processing', None, None, ), # 5
+    (6, TType.MAP, 'req_header', (TType.STRING,None,TType.STRING,None), None, ), # 6
+    (7, TType.MAP, 'rep_header', (TType.STRING,None,TType.STRING,None), None, ), # 7
+    (8, TType.STRING, 'content_body', None, None, ), # 8
+    (9, TType.MAP, 'optional_vars', (TType.STRING,None,TType.STRING,None), None, ), # 9
   )
 
-  def __init__(self, url=None, host_identifier=None, begin_processing=None, end_processing=None, req_header=None, rep_header=None, content_body=None, optional_vars=None,):
+  def __init__(self, url=None, effective_url=None, host_identifier=None, begin_processing=None, end_processing=None, req_header=None, rep_header=None, content_body=None, optional_vars=None,):
     self.url = url
+    self.effective_url = effective_url
     self.host_identifier = host_identifier
     self.begin_processing = begin_processing
     self.end_processing = end_processing
@@ -70,20 +73,25 @@ class CrawlUri(object):
           iprot.skip(ftype)
       elif fid == 2:
         if ftype == TType.STRING:
-          self.host_identifier = iprot.readString();
+          self.effective_url = iprot.readString();
         else:
           iprot.skip(ftype)
       elif fid == 3:
-        if ftype == TType.I64:
-          self.begin_processing = iprot.readI64();
+        if ftype == TType.STRING:
+          self.host_identifier = iprot.readString();
         else:
           iprot.skip(ftype)
       elif fid == 4:
         if ftype == TType.I64:
-          self.end_processing = iprot.readI64();
+          self.begin_processing = iprot.readI64();
         else:
           iprot.skip(ftype)
       elif fid == 5:
+        if ftype == TType.I64:
+          self.end_processing = iprot.readI64();
+        else:
+          iprot.skip(ftype)
+      elif fid == 6:
         if ftype == TType.MAP:
           self.req_header = {}
           (_ktype1, _vtype2, _size0 ) = iprot.readMapBegin() 
@@ -94,7 +102,7 @@ class CrawlUri(object):
           iprot.readMapEnd()
         else:
           iprot.skip(ftype)
-      elif fid == 6:
+      elif fid == 7:
         if ftype == TType.MAP:
           self.rep_header = {}
           (_ktype8, _vtype9, _size7 ) = iprot.readMapBegin() 
@@ -105,12 +113,12 @@ class CrawlUri(object):
           iprot.readMapEnd()
         else:
           iprot.skip(ftype)
-      elif fid == 7:
+      elif fid == 8:
         if ftype == TType.STRING:
           self.content_body = iprot.readString();
         else:
           iprot.skip(ftype)
-      elif fid == 8:
+      elif fid == 9:
         if ftype == TType.MAP:
           self.optional_vars = {}
           (_ktype15, _vtype16, _size14 ) = iprot.readMapBegin() 
@@ -135,20 +143,24 @@ class CrawlUri(object):
       oprot.writeFieldBegin('url', TType.STRING, 1)
       oprot.writeString(self.url)
       oprot.writeFieldEnd()
+    if self.effective_url != None:
+      oprot.writeFieldBegin('effective_url', TType.STRING, 2)
+      oprot.writeString(self.effective_url)
+      oprot.writeFieldEnd()
     if self.host_identifier != None:
-      oprot.writeFieldBegin('host_identifier', TType.STRING, 2)
+      oprot.writeFieldBegin('host_identifier', TType.STRING, 3)
       oprot.writeString(self.host_identifier)
       oprot.writeFieldEnd()
     if self.begin_processing != None:
-      oprot.writeFieldBegin('begin_processing', TType.I64, 3)
+      oprot.writeFieldBegin('begin_processing', TType.I64, 4)
       oprot.writeI64(self.begin_processing)
       oprot.writeFieldEnd()
     if self.end_processing != None:
-      oprot.writeFieldBegin('end_processing', TType.I64, 4)
+      oprot.writeFieldBegin('end_processing', TType.I64, 5)
       oprot.writeI64(self.end_processing)
       oprot.writeFieldEnd()
     if self.req_header != None:
-      oprot.writeFieldBegin('req_header', TType.MAP, 5)
+      oprot.writeFieldBegin('req_header', TType.MAP, 6)
       oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.req_header))
       for kiter21,viter22 in self.req_header.items():
         oprot.writeString(kiter21)
@@ -156,7 +168,7 @@ class CrawlUri(object):
       oprot.writeMapEnd()
       oprot.writeFieldEnd()
     if self.rep_header != None:
-      oprot.writeFieldBegin('rep_header', TType.MAP, 6)
+      oprot.writeFieldBegin('rep_header', TType.MAP, 7)
       oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.rep_header))
       for kiter23,viter24 in self.rep_header.items():
         oprot.writeString(kiter23)
@@ -164,11 +176,11 @@ class CrawlUri(object):
       oprot.writeMapEnd()
       oprot.writeFieldEnd()
     if self.content_body != None:
-      oprot.writeFieldBegin('content_body', TType.STRING, 7)
+      oprot.writeFieldBegin('content_body', TType.STRING, 8)
       oprot.writeString(self.content_body)
       oprot.writeFieldEnd()
     if self.optional_vars != None:
-      oprot.writeFieldBegin('optional_vars', TType.MAP, 8)
+      oprot.writeFieldBegin('optional_vars', TType.MAP, 9)
       oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.optional_vars))
       for kiter25,viter26 in self.optional_vars.items():
         oprot.writeString(kiter25)
