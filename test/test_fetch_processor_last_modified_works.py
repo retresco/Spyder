@@ -27,8 +27,10 @@
 #
 #
 
+import os
 import os.path
 import time
+from datetime import datetime
 import random
 
 import unittest
@@ -44,7 +46,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
-from spyder.core.messages import DataMessage
+from spyder.core.messages import DataMessage, serialize_date_time
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import AsyncZmqWorker
 from spyder.core.settings import Settings
@@ -128,9 +130,9 @@ class SimpleFetcherTestCase(ZmqWorkerIntegrationTestBase):
     def setUp(self):
         ZmqWorkerIntegrationTestBase.setUp(self)
 
-        path = os.path.join(os.path.dirname(__file__), "static")
+        self._path = os.path.join(os.path.dirname(__file__), "static")
         application = tornado.web.Application([
-            (r"/(.*)", tornado.web.StaticFileHandler, {"path": path}),
+            (r"/(.*)", tornado.web.StaticFileHandler, {"path": self._path}),
         ])
         self._server = tornado.httpserver.HTTPServer(application, io_loop =
                 self._ioloop)
@@ -147,11 +149,14 @@ class SimpleFetcherTestCase(ZmqWorkerIntegrationTestBase):
             fetcher,
             self._ioloop)
 
+        mtimestamp = datetime.fromtimestamp(os.stat(os.path.join(self._path,
+                        "robots.txt")).st_mtime)
+        mtime = serialize_date_time(mtimestamp)
         curi = CrawlUri(url="http://localhost:%s/robots.txt" % self.port,
                 host_identifier="127.0.0.1",
                 effective_url="http://127.0.0.1:%s/robots.txt" % self.port,
                 req_header = { "Last-Modified" :
-                    "Mon, 17 Jan 2011 13:16:39 GMT" }
+                    mtime }
                 )
 
         msg = DataMessage()

@@ -28,6 +28,7 @@
 #
 
 from datetime import datetime
+import pytz
 
 from  thrift import TSerialization
 
@@ -111,13 +112,14 @@ def serialize_crawl_uri(crawl_uri):
 
 
 SERVER_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
+GMT = pytz.timezone('GMT')
 
 
 def serialize_date_time(dt):
     """
     Create a string of the datetime.
     """
-    return dt.strftime(SERVER_TIME_FORMAT)
+    return GMT.localize(dt).strftime(SERVER_TIME_FORMAT)
 
 
 def deserialize_date_time(date_string):
