@@ -17,5 +17,11 @@
 # under the License.
 #
 #
+"""
+The Spyder.
+"""
 
 __version__ = '0.0-dev'
+
+__all__ = ["core", "processor", "defaultsettings", "spyder_template", "thrift",
+        "workerprocess"]
