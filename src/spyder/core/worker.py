@@ -75,8 +75,7 @@ class ZmqWorker(object):
         """
         We have a message!
 
-        The `msg` has to have only one part: a serialized version of
-        `spyder.thrift.gen.ttype.CrawlUri`.
+        `msg` is a serialized version of a `DataMessage`.
         """
         message = DataMessage(msg)
 
@@ -115,7 +114,7 @@ class AsyncZmqWorker(ZmqWorker):
         We have a message!
 
         Instead of the synchronous version we do not handle serializing and
-        sending the result to the `self._outsocket`. This will be handled by
+        sending the result to the `self._outsocket`. This has to be handled by
         the `self._processing` method.
         """
         message = DataMessage(msg)
