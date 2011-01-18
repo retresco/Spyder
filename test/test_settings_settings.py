@@ -18,4 +18,4 @@
 #
 #
 
-ZEROMQ_WORKER_SOCKET = "test"
+ZEROMQ_MGMT_WORKER = "test"

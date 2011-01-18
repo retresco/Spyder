@@ -29,7 +29,8 @@ class SettingsTest(unittest.TestCase):
         from spyder.core.settings import Settings
 
         settings = Settings()
-        self.assertEqual(defaultsettings.ZEROMQ_WORKER_SOCKET, settings.ZEROMQ_WORKER_SOCKET)
+        self.assertEqual(defaultsettings.ZEROMQ_MGMT_MASTER,
+                settings.ZEROMQ_MGMT_MASTER)
 
 
     def test_loading_custom_settings_works(self):
@@ -40,4 +41,5 @@ class SettingsTest(unittest.TestCase):
         import test_settings_settings
         settings = Settings(test_settings_settings)
 
-        self.assertEqual(test_settings_settings.ZEROMQ_WORKER_SOCKET, settings.ZEROMQ_WORKER_SOCKET)
+        self.assertEqual(test_settings_settings.ZEROMQ_MGMT_WORKER,
+                settings.ZEROMQ_MGMT_WORKER)

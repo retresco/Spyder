@@ -21,10 +21,7 @@
 Module for the default spyder settings.
 """
 
-# ZeroMQ
-
-ZEROMQ_WORKER_SOCKET = "ipc:///tmp/spyder-zmq-worker.sock"
-
+# simple settings
 
 # Fetch Processor
 USER_AGENT = "Mozilla/5.0 (compatible; spyder/0.1; " + \
@@ -34,3 +31,43 @@ MAX_SIMULTANEOUS_CONNECTIONS = 1
 FOLLOW_REDIRECTS = True
 MAX_REDIRECTS = 1
 USE_GZIP = True
+
+
+# The pipeline of link extractors
+SPYDER_EXTRACTOR_PIPELINE = [
+    'spyder.processor.limiter',
+]
+
+
+# The pipeline of scope processors
+SPYDER_SCOPER_PIPELINE = [
+    'spyder.processor.limiter',
+]
+
+
+# improved settings
+# only edit if you are usually working behind a nuclear power plant's control
+# panel
+
+# ZeroMQ Master
+ZEROMQ_MASTER_PUSH = "ipc:///tmp/spyder-zmq-master-push.sock"
+ZEROMQ_MASTER_PUSH_HWM = 10
+ZEROMQ_MASTER_SUB = "ipc:///tmp/spyder-zmq-master-sub.sock"
+
+# ZeroMQ Worker
+ZEROMQ_WORKER_PULL = ZEROMQ_MASTER_PUSH
+
+ZEROMQ_WORKER_PROC_FETCHER_PULL = ZEROMQ_MASTER_PUSH
+ZEROMQ_WORKER_PROC_FETCHER_PUSH = "inproc://processing/fetcher/push"
+ZEROMQ_WORKER_PROC_FETCHER_PUSH_HWM = 10
+
+ZEROMQ_WORKER_PROC_EXTRACTOR_PULL = ZEROMQ_WORKER_PROC_FETCHER_PUSH
+ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH = "inproc://processing/extractor/push"
+ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH_HWM = 10
+
+ZEROMQ_WORKER_PROC_SCOPER_PULL = ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH
+ZEROMQ_WORKER_PROC_SCOPER_PUB = ZEROMQ_MASTER_SUB
+
+# ZeroMQ Management Sockets
+ZEROMQ_MGMT_MASTER = "ipc:///tmp/spyder-zmq-mgmt-master"
+ZEROMQ_MGMT_WORKER = "ips:///tmp/spyder-zmq-mgmt-worker"
