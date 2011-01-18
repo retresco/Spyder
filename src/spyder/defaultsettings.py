@@ -70,4 +70,4 @@ ZEROMQ_WORKER_PROC_SCOPER_PUB = ZEROMQ_MASTER_SUB
 
 # ZeroMQ Management Sockets
 ZEROMQ_MGMT_MASTER = "ipc:///tmp/spyder-zmq-mgmt-master"
-ZEROMQ_MGMT_WORKER = "ips:///tmp/spyder-zmq-mgmt-worker"
+ZEROMQ_MGMT_WORKER = "ipc:///tmp/spyder-zmq-mgmt-worker"
