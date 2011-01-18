@@ -49,3 +49,5 @@ def do_not_process_robots(curi):
     if CURI_EXTRACTION_FINISHED not in curi.optional_vars and \
         curi.effective_url.endswith("robots.txt"):
         curi.optional_vars[CURI_EXTRACTION_FINISHED] = CURI_OPTIONAL_TRUE
+
+    return curi
