@@ -38,10 +38,7 @@ from zmq.eventloop.ioloop import IOLoop
 
 from spyder.core.constants import CURI_SITE_USERNAME
 from spyder.core.constants import CURI_SITE_PASSWORD
-from spyder.core.messages import DataMessage
-from spyder.core.messages import serialize_date_time, deserialize_date_time
-from spyder.core.worker import AsyncZmqWorker
-from spyder.thrift.gen.ttypes import CrawlUri
+from spyder.core.messages import deserialize_date_time
 
 LOG = logging.getLogger('fetcher')
 
@@ -96,14 +93,14 @@ class FetchProcessor(object):
 
         # create the request
         request = HTTPRequest(msg.curi.effective_url,
-                method = "GET",
-                headers = headers,
-                auth_username = auth_username,
-                auth_password = auth_password,
-                if_modified_since = last_modified,
-                follow_redirects = self._follow_redirects,
-                max_redirects = self._max_redirects,
-                user_agent = self._user_agent)
+                method="GET",
+                headers=headers,
+                auth_username=auth_username,
+                auth_password=auth_password,
+                if_modified_since=last_modified,
+                follow_redirects=self._follow_redirects,
+                max_redirects=self._max_redirects,
+                user_agent=self._user_agent)
 
         LOG.info("proc.fetch::request for %s" % msg.curi.url)
         self._client.fetch(request, self._handle_response(msg, out_socket))
@@ -122,7 +119,6 @@ class FetchProcessor(object):
                 headers["If-None-Match"] = \
                     msg.curi.req_header["Etag"]
 
-
         # manually set the Host header since we are requesting using an IP
         host = urlsplit(msg.curi.url).hostname
         if host is None:
@@ -139,8 +135,8 @@ class FetchProcessor(object):
         """
         def handle_server_response(response):
             self._extract_info_from_response(response, msg)
-            LOG.info("proc.fetch::response for %s (took '%s'ms)" % (msg.curi.url,
-                        response.request_time))
+            LOG.info("proc.fetch::response for %s (took '%s'ms)" %
+                    (msg.curi.url, response.request_time))
             out_socket.send_multipart(msg.serialize())
 
         return handle_server_response
