@@ -122,8 +122,8 @@ def create_worker_extractor(settings, mgmt, zmq_context, io_loop):
 
     pushing_socket = zmq_context.socket(zmq.PUSH)
     pushing_socket.setsockopt(zmq.HWM,
-            settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH)
-    pushing_socket.bind(settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH_HWM)
+            settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH_HWM)
+    pushing_socket.bind(settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH)
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
         io_loop=io_loop)

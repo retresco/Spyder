@@ -36,7 +36,6 @@ from spyder import workerprocess
 class WorkerProcessingUnittest(unittest.TestCase):
 
     def test_that_creating_processing_function_works(self):
-
         settings = Settings()
         processors = settings.SPYDER_SCOPER_PIPELINE
         processors.append('test_workerprocess')
