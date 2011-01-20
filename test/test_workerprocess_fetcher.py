@@ -48,33 +48,14 @@ class WorkerExtractorTestCase(unittest.TestCase):
 
         settings = Settings()
 
-        pubsocket = ctx.socket(zmq.PUB)
-        pubsocket.bind(settings.ZEROMQ_MGMT_MASTER)
-        subsocket = ctx.socket(zmq.SUB)
-        subsocket.bind(settings.ZEROMQ_MGMT_WORKER)
-        subsocket.setsockopt(zmq.SUBSCRIBE, "")
-
-        # we need to sleep here since zmq seems to take a breath creating the
-        # sockets. Otherwise the test will hang forever
-        time.sleep(.5)
-
-        mgmt = workerprocess.create_worker_management(settings, ctx, io_loop)
-        mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, stop_looping)
-        mgmt.start()
-
         master_push = ctx.socket(zmq.PUSH)
         master_push.bind(settings.ZEROMQ_MASTER_PUSH)
 
-        fetcher = workerprocess.create_worker_fetcher(settings, mgmt, ctx,
+        fetcher = workerprocess.create_worker_fetcher(settings, {}, ctx,
                 io_loop)
 
         self.assertTrue(isinstance(fetcher._processing, FetchProcessor))
         self.assertTrue(isinstance(fetcher, AsyncZmqWorker))
-
-        mgmt._subscriber.close()
-        mgmt._publisher.close()
-        subsocket.close()
-        pubsocket.close()
 
         fetcher._insocket.close()
         fetcher._outsocket.close()

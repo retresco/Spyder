@@ -31,7 +31,7 @@ from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
 
 class ZmqMgmt(object):
     """
-    A `ZMQStream` object handling the management sockets.
+    A :class:`ZMQStream` object handling the management sockets.
     """
 
     def __init__(self, subscriber, publisher, **kwargs):
@@ -42,17 +42,15 @@ class ZmqMgmt(object):
         commands to the workers. The publisher socket is used to send commands
         to the Master.
         """
-        self._master_topic = kwargs.get('topic', ZMQ_SPYDER_TOPIC)
         self._io_loop = kwargs.get('io_loop', IOLoop.instance())
 
         self._subscriber = subscriber
-        self._subscriber.setsockopt(zmq.SUBSCRIBE, self._master_topic)
+        self._in_stream = ZMQStream(self._subscriber, self._io_loop)
 
         self._publisher = publisher
+        self._out_stream = ZMQStream(self._publisher, self._io_loop)
 
-        self._callbacks = {}
-
-        self._stream = ZMQStream(self._subscriber, self._io_loop)
+        self._callbacks = dict()
 
     def _receive(self, message):
         """
@@ -69,20 +67,20 @@ class ZmqMgmt(object):
                     callback(message)
 
         if message == ZMQ_SPYDER_MGMT_WORKER_QUIT:
-            self._stream.stop_on_recv()
-            self._publisher.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
+            self._in_stream.stop_on_recv()
+            self._out_stream.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
 
     def start(self):
         """
         Start the MGMT interface.
         """
-        self._stream.on_recv(self._receive)
+        self._in_stream.on_recv(self._receive)
 
     def stop(self):
         """
         Stop the MGMT interface.
         """
-        self._stream.stop_on_recv()
+        self._in_stream.stop_on_recv()
 
     def add_callback(self, topic, callback):
         """

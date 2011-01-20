@@ -58,9 +58,9 @@ class FetchProcessor(object):
             max_clients=self._max_clients,
             max_simultaneous_connections=self._max_simultaneous_connections)
 
-    def __call__(self, msg, out_socket):
+    def __call__(self, msg, out_stream):
         """
-        Work on the current `DataMessage` and send the result to `out_socket`.
+        Work on the current `DataMessage` and send the result to `out_stream`.
         """
         # prepare the HTTPHeaders
         headers = self._prepare_headers(msg)
@@ -94,7 +94,7 @@ class FetchProcessor(object):
                 user_agent=self._user_agent)
 
         LOG.info("proc.fetch::request for %s" % msg.curi.url)
-        self._client.fetch(request, self._handle_response(msg, out_socket))
+        self._client.fetch(request, self._handle_response(msg, out_stream))
 
     def _prepare_headers(self, msg):
         """
@@ -120,7 +120,7 @@ class FetchProcessor(object):
 
         return headers
 
-    def _handle_response(self, msg, out_socket):
+    def _handle_response(self, msg, out_stream):
         """
         Callback is being called when the data has been retrieved from the web.
         """
@@ -128,7 +128,7 @@ class FetchProcessor(object):
             self._extract_info_from_response(response, msg)
             LOG.info("proc.fetch::response for %s (took '%s'ms)" %
                     (msg.curi.url, response.request_time))
-            out_socket.send_multipart(msg.serialize())
+            out_stream.send_multipart(msg.serialize())
 
         return handle_server_response
 

@@ -49,23 +49,27 @@ SPYDER_SCOPER_PIPELINE = [
 # only edit if you are usually working behind a nuclear power plant's control
 # panel
 
-# ZeroMQ Master
+# ZeroMQ Master Push
 ZEROMQ_MASTER_PUSH = "ipc:///tmp/spyder-zmq-master-push.sock"
 ZEROMQ_MASTER_PUSH_HWM = 10
-ZEROMQ_MASTER_SUB = "ipc:///tmp/spyder-zmq-master-sub.sock"
 
-# ZeroMQ Worker
+# ZeroMQ Fetcher
 ZEROMQ_WORKER_PROC_FETCHER_PULL = ZEROMQ_MASTER_PUSH
 ZEROMQ_WORKER_PROC_FETCHER_PUSH = "inproc://processing/fetcher/push"
 ZEROMQ_WORKER_PROC_FETCHER_PUSH_HWM = 10
 
+# ZeroMQ Extractor
 ZEROMQ_WORKER_PROC_EXTRACTOR_PULL = ZEROMQ_WORKER_PROC_FETCHER_PUSH
 ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH = "inproc://processing/extractor/push"
 ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH_HWM = 10
 
+# ZeroMQ Scoper
 ZEROMQ_WORKER_PROC_SCOPER_PULL = ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH
-ZEROMQ_WORKER_PROC_SCOPER_PUB = ZEROMQ_MASTER_SUB
+ZEROMQ_WORKER_PROC_SCOPER_PUB = "ipc:///tmp/spyder-zmq-master-sub.sock"
+
+# ZeroMQ Master Sub
+ZEROMQ_MASTER_SUB = ZEROMQ_WORKER_PROC_SCOPER_PUB
 
 # ZeroMQ Management Sockets
-ZEROMQ_MGMT_MASTER = "ipc:///tmp/spyder-zmq-mgmt-master"
-ZEROMQ_MGMT_WORKER = "ipc:///tmp/spyder-zmq-mgmt-worker"
+ZEROMQ_MGMT_MASTER = "ipc:///tmp/spyder-zmq-mgmt-master.sock"
+ZEROMQ_MGMT_WORKER = "ipc:///tmp/spyder-zmq-mgmt-worker.sock"

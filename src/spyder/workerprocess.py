@@ -47,6 +47,7 @@ def create_worker_management(settings, zmq_context, io_loop):
     Create and return a new instance of the `ZmqMgmt`.
     """
     listening_socket = zmq_context.socket(zmq.SUB)
+    listening_socket.setsockopt(zmq.SUBSCRIBE, "")
     listening_socket.connect(settings.ZEROMQ_MGMT_MASTER)
 
     publishing_socket = zmq_context.socket(zmq.PUB)
@@ -110,7 +111,7 @@ def create_processing_function(settings, pipeline):
 def create_worker_extractor(settings, mgmt, zmq_context, io_loop):
     """
     Create and return a new `Worker Extractor` that will combine all configured
-    extractors to a single `ZmqWorker`.
+    extractors to a single :class:`ZmqWorker`.
     """
     # the processing function used to process the incoming `DataMessage` by
     # iterating over all available processors
@@ -140,7 +141,7 @@ def create_worker_scoper(settings, mgmt, zmq_context, io_loop):
     pulling_socket = zmq_context.socket(zmq.PULL)
     pulling_socket.connect(settings.ZEROMQ_WORKER_PROC_SCOPER_PULL)
 
-    pushing_socket = zmq_context.socket(zmq.PUSH)
+    pushing_socket = zmq_context.socket(zmq.PUB)
     pushing_socket.connect(settings.ZEROMQ_WORKER_PROC_SCOPER_PUB)
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,

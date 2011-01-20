@@ -24,6 +24,7 @@ import time
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop
+from zmq.eventloop.zmqstream import ZMQStream
 
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.constants import *
@@ -33,22 +34,25 @@ class ManagementIntegrationTest(unittest.TestCase):
 
 
     def setUp(self):
-        self._context = zmq.Context(1)
+        self._io_loop = IOLoop.instance()
+        self._ctx = zmq.Context(1)
 
-        self._master_pub = self._context.socket(zmq.PUB)
-        self._master_pub.bind( 'inproc://master/worker/coordination' )
+        sock = self._ctx.socket(zmq.PUB)
+        sock.bind('inproc://master/worker/coordination')
+        self._master_pub = ZMQStream(sock, self._io_loop)
 
-        self._worker_sub = self._context.socket(zmq.SUB)
-        self._worker_sub.connect( 'inproc://master/worker/coordination' )
+        self._worker_sub = self._ctx.socket(zmq.SUB)
+        self._worker_sub.setsockopt(zmq.SUBSCRIBE, "")
+        self._worker_sub.connect('inproc://master/worker/coordination')
 
-        self._worker_pub = self._context.socket(zmq.PUB)
+        self._worker_pub = self._ctx.socket(zmq.PUB)
         self._worker_pub.bind( 'inproc://worker/master/coordination' )
 
-        self._master_sub = self._context.socket(zmq.SUB)
-        self._master_sub.connect( 'inproc://worker/master/coordination' )
-        self._master_sub.setsockopt(zmq.SUBSCRIBE, "")
+        sock = self._ctx.socket(zmq.SUB)
+        sock.setsockopt(zmq.SUBSCRIBE, "")
+        sock.connect( 'inproc://worker/master/coordination' )
+        self._master_sub = ZMQStream(sock, self._io_loop)
 
-        self._ioloop = IOLoop.instance()
         self._topic = ZMQ_SPYDER_MGMT_WORKER + 'testtopic'
 
     def tearDown(self):
@@ -56,7 +60,7 @@ class ManagementIntegrationTest(unittest.TestCase):
         self._worker_sub.close()
         self._worker_pub.close()
         self._master_sub.close()
-        self._context.term()
+        self._ctx.term()
 
     def call_me(self, msg):
         self.assertEqual( [ self._topic, 'test' ], msg )
@@ -65,12 +69,12 @@ class ManagementIntegrationTest(unittest.TestCase):
 
     def on_end(self, msg):
         self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT, msg)
-        self._ioloop.stop()
+        self._io_loop.stop()
 
 
     def test_simple_mgmt_session(self):
         
-        mgmt = ZmqMgmt( self._worker_sub, self._worker_pub, ioloop=self._ioloop)
+        mgmt = ZmqMgmt(self._worker_sub, self._worker_pub, io_loop=self._io_loop)
         mgmt.start()
 
         self.assertRaises(ValueError, mgmt.add_callback, "test", "test")
@@ -80,13 +84,13 @@ class ManagementIntegrationTest(unittest.TestCase):
 
         self._master_pub.send_multipart( [ self._topic, 'test'.encode() ] )
 
-        self._ioloop.start()
+        def assertCorrectMgmtAnswer(msg):
+            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg)
+            mgmt.remove_callback(self._topic, self.call_me)
+            mgmt.remove_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
+            self.assertEqual({}, mgmt._callbacks)
 
-        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, self._master_sub.recv_multipart())
-        mgmt.remove_callback(self._topic, self.call_me)
-        mgmt.remove_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
-        self.assertEqual({}, mgmt._callbacks)
-        mgmt.stop()
+        self._io_loop.start()
 
 
 if __name__ == '__main__':

@@ -43,100 +43,121 @@ from spyder.processor.fetcher import FetchProcessor
 from spyder.thrift.gen.ttypes import CrawlUri
 
 
-class ZmqWorkerIntegrationTestBase(unittest.TestCase):
+class ZmqTornadoIntegrationTest(unittest.TestCase):
 
     def setUp(self):
-        
-        # create context
-        self._context = zmq.Context(1)
 
-        # create the ioloop
-        self._ioloop = IOLoop.instance()
+        # create the io_loop
+        self._io_loop = IOLoop.instance()
 
-        t = time.time()
+        # and the context
+        self._ctx = zmq.Context(1)
 
-        mgmt_master_worker = 'inproc://master/worker/coordination/%s' % t
-        mgmt_worker_master = 'inproc://worker/master/coordination/%s' % t
+        # setup the mgmt sockets
+        self._setup_mgmt_sockets()
 
-        # create sockets
-        self._mgmt_sockets = dict()
-        self._mgmt_sockets['master_pub'] = self._context.socket(zmq.PUB)
-        self._mgmt_sockets['master_pub'].bind(mgmt_master_worker)
+        # setup the data sockets
+        self._setup_data_sockets()
 
-        self._mgmt_sockets['worker_sub'] = self._context.socket(zmq.SUB)
-        self._mgmt_sockets['worker_sub'].connect(mgmt_master_worker)
-
-        self._mgmt_sockets['worker_pub'] = self._context.socket(zmq.PUB)
-        self._mgmt_sockets['worker_pub'].bind(mgmt_worker_master)
-
-        self._mgmt_sockets['master_sub'] = self._context.socket(zmq.SUB)
-        self._mgmt_sockets['master_sub'].connect(mgmt_worker_master)
-        self._mgmt_sockets['master_sub'].setsockopt(zmq.SUBSCRIBE, "")
-
-        data_master_worker = 'inproc://master/worker/pipeline/%s' % t
-        data_worker_master = 'inproc://worker/master/pipeline/%s' % t
-
-        self._worker_sockets = dict()
-        self._worker_sockets['master_push'] = self._context.socket(zmq.PUSH)
-        self._worker_sockets['master_push'].bind(data_master_worker)
-
-        self._worker_sockets['worker_pull'] = self._context.socket(zmq.PULL)
-        self._worker_sockets['worker_pull'].connect(data_master_worker)
-
-        self._worker_sockets['worker_pub'] = self._context.socket(zmq.PUB)
-        self._worker_sockets['worker_pub'].bind(data_worker_master)
-
-        self._worker_sockets['master_sub'] = self._context.socket(zmq.SUB)
-        self._worker_sockets['master_sub'].connect(data_worker_master)
-        self._worker_sockets['master_sub'].setsockopt(zmq.SUBSCRIBE, "")
-
+        # setup the management interface
         self._mgmt = ZmqMgmt( self._mgmt_sockets['worker_sub'],
-            self._mgmt_sockets['worker_pub'], ioloop=self._ioloop)
+            self._mgmt_sockets['worker_pub'], io_loop=self._io_loop)
         self._mgmt.start()
         self._mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_mgmt_end)
 
     def tearDown(self):
-
-        self._mgmt._stream.flush()
+        # stop the mgmt
         self._mgmt.stop()
 
+        # close all sockets
         for socket in self._mgmt_sockets.itervalues():
             socket.close()
-
         for socket in self._worker_sockets.itervalues():
             socket.close()
 
-        self._context.term()
+        # terminate the context
+        self._ctx.term()
+
+    def _setup_mgmt_sockets(self):
+
+        self._mgmt_sockets = dict()
+
+        # adress for the communication from master to worker(s)
+        mgmt_master_worker = 'inproc://master/worker/coordination/'
+
+        # connect the master with the worker
+        # the master is a ZMQStream because we are sending msgs from the test
+        sock = self._ctx.socket(zmq.PUB)
+        sock.bind(mgmt_master_worker)
+        self._mgmt_sockets['master_pub'] = ZMQStream(sock, self._io_loop)
+        # the worker stream is created inside the ZmqMgmt class
+        self._mgmt_sockets['worker_sub'] = self._ctx.socket(zmq.SUB)
+        self._mgmt_sockets['worker_sub'].setsockopt(zmq.SUBSCRIBE, "")
+        self._mgmt_sockets['worker_sub'].connect(mgmt_master_worker)
+
+        # adress for the communication from worker(s) to master
+        mgmt_worker_master = 'inproc://worker/master/coordination/'
+
+        # connect the worker with the master
+        self._mgmt_sockets['worker_pub'] = self._ctx.socket(zmq.PUB)
+        self._mgmt_sockets['worker_pub'].bind(mgmt_worker_master)
+        sock = self._ctx.socket(zmq.SUB)
+        sock.setsockopt(zmq.SUBSCRIBE, "")
+        sock.connect(mgmt_worker_master)
+        self._mgmt_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
+
+    def _setup_data_sockets(self):
+
+        self._worker_sockets = dict()
+
+        # address for master -> worker communication
+        data_master_worker = 'inproc://master/worker/pipeline/'
+
+        sock = self._ctx.socket(zmq.PUSH)
+        sock.bind(data_master_worker)
+        self._worker_sockets['master_push'] = ZMQStream(sock, self._io_loop)
+        self._worker_sockets['worker_pull'] = self._ctx.socket(zmq.PULL)
+        self._worker_sockets['worker_pull'].connect(data_master_worker)
+
+        # address for worker -> master communication
+        data_worker_master = 'inproc://worker/master/pipeline/'
+
+        self._worker_sockets['worker_pub'] = self._ctx.socket(zmq.PUB)
+        self._worker_sockets['worker_pub'].bind(data_worker_master)
+        sock = self._ctx.socket(zmq.SUB)
+        sock.setsockopt(zmq.SUBSCRIBE, "")
+        sock.connect(data_worker_master)
+        self._worker_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
     def on_mgmt_end(self, _msg):
-        self._ioloop.stop()
+        self._io_loop.stop()
 
 
-class SimpleFetcherTestCase(ZmqWorkerIntegrationTestBase):
+class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
 
     port = random.randint(8000, 9000)
 
     def setUp(self):
-        ZmqWorkerIntegrationTestBase.setUp(self)
+        ZmqTornadoIntegrationTest.setUp(self)
 
         path = os.path.join(os.path.dirname(__file__), "static")
         application = tornado.web.Application([
             (r"/(.*)", tornado.web.StaticFileHandler, {"path": path}),
         ])
         self._server = tornado.httpserver.HTTPServer(application, io_loop =
-                self._ioloop)
+                self._io_loop)
         self._server.listen(self.port)
 
     def test_fetching_etag_works(self):
 
         settings = Settings()
-        fetcher = FetchProcessor(settings, io_loop=self._ioloop)
+        fetcher = FetchProcessor(settings, io_loop=self._io_loop)
 
         worker = AsyncZmqWorker( self._worker_sockets['worker_pull'],
             self._worker_sockets['worker_pub'],
             self._mgmt,
             fetcher,
-            self._ioloop)
+            self._io_loop)
 
         curi = CrawlUri(url="http://localhost:%s/robots.txt" % self.port,
                 host_identifier="127.0.0.1",
@@ -157,11 +178,10 @@ class SimpleFetcherTestCase(ZmqWorkerIntegrationTestBase):
             self.assertEqual("", msg.curi.content_body)
             self._mgmt_sockets['master_pub'].send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
 
-        stream = ZMQStream(self._worker_sockets['master_sub'], self._ioloop)
-        stream.on_recv(assert_expected_result_and_stop)
+        self._worker_sockets['master_sub'].on_recv(assert_expected_result_and_stop)
 
         worker.start()
-        self._ioloop.start()
+        self._io_loop.start()
 
 
 if __name__ == '__main__':

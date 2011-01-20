@@ -26,6 +26,7 @@ import time
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop
+from zmq.eventloop.zmqstream import ZMQStream
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
@@ -46,28 +47,42 @@ class WorkerProcessTestCase(unittest.TestCase):
             io_loop.stop()
 
         settings = Settings()
+        settings.ZEROMQ_MASTER_PUSH = 'inproc://spyder-zmq-master-push'
+        settings.ZEROMQ_WORKER_PROC_FETCHER_PULL = \
+            settings.ZEROMQ_MASTER_PUSH
+        settings.ZEROMQ_MASTER_SUB = 'inproc://spyder-zmq-master-sub'
+        settings.ZEROMQ_WORKER_PROC_SCOPER_PUB = \
+            settings.ZEROMQ_MASTER_SUB
+
+        settings.ZEROMQ_MGMT_MASTER = 'inproc://spyder-zmq-mgmt-master'
+        settings.ZEROMQ_MGMT_WORKER = 'inproc://spyder-zmq-mgmt-worker'
+
         pubsocket = ctx.socket(zmq.PUB)
         pubsocket.bind(settings.ZEROMQ_MGMT_MASTER)
+        pub_stream = ZMQStream(pubsocket, io_loop)
+
         subsocket = ctx.socket(zmq.SUB)
-        subsocket.bind(settings.ZEROMQ_MGMT_WORKER)
         subsocket.setsockopt(zmq.SUBSCRIBE, "")
-        time.sleep(1)
+        subsocket.bind(settings.ZEROMQ_MGMT_WORKER)
+        sub_stream = ZMQStream(subsocket, io_loop)
 
         mgmt = workerprocess.create_worker_management(settings, ctx, io_loop)
         mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, stop_looping)
         mgmt.start()
 
-        pubsocket.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
-        time.sleep(1)
+        def assert_quit_message(msg):
+            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg)
+            
+        sub_stream.on_recv(assert_quit_message)
+
+        pub_stream.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
+
         io_loop.start()
 
-        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK,
-                subsocket.recv_multipart())
-
-        mgmt._subscriber.close()
-        mgmt._publisher.close()
-        subsocket.close()
-        pubsocket.close()
+        mgmt._out_stream.close()
+        mgmt._in_stream.close()
+        pub_stream.close()
+        sub_stream.close()
         ctx.term()
 
 

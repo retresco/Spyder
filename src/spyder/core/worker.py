@@ -62,7 +62,8 @@ class ZmqWorker(object):
 
         self._processing = processing
         self._mgmt = mgmt
-        self._stream = ZMQStream(self._insocket, self._io_loop)
+        self._in_stream = ZMQStream(self._insocket, self._io_loop)
+        self._out_stream = ZMQStream(self._outsocket, self._io_loop)
 
     def _quit(self, msg):
         """
@@ -84,21 +85,21 @@ class ZmqWorker(object):
 
         # finished, now send the result back to the master
         message.curi = curi
-        self._outsocket.send_multipart(message.serialize())
+        self._out_stream.send_multipart(message.serialize())
 
     def start(self):
         """
         Start the worker.
         """
         self._mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, self._quit)
-        self._stream.on_recv(self._receive)
+        self._in_stream.on_recv(self._receive)
 
     def stop(self):
         """
         Stop the worker.
         """
         self._mgmt.remove_callback(ZMQ_SPYDER_MGMT_WORKER, self._quit)
-        self._stream.stop_on_recv()
+        self._in_stream.stop_on_recv()
 
 
 class AsyncZmqWorker(ZmqWorker):
@@ -118,4 +119,4 @@ class AsyncZmqWorker(ZmqWorker):
         the `self._processing` method.
         """
         message = DataMessage(msg)
-        self._processing(message, self._outsocket)
+        self._processing(message, self._out_stream)
