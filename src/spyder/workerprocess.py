@@ -93,16 +93,20 @@ def create_processing_function(settings, pipeline):
     """
     processors = []
     for processor in pipeline:
-        p = custom_import(processor)
-        if "create_processor" not in dir(p):
+        processor_module = custom_import(processor)
+        if "create_processor" not in dir(processor_module):
             raise ValueError("Processor module (%s) does not have a \
                     'create_processor' method!" % processor)
-        processors.append(p.create_processor(settings))
+        processors.append(processor_module.create_processor(settings))
 
     def processing(data_message):
+        """
+        The actual processing function calling each configured processor in the
+        order they have been configured.
+        """
         next_message = data_message
-        for p in processors:
-            next_message = p(next_message)
+        for processor in processors:
+            next_message = processor(next_message)
         return next_message
 
     return processing

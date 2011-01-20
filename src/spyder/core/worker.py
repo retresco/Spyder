@@ -29,7 +29,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
-from spyder.core.messages import DataMessage, MgmtMessage
+from spyder.core.messages import DataMessage
 
 
 class ZmqWorker(object):

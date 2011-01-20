@@ -17,6 +17,11 @@
 # under the License.
 #
 #
+"""
+Module for downloading content from the web.
+
+TODO: document pycurls features, i.e. what it can download.
+"""
 
 import logging
 
@@ -47,23 +52,24 @@ class FetchProcessor(object):
         assert self._user_agent
 
         self._io_loop = io_loop or IOLoop.instance()
-        self._max_clients = settings.MAX_CLIENTS
-        self._max_simultaneous_connections = \
-            settings.MAX_SIMULTANEOUS_CONNECTIONS
+
         self._follow_redirects = settings.FOLLOW_REDIRECTS
         self._max_redirects = settings.MAX_REDIRECTS
         self._gzip = settings.USE_GZIP
 
+        max_clients = settings.MAX_CLIENTS
+        max_simultaneous_connections = settings.MAX_SIMULTANEOUS_CONNECTIONS
+
         self._client = AsyncHTTPClient(self._io_loop,
-            max_clients=self._max_clients,
-            max_simultaneous_connections=self._max_simultaneous_connections)
+            max_clients=max_clients,
+            max_simultaneous_connections=max_simultaneous_connections)
 
     def __call__(self, msg, out_stream):
         """
         Work on the current `DataMessage` and send the result to `out_stream`.
         """
         # prepare the HTTPHeaders
-        headers = self._prepare_headers(msg)
+        headers = prepare_headers(msg)
 
         last_modified = None
         if msg.curi.req_header:
@@ -94,51 +100,62 @@ class FetchProcessor(object):
                 user_agent=self._user_agent)
 
         LOG.info("proc.fetch::request for %s" % msg.curi.url)
-        self._client.fetch(request, self._handle_response(msg, out_stream))
+        self._client.fetch(request, handle_response(msg, out_stream))
 
-    def _prepare_headers(self, msg):
+
+def prepare_headers(msg):
+    """
+    Construct the :class:`HTTPHeaders` with all the necessary information for
+    the request.
+    """
+    # construct the headers
+    headers = HTTPHeaders()
+
+    if msg.curi.req_header:
+        # check if we have a previous Etag
+        if "Etag" in msg.curi.req_header:
+            headers["If-None-Match"] = \
+                msg.curi.req_header["Etag"]
+
+    # manually set the Host header since we are requesting using an IP
+    host = urlsplit(msg.curi.url).hostname
+    if host is None:
+        LOG.error("proc.fetch::cannot extract hostname from url '%s'" %
+                msg.curi.url)
+    else:
+        headers["Host"] = host
+
+    return headers
+
+
+def handle_response(msg, out_stream):
+    """
+    Decorator for the actual callback function that will extract interesting
+    info and forward the response.
+    """
+    def handle_server_response(response):
         """
-        Construct the `HTTPHeaders` with all the necessary information for the
-        request.
+        The actual callback function.
+
+        Extract interesting info from the response using
+        :meth:`extract_info_from_response` and forward the result to the
+        `out_stream`.
         """
-        # construct the headers
-        headers = HTTPHeaders()
+        extract_info_from_response(response, msg)
+        LOG.info("proc.fetch::response for %s (took '%s'ms)" %
+                (msg.curi.url, response.request_time))
+        out_stream.send_multipart(msg.serialize())
 
-        if msg.curi.req_header:
-            # check if we have a previous Etag
-            if "Etag" in msg.curi.req_header:
-                headers["If-None-Match"] = \
-                    msg.curi.req_header["Etag"]
+    return handle_server_response
 
-        # manually set the Host header since we are requesting using an IP
-        host = urlsplit(msg.curi.url).hostname
-        if host is None:
-            LOG.error("proc.fetch::cannot extract hostname from url '%s'" %
-                    msg.curi.url)
-        else:
-            headers["Host"] = host
 
-        return headers
-
-    def _handle_response(self, msg, out_stream):
-        """
-        Callback is being called when the data has been retrieved from the web.
-        """
-        def handle_server_response(response):
-            self._extract_info_from_response(response, msg)
-            LOG.info("proc.fetch::response for %s (took '%s'ms)" %
-                    (msg.curi.url, response.request_time))
-            out_stream.send_multipart(msg.serialize())
-
-        return handle_server_response
-
-    def _extract_info_from_response(self, response, msg):
-        """
-        Extract the interesting information from a HTTPResponse.
-        """
-        msg.curi.status_code = response.code
-        msg.curi.content_body = response.body
-        msg.curi.req_header = response.request.headers
-        msg.curi.rep_header = response.headers
-        msg.curi.req_time = response.request_time
-        msg.curi.queue_time = response.time_info["queue"]
+def extract_info_from_response(response, msg):
+    """
+    Extract the interesting information from a HTTPResponse.
+    """
+    msg.curi.status_code = response.code
+    msg.curi.content_body = response.body
+    msg.curi.req_header = response.request.headers
+    msg.curi.rep_header = response.headers
+    msg.curi.req_time = response.request_time
+    msg.curi.queue_time = response.time_info["queue"]

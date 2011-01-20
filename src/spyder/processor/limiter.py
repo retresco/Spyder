@@ -26,7 +26,7 @@ Basically this will be used for ignoring any `robots.txt` for being processed.
 from spyder.core.constants import CURI_OPTIONAL_TRUE, CURI_EXTRACTION_FINISHED
 
 
-def create_processor(settings):
+def create_processor(_settings):
     """
     Create a new `do_not_process_robots` processor using the given `Settings`.
     """

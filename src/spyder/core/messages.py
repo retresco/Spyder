@@ -17,6 +17,11 @@
 # under the License.
 #
 #
+"""
+Definitions of messages that are being sent via ZeroMQ Sockets.
+
+Plus some (de-)serialization helpers.
+"""
 
 from datetime import datetime
 import pytz
@@ -106,11 +111,11 @@ SERVER_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 GMT = pytz.timezone('GMT')
 
 
-def serialize_date_time(dt):
+def serialize_date_time(date_time):
     """
     Create a string of the datetime.
     """
-    return GMT.localize(dt).strftime(SERVER_TIME_FORMAT)
+    return GMT.localize(date_time).strftime(SERVER_TIME_FORMAT)
 
 
 def deserialize_date_time(date_string):
