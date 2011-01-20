@@ -31,6 +31,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
+from spyder.core.messages import MgmtMessage
 from spyder.core.settings import Settings
 from spyder.processor import limiter
 from spyder import workerprocess
@@ -71,11 +72,13 @@ class WorkerProcessTestCase(unittest.TestCase):
         mgmt.start()
 
         def assert_quit_message(msg):
-            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg)
+            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg.data)
             
         sub_stream.on_recv(assert_quit_message)
 
-        pub_stream.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
+                data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        pub_stream.send_multipart(death.serialize())
 
         io_loop.start()
 

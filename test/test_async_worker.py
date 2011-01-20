@@ -28,7 +28,7 @@ from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import AsyncZmqWorker
-from spyder.core.messages import DataMessage
+from spyder.core.messages import DataMessage, MgmtMessage
 from spyder.thrift.gen.ttypes import CrawlUri
 
 
@@ -125,7 +125,9 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 class AsyncZmqWorkerIntegrationTest(ZmqTornadoIntegrationTest):
 
     def echo_processing(self, data_message, out_socket):
-        self._mgmt_sockets['master_pub'].send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        msg = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
+                data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        self._mgmt_sockets['master_pub'].send_multipart(msg.serialize())
         out_socket.send_multipart(data_message.serialize())
 
     def test_that_async_worker_works(self):
@@ -142,16 +144,16 @@ class AsyncZmqWorkerIntegrationTest(ZmqTornadoIntegrationTest):
         msg.identity = "me"
         msg.curi = curi
 
-        def assertCorrectData(msg2):
+        def assert_correct_data(msg2):
             msg3 = DataMessage(msg2)
             self.assertEqual(msg, msg3)
 
-        self._worker_sockets['master_sub'].on_recv(assertCorrectData)
+        self._worker_sockets['master_sub'].on_recv(assert_correct_data)
 
-        def assertCorrectMgmt(msg4):
-            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg4)
+        def assert_correct_mgmt(msg4):
+            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg4.data)
 
-        self._mgmt_sockets['master_sub'].on_recv(assertCorrectMgmt)
+        self._mgmt_sockets['master_sub'].on_recv(assert_correct_mgmt)
 
         self._worker_sockets['master_push'].send_multipart(msg.serialize())
 

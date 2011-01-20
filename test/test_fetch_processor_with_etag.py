@@ -35,7 +35,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
-from spyder.core.messages import DataMessage
+from spyder.core.messages import DataMessage, MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import AsyncZmqWorker
 from spyder.core.settings import Settings
@@ -135,7 +135,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 
 class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
 
-    port = random.randint(8000, 9000)
+    port = 8085
 
     def setUp(self):
         ZmqTornadoIntegrationTest.setUp(self)
@@ -148,6 +148,10 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
                 self._io_loop)
         self._server.listen(self.port)
 
+    def tearDown(self):
+        ZmqTornadoIntegrationTest.tearDown(self)
+        self._server.stop()
+
     def test_fetching_etag_works(self):
 
         settings = Settings()
@@ -158,6 +162,7 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
             self._mgmt,
             fetcher,
             self._io_loop)
+        worker.start()
 
         curi = CrawlUri(url="http://localhost:%s/robots.txt" % self.port,
                 host_identifier="127.0.0.1",
@@ -170,17 +175,18 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
         msg.identity = "me"
         msg.curi = curi
 
-        self._worker_sockets['master_push'].send_multipart(msg.serialize())
-
         def assert_expected_result_and_stop(raw_msg):
             msg = DataMessage(raw_msg)
             self.assertEqual(304, msg.curi.status_code)
             self.assertEqual("", msg.curi.content_body)
-            self._mgmt_sockets['master_pub'].send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
+            death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
+                    data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+            self._mgmt_sockets['master_pub'].send_multipart(death.serialize())
 
         self._worker_sockets['master_sub'].on_recv(assert_expected_result_and_stop)
 
-        worker.start()
+        self._worker_sockets['master_push'].send_multipart(msg.serialize())
+
         self._io_loop.start()
 
 

@@ -32,7 +32,7 @@ from spyder.core.constants import CURI_EXTRACTION_FINISHED
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
-from spyder.core.messages import DataMessage
+from spyder.core.messages import DataMessage, MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.settings import Settings
 from spyder.processor import limiter
@@ -60,10 +60,6 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 
         self._settings.ZEROMQ_MGMT_MASTER = 'inproc://spyder-zmq-mgmt-master'
         self._settings.ZEROMQ_MGMT_WORKER = 'inproc://spyder-zmq-mgmt-worker'
-
-        for s in dir(self._settings):
-            if s.startswith("ZEROMQ_"):
-                print "%s = %s" % (s, getattr(self._settings, s))
 
         # setup the mgmt sockets
         self._setup_mgmt_sockets()
@@ -166,13 +162,14 @@ class WorkerScoperTestCase(ZmqTornadoIntegrationTest):
             msg2 = DataMessage(raw_msg)
             self.assertEqual(CURI_OPTIONAL_TRUE,
                     msg2.curi.optional_vars[CURI_EXTRACTION_FINISHED])
-            self._mgmt_sockets['master_pub'].send_multipart(
-                    ZMQ_SPYDER_MGMT_WORKER_QUIT)
+            death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
+                    data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+            self._mgmt_sockets['master_pub'].send_multipart(death.serialize())
 
         self._worker_sockets['master_sub'].on_recv(assert_expected_result_and_stop)
 
-        def assert_correct_mgmt_message(raw_msg):
-            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, raw_msg)
+        def assert_correct_mgmt_message(msg):
+            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg.data)
 
         self._mgmt_sockets['master_sub'].on_recv(assert_correct_mgmt_message)
 

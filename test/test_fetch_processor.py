@@ -35,7 +35,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
-from spyder.core.messages import DataMessage
+from spyder.core.messages import DataMessage, MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import AsyncZmqWorker
 from spyder.core.settings import Settings
@@ -136,7 +136,6 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
 
     port = 8085
-    #port = random.randint(8000, 9000)
 
     def setUp(self):
         ZmqTornadoIntegrationTest.setUp(self)
@@ -148,6 +147,10 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
         self._server = tornado.httpserver.HTTPServer(application, io_loop =
                 self._io_loop)
         self._server.listen(self.port)
+
+    def tearDown(self):
+        ZmqTornadoIntegrationTest.tearDown(self)
+        self._server.stop()
 
     def test_fetching_works(self):
 
@@ -176,7 +179,9 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
             robots = open(os.path.join(os.path.dirname(__file__),
                         "static/robots.txt")).read()
             self.assertEqual(robots, msg.curi.content_body)
-            self._mgmt_sockets['master_pub'].send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
+            death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
+                    data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+            self._mgmt_sockets['master_pub'].send_multipart(death.serialize())
 
         self._worker_sockets['master_sub'].on_recv(assert_expected_result_and_stop)
 

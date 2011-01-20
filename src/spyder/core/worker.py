@@ -29,15 +29,15 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
-from spyder.core.messages import DataMessage
+from spyder.core.messages import DataMessage, MgmtMessage
 
 
 class ZmqWorker(object):
     """
     This is the ZMQ worker implementation.
 
-    The worker will register a `ZMQStream` with the configured `zmq.socket` and
-    `zmq.eventloop.ioloop` instance.
+    The worker will register a :class:`ZMQStream` with the configured
+    :class:`zmq.Socket` and :class:`zmq.eventloop.ioloop.IOLoop` instance.
 
     Upon `ZMQStream.on_recv` the configured `processors` will be executed
     with the deserialized context and the result will be published through the
@@ -69,7 +69,7 @@ class ZmqWorker(object):
         """
         The worker is quitting, stop receiving messages.
         """
-        if msg == ZMQ_SPYDER_MGMT_WORKER_QUIT:
+        if ZMQ_SPYDER_MGMT_WORKER_QUIT == msg.data:
             self.stop()
 
     def _receive(self, msg):
@@ -98,8 +98,12 @@ class ZmqWorker(object):
         """
         Stop the worker.
         """
-        self._mgmt.remove_callback(ZMQ_SPYDER_MGMT_WORKER, self._quit)
+        # stop receiving
         self._in_stream.stop_on_recv()
+        self._mgmt.remove_callback(ZMQ_SPYDER_MGMT_WORKER, self._quit)
+        # but work on anything we might already have
+        self._in_stream.flush()
+        self._out_stream.flush()
 
 
 class AsyncZmqWorker(ZmqWorker):

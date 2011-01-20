@@ -41,3 +41,7 @@ class LimiterTestCase(unittest.TestCase):
             limiter.do_not_process_robots(curi)
             self.assertEqual(CURI_OPTIONAL_TRUE,
                     curi.optional_vars[CURI_EXTRACTION_FINISHED])
+
+
+if __name__ == '__main__':
+    unittest.main()

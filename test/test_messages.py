@@ -48,16 +48,16 @@ class TestMessages(unittest.TestCase):
         self.assertEqual(msg, DataMessage(msg.serialize()))
 
     def test_that_mgmt_messages_work(self):
-        key = "me"
+        topic = "me"
         identity = "myself"
         data = "and i"
 
-        msg = MgmtMessage([key, identity, data])
+        msg = MgmtMessage([topic, identity, data])
 
-        self.assertEqual(key, msg.key)
+        self.assertEqual(topic, msg.topic)
         self.assertEqual(identity, msg.identity)
         self.assertEqual(data, msg.data)
-        self.assertEqual([key, identity, data], msg.serialize())
+        self.assertEqual([topic, identity, data], msg.serialize())
         self.assertEqual(msg, MgmtMessage(msg.serialize()))
 
     def test_that_construction_works(self):

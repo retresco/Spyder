@@ -19,9 +19,6 @@
 #
 
 import unittest
-from mockito import mock, verify, verifyZeroInteractions
-from mockito import verifyNoMoreInteractions
-from mockito import when, any
 
 import time
 
@@ -37,64 +34,6 @@ from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import ZmqWorker, AsyncZmqWorker
 from spyder.core.messages import DataMessage, MgmtMessage
 from spyder.thrift.gen.ttypes import CrawlUri
-
-
-class ZmqWorkerTest(unittest.TestCase):
-
-    def test_start_stop_works(self):
-
-        in_socket_mock = mock(Socket)
-        out_socket_mock = mock(Socket)
-        mgmt_mock = mock()
-        processing_mock = mock()
-        stream_mock = mock(ZMQStream)
-        io_loop = mock(IOLoop)
-
-        worker = ZmqWorker(in_socket_mock, out_socket_mock, mgmt_mock,
-            processing_mock, io_loop)
-        real_stream = worker._in_stream
-        worker._in_stream = stream_mock
-
-        worker.start()
-        verify(mgmt_mock).add_callback(ZMQ_SPYDER_MGMT_WORKER,
-            worker._quit)
-        verify(stream_mock).on_recv(worker._receive)
-        verify(io_loop).add_handler(in_socket_mock, real_stream._handle_events,
-            zmq.POLLERR)
-
-        worker.stop()
-        verify(mgmt_mock).remove_callback(ZMQ_SPYDER_MGMT_WORKER,
-            worker._quit)
-        verify(stream_mock).stop_on_recv()
-
-        verifyZeroInteractions(in_socket_mock)
-        verifyZeroInteractions(out_socket_mock)
-        verifyNoMoreInteractions(mgmt_mock)
-        verifyNoMoreInteractions(stream_mock)
-
-    def test_that_receiving_works(self):
-
-        def processing(curi):
-            curi.begin_processing = 123456789
-            return curi
-
-        in_socket_mock = mock(Socket)
-        out_socket_mock = mock(Socket)
-        mgmt_mock = mock()
-        stream_mock = mock(ZMQStream)
-        io_loop = mock(IOLoop)
-
-        worker = ZmqWorker(in_socket_mock, out_socket_mock, mgmt_mock,
-            processing, io_loop)
-        real_stream = worker._in_stream
-        worker._in_stream = stream_mock
-
-        curi = CrawlUri(url="http://localhost", host_identifier="127.0.0.1")
-        msg = DataMessage(curi=curi)
-        curi.begin_processing = 123456789
-        msg2 = DataMessage(curi=curi)
-
-        worker._receive(msg.serialize())
 
 
 class ZmqTornadoIntegrationTest(unittest.TestCase):
@@ -190,7 +129,9 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 class ZmqWorkerIntegrationTest(ZmqTornadoIntegrationTest):
     
     def echo_processing(self, crawl_uri):
-        self._mgmt_sockets['master_pub'].send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
+                data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        self._mgmt_sockets['master_pub'].send_multipart(death.serialize())
         return crawl_uri
 
     def test_that_stopping_worker_via_mgmt_works(self):
@@ -208,13 +149,15 @@ class ZmqWorkerIntegrationTest(ZmqTornadoIntegrationTest):
         msg.identity = "me"
         msg.curi = curi
 
-        def assertCorrectDataAnswer(msg2):
+        def assert_correct_data_answer(msg2):
             self.assertEqual(msg, DataMessage(msg2))
 
-        self._worker_sockets['master_sub'].on_recv(assertCorrectDataAnswer)
+        self._worker_sockets['master_sub'].on_recv(assert_correct_data_answer)
 
-        def assertCorrectMgmtAnswer(msg3):
-            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg3)
+        def assert_correct_mgmt_answer(msg3):
+            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg3.data)
+
+        self._mgmt_sockets['master_sub'].on_recv(assert_correct_data_answer)
 
         self._worker_sockets['master_push'].send_multipart(msg.serialize())
 

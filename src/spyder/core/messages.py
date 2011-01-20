@@ -61,29 +61,29 @@ class MgmtMessage(object):
     Envelope class describing `management` messages.
     """
 
-    def __init__(self, message=None, key=None, identity=None, data=None):
+    def __init__(self, message=None, topic=None, identity=None, data=None):
         """
         Construct a new message and if given parse the serialized message.
         """
         if message is not None:
-            self.key = message[0]
+            self.topic = message[0]
             self.identity = message[1]
             self.data = message[2]
-        elif key is not None or identity is not None or data is not None:
-            self.key = key
+        elif topic is not None or identity is not None or data is not None:
+            self.topic = topic
             self.identity = identity
             self.data = data
         else:
-            self.key = self.identity = self.data = None
+            self.topic = self.identity = self.data = None
 
     def serialize(self):
         """
         Return a new message envelope from the class members.
         """
-        return [self.key, self.identity, self.data]
+        return [self.topic, self.identity, self.data]
 
     def __eq__(self, other):
-        return (self.key == other.key
+        return (self.topic == other.topic
             and self.identity == other.identity
             and self.data == other.data)
 

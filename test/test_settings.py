@@ -43,3 +43,7 @@ class SettingsTest(unittest.TestCase):
 
         self.assertEqual(test_settings_settings.ZEROMQ_MGMT_WORKER,
                 settings.ZEROMQ_MGMT_WORKER)
+
+
+if __name__ == '__main__':
+    unittest.main()

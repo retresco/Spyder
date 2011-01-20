@@ -21,12 +21,13 @@
 A management module for managing components via ZeroMQ.
 """
 
-import zmq
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
 
-from spyder.core.constants import ZMQ_SPYDER_TOPIC, ZMQ_SPYDER_MGMT_WORKER_QUIT
+from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
+from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
+from spyder.core.messages import MgmtMessage
 
 
 class ZmqMgmt(object):
@@ -41,6 +42,8 @@ class ZmqMgmt(object):
         The `subscriber` socket is the socket used by the Master to send
         commands to the workers. The publisher socket is used to send commands
         to the Master.
+
+        You have to set the `zmq.SUBSCRIBE` socket option yourself!
         """
         self._io_loop = kwargs.get('io_loop', IOLoop.instance())
 
@@ -52,23 +55,22 @@ class ZmqMgmt(object):
 
         self._callbacks = dict()
 
-    def _receive(self, message):
+    def _receive(self, raw_msg):
         """
         Main method for receiving management messages.
 
         `message` is a multipart message where `message[0]` contains the topic,
         `message[1]` is 0 and `message[1]` contains the actual message.
         """
-        topic = message[0]
+        msg = MgmtMessage(raw_msg)
 
-        if topic in self._callbacks:
-            for callback in self._callbacks[topic]:
+        if msg.topic in self._callbacks:
+            for callback in self._callbacks[msg.topic]:
                 if callable(callback):
-                    callback(message)
+                    callback(msg)
 
-        if message == ZMQ_SPYDER_MGMT_WORKER_QUIT:
-            self._in_stream.stop_on_recv()
-            self._out_stream.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
+        if ZMQ_SPYDER_MGMT_WORKER_QUIT == msg.data:
+            self.stop()
 
     def start(self):
         """
@@ -81,6 +83,9 @@ class ZmqMgmt(object):
         Stop the MGMT interface.
         """
         self._in_stream.stop_on_recv()
+        msg = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=None,
+                data=ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
+        self._out_stream.send_multipart(msg)
 
     def add_callback(self, topic, callback):
         """
@@ -100,6 +105,3 @@ class ZmqMgmt(object):
         """
         if topic in self._callbacks and callback in self._callbacks[topic]:
             self._callbacks[topic].remove(callback)
-
-            if len(self._callbacks[topic]) == 0:
-                del self._callbacks[topic]

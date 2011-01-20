@@ -32,7 +32,7 @@ from spyder.core.constants import CURI_EXTRACTION_FINISHED
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
-from spyder.core.messages import DataMessage
+from spyder.core.messages import DataMessage, MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.settings import Settings
 from spyder.processor import limiter
@@ -165,8 +165,9 @@ class WorkerExtractorTestCase(ZmqTornadoIntegrationTest):
             msg2 = DataMessage(raw_msg)
             self.assertEqual(CURI_OPTIONAL_TRUE,
                     msg2.curi.optional_vars[CURI_EXTRACTION_FINISHED])
-            self._mgmt_sockets['master_pub'].send_multipart(
-                    ZMQ_SPYDER_MGMT_WORKER_QUIT)
+            death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
+                    data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+            self._mgmt_sockets['master_pub'].send_multipart(death.serialize())
 
         self._worker_sockets['master_sub'].on_recv(assert_expected_result_and_stop)
 

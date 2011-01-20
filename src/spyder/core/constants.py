@@ -21,11 +21,13 @@
 Serveral constants mainly for ZeroMQ topics and messages.
 """
 
-# zeromq constants
-ZMQ_SPYDER_TOPIC = 'spyder.'
-ZMQ_SPYDER_MGMT_WORKER = ZMQ_SPYDER_TOPIC + 'worker.'
-ZMQ_SPYDER_MGMT_WORKER_QUIT = [ZMQ_SPYDER_MGMT_WORKER, 'quit'.encode()]
-ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK = [ZMQ_SPYDER_MGMT_WORKER, 'quit.ack'.encode()]
+# general topic for spyder related management tasks
+ZMQ_SPYDER_MGMT = 'spyder.'
+
+ZMQ_SPYDER_MGMT_WORKER = ZMQ_SPYDER_MGMT + 'worker.'
+
+ZMQ_SPYDER_MGMT_WORKER_QUIT = 'quit'.encode()
+ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK = 'quit.ack'.encode()
 
 # constants used in the optional_vars map of CrawlUris
 CURI_OPTIONAL_TRUE = "1".encode()

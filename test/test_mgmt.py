@@ -26,6 +26,7 @@ import zmq
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
 
+from spyder.core.messages import MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.constants import *
 
@@ -63,12 +64,14 @@ class ManagementIntegrationTest(unittest.TestCase):
         self._ctx.term()
 
     def call_me(self, msg):
-        self.assertEqual( [ self._topic, 'test' ], msg )
-        self._master_pub.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
-
+        self.assertEqual(self._topic, msg.topic)
+        self.assertEqual('test'.encode(), msg.data)
+        death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
+                data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        self._master_pub.send_multipart(death.serialize())
 
     def on_end(self, msg):
-        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT, msg)
+        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT, msg.data)
         self._io_loop.stop()
 
 
@@ -82,13 +85,17 @@ class ManagementIntegrationTest(unittest.TestCase):
         mgmt.add_callback(self._topic, self.call_me)
         mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
 
-        self._master_pub.send_multipart( [ self._topic, 'test'.encode() ] )
+        test_msg = MgmtMessage(topic=self._topic, data='test'.encode())
+        self._master_pub.send_multipart(test_msg.serialize())
 
-        def assertCorrectMgmtAnswer(msg):
-            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg)
+        def assert_correct_mgmt_answer(raw_msg):
+            msg = MgmtMessage(raw_msg)
+            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg.data)
             mgmt.remove_callback(self._topic, self.call_me)
             mgmt.remove_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
             self.assertEqual({}, mgmt._callbacks)
+
+        self._master_sub.on_recv(assert_correct_mgmt_answer)
 
         self._io_loop.start()
 
