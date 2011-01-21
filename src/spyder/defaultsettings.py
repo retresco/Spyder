@@ -45,6 +45,11 @@ SPYDER_SCOPER_PIPELINE = [
 ]
 
 
+# Default HTML Extractor settings
+# maximum number of chars an element name may have
+REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH = 64
+
+
 # improved settings
 # only edit if you are usually working behind a nuclear power plant's control
 # panel

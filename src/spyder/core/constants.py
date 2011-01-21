@@ -33,7 +33,12 @@ ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK = 'quit.ack'.encode()
 CURI_OPTIONAL_TRUE = "1".encode()
 CURI_OPTIONAL_FALSE = "0".encode()
 
+# username and password fields
 CURI_SITE_USERNAME = "username".encode()
 CURI_SITE_PASSWORD = "password".encode()
 
+# extraction finished field
 CURI_EXTRACTION_FINISHED = "extraction_finished".encode()
+
+# extracted urls field
+CURI_EXTRACTED_URLS = "extracted_urls".encode()
