@@ -154,8 +154,34 @@ def extract_info_from_response(response, msg):
     Extract the interesting information from a HTTPResponse.
     """
     msg.curi.status_code = response.code
-    msg.curi.content_body = response.body
     msg.curi.req_header = response.request.headers
     msg.curi.rep_header = response.headers
     msg.curi.req_time = response.request_time
     msg.curi.queue_time = response.time_info["queue"]
+
+    (_content_type, encoding) = get_content_type_encoding(
+        response.headers)
+    # some content types might have no encoding info (text/plain)
+    if encoding:
+        msg.curi.content_body = response.body.encode(encoding)
+    else:
+        msg.curi.content_body = response.body.encode()
+
+    return msg
+
+
+def get_content_type_encoding(rep_header):
+    """
+    Determine the content encoding based on the `Content-Type` Header.
+    """
+    charset = ""
+    content_type = ""
+    for part in rep_header["Content-Type"].split(";"):
+        part = part.strip().lower()
+        if part.startswith("charset"):
+            charset = part.split("=")[2]
+            charset = charset.replace("-", "_")
+        else:
+            content_type = part
+
+    return (content_type, charset)

@@ -33,6 +33,7 @@ import re
 from urlparse import urlparse
 
 from spyder.core.constants import CURI_EXTRACTED_URLS
+from spyder.processor.fetcher import get_content_type_encoding
 
 # Maximum number of chars an element name may have
 MAX_ELEMENT_REPLACE = "MAX_ELEMENT_REPLACE"
@@ -182,7 +183,8 @@ class DefaultHtmlLinkExtractor(object):
         """
         allowed = ["text/html", "application/xhtml", "text/vnd.wap.wml",
             "application/vnd.wap.wml", "application/vnd.wap.xhtm"]
-        return curi.rep_header["Content-Type"].lower() in allowed
+        (ctype, _enc) = get_content_type_encoding(curi.rep_header)
+        return ctype in allowed
 
 
 def create_processor(settings):
