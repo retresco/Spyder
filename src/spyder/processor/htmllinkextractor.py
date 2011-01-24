@@ -87,9 +87,9 @@ class DefaultHtmlLinkExtractor(object):
         max_size = settings.REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH
         self._tag_extractor = re.compile(
                 RELEVANT_TAG_EXTRACTOR.replace(MAX_ELEMENT_REPLACE,
-                    str(max_size)), re.I|re.S)
+                    str(max_size)), re.I | re.S)
 
-        self._link_extractor = re.compile(LINK_EXTRACTOR, re.I|re.S)
+        self._link_extractor = re.compile(LINK_EXTRACTOR, re.I | re.S)
 
     def __call__(self, curi):
         """
@@ -115,7 +115,8 @@ class DefaultHtmlLinkExtractor(object):
 
             elif tag.start(7) > 0:
                 # a meta tag
-                curi = self._process_meta(curi, content[tag.start(5):tag.end(5)])
+                curi = self._process_meta(curi,
+                        content[tag.start(5):tag.end(5)])
 
             elif tag.start(5) > 0:
                 # generic <whatever tag
@@ -145,28 +146,29 @@ class DefaultHtmlLinkExtractor(object):
             curi = self._extract_links(curi, element)
 
         return curi
-        
+
     def _extract_links(self, curi, element):
         """
         Extract links from an element, e.g. href="" attributes.
         """
         parsed_url = urlparse(curi.url)
         links = []
-        for link in self._link_extractor.finditer(element):
-            l = link.group(3)[1:-1]
-            if "://" not in l:
+        for link_candidate in self._link_extractor.finditer(element):
+            link = link_candidate.group(3)[1:-1]
+            if "://" not in link:
                 # a relative link
-                if l.startswith('/'):
-                    l = parsed_url.scheme + "://" + parsed_url.netloc + l
+                if link.startswith('/'):
+                    link = parsed_url.scheme + "://" + parsed_url.netloc + \
+                        link
                 else:
                     if not parsed_url.path.endswith('/'):
-                        l = parsed_url.scheme + "://" + \
+                        link = parsed_url.scheme + "://" + \
                             parsed_url.netloc + parsed_url.path + '/' + \
-                            l
+                            link
                     else:
-                        l = parsed_url.scheme + "://" + \
-                            parsed_url.netloc + parsed_url.path + l
-            links.append(l)
+                        link = parsed_url.scheme + "://" + \
+                            parsed_url.netloc + parsed_url.path + link
+            links.append(link)
 
         if not CURI_EXTRACTED_URLS in curi.optional_vars:
             curi.optional_vars[CURI_EXTRACTED_URLS] = links
