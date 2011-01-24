@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2008 Daniel Truemper truemped@googlemail.com
 #
-# __init__.py 07-Jan-2011
+# __init__.py 10-Jan-2011
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,10 +18,8 @@
 #
 #
 """
-The Spyder.
+Generated modules from thrift.
 """
 
-__version__ = '0.0-dev'
+__all__ = ['ttypes', 'constants']
 
-__all__ = ["core", "processor", "defaultsettings", "spyder_template", "thrift",
-        "workerprocess"]

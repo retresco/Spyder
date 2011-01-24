@@ -24,54 +24,81 @@ import time
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop
+from zmq.eventloop.zmqstream import ZMQStream
 
+from spyder.core.messages import MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.constants import *
 
 
-class ManagementTest(unittest.TestCase):
+class ManagementIntegrationTest(unittest.TestCase):
 
 
-    def callMe(self, msg):
-        self.assertEqual( [ self._topic, 'test' ], msg )
-        self._master_pub.send_multipart(ZMQ_SPYDER_MGMT_WORKER_QUIT)
+    def setUp(self):
+        self._io_loop = IOLoop.instance()
+        self._ctx = zmq.Context(1)
 
+        sock = self._ctx.socket(zmq.PUB)
+        sock.bind('inproc://master/worker/coordination')
+        self._master_pub = ZMQStream(sock, self._io_loop)
 
-    def onEnd(self, msg):
-        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT, msg)
-        self._ioloop.stop()
+        self._worker_sub = self._ctx.socket(zmq.SUB)
+        self._worker_sub.setsockopt(zmq.SUBSCRIBE, "")
+        self._worker_sub.connect('inproc://master/worker/coordination')
 
+        self._worker_pub = self._ctx.socket(zmq.PUB)
+        self._worker_pub.bind( 'inproc://worker/master/coordination' )
 
-    def test_simple_mgmg_session(self):
-        
-        context = zmq.Context(1)
-
-        self._master_pub = context.socket(zmq.PUB)
-        self._master_pub.bind( 'inproc://master/worker/coordination' )
-
-        worker_sub = context.socket(zmq.SUB)
-        worker_sub.connect( 'inproc://master/worker/coordination' )
-
-        worker_pub = context.socket(zmq.PUB)
-        worker_pub.bind( 'inproc://worker/master/coordination' )
-
-        master_sub = context.socket(zmq.SUB)
-        master_sub.connect( 'inproc://worker/master/coordination' )
-
-        self._ioloop = IOLoop.instance()
+        sock = self._ctx.socket(zmq.SUB)
+        sock.setsockopt(zmq.SUBSCRIBE, "")
+        sock.connect( 'inproc://worker/master/coordination' )
+        self._master_sub = ZMQStream(sock, self._io_loop)
 
         self._topic = ZMQ_SPYDER_MGMT_WORKER + 'testtopic'
 
-        mgmt = ZmqMgmt( worker_sub, worker_pub, ioloop=self._ioloop)
-        mgmt.addCallback(self._topic, self.callMe)
-        mgmt.addCallback(ZMQ_SPYDER_MGMT_WORKER, self.onEnd)
+    def tearDown(self):
+        self._master_pub.close()
+        self._worker_sub.close()
+        self._worker_pub.close()
+        self._master_sub.close()
+        self._ctx.term()
 
-        self._master_pub.send_multipart( [ self._topic, 'test'.encode() ] )
+    def call_me(self, msg):
+        self.assertEqual(self._topic, msg.topic)
+        self.assertEqual('test'.encode(), msg.data)
+        death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
+                data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        self._master_pub.send_multipart(death.serialize())
 
-        self._ioloop.start()
+    def on_end(self, msg):
+        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT, msg.data)
+        self._io_loop.stop()
 
-        master_sub.setsockopt(zmq.SUBSCRIBE, "")
-        self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, master_sub.recv_multipart())
+
+    def test_simple_mgmt_session(self):
+        
+        mgmt = ZmqMgmt(self._worker_sub, self._worker_pub, io_loop=self._io_loop)
+        mgmt.start()
+
+        self.assertRaises(ValueError, mgmt.add_callback, "test", "test")
+
+        mgmt.add_callback(self._topic, self.call_me)
+        mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
+
+        test_msg = MgmtMessage(topic=self._topic, data='test'.encode())
+        self._master_pub.send_multipart(test_msg.serialize())
+
+        def assert_correct_mgmt_answer(raw_msg):
+            msg = MgmtMessage(raw_msg)
+            self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg.data)
+            mgmt.remove_callback(self._topic, self.call_me)
+            mgmt.remove_callback(ZMQ_SPYDER_MGMT_WORKER, self.on_end)
+            self.assertEqual({}, mgmt._callbacks)
+
+        self._master_sub.on_recv(assert_correct_mgmt_answer)
+
+        self._io_loop.start()
+
 
 if __name__ == '__main__':
     unittest.main()

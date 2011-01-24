@@ -17,25 +17,28 @@
 # under the License.
 #
 #
-
-
-ZMQ_SPYDER_TOPIC = 'spyder.'
 """
-Base name for `zmq.PUB` sockets. Used for message filtering.
+Serveral constants mainly for ZeroMQ topics and messages.
 """
 
-ZMQ_SPYDER_MGMT_WORKER = ZMQ_SPYDER_TOPIC + 'worker.'
-"""
-Base name for messages to workers.
-"""
+# general topic for spyder related management tasks
+ZMQ_SPYDER_MGMT = 'spyder.'
 
-ZMQ_SPYDER_MGMT_WORKER_QUIT = [ ZMQ_SPYDER_MGMT_WORKER, 'quit'.encode() ]
-"""
-Command for quiting the workers.
-"""
+ZMQ_SPYDER_MGMT_WORKER = ZMQ_SPYDER_MGMT + 'worker.'
+ZMQ_SPYDER_MGMT_WORKER_AVAIL = 'be here now'.encode()
+ZMQ_SPYDER_MGMT_WORKER_QUIT = 'quit'.encode()
+ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK = 'quit.ack'.encode()
 
-ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK = [ZMQ_SPYDER_MGMT_WORKER, 'quit.ack'.encode()]
-"""
-Acknowledge that the worker is going to quit.
-"""
+# constants used in the optional_vars map of CrawlUris
+CURI_OPTIONAL_TRUE = "1".encode()
+CURI_OPTIONAL_FALSE = "0".encode()
 
+# username and password fields
+CURI_SITE_USERNAME = "username".encode()
+CURI_SITE_PASSWORD = "password".encode()
+
+# extraction finished field
+CURI_EXTRACTION_FINISHED = "extraction_finished".encode()
+
+# extracted urls field
+CURI_EXTRACTED_URLS = "extracted_urls".encode()

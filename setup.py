@@ -27,7 +27,7 @@ assert __version__
 long_description = open("README.rst").read()
 assert long_description
 
-tests_require = ['mockito>=0.5.1',]
+tests_require = ['mockito>=0.5.1', 'coverage>=3.4']
 
 setup(
     name = "sPyder",
@@ -48,14 +48,14 @@ setup(
         'supervisor>=3.0a9',
         'supervisor_twiddler>=0.2',
         'thrift>=0.5.0',
+        'pycurl>=7.19.0',
+        'pytz>=2010o',
     ],
     tests_require = tests_require,
     extras_require = {'test': tests_require},
     entry_points = {
         'console_scripts' : [
             'spyder = spyder:main',
-            'spyder-master = spyder.master:main',
-            'spyder-worker = spyder.worker:main',
         ]
     },
 )

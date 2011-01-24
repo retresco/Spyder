@@ -17,10 +17,76 @@
 # under the License.
 #
 #
+"""
+Module for the default spyder settings.
+"""
 
-# module for the default spyder settings
+# simple settings
 
-# ZeroMQ
+# Fetch Processor
+USER_AGENT = "Mozilla/5.0 (compatible; spyder/0.1; " + \
+    "+http://github.com/retresco/spyder)"
+MAX_CLIENTS = 10
+MAX_SIMULTANEOUS_CONNECTIONS = 1
+FOLLOW_REDIRECTS = True
+MAX_REDIRECTS = 1
+USE_GZIP = True
 
-ZEROMQ_WORKER_SOCKET="ipc:///tmp/spyder-zmq-worker.sock"
 
+# The pipeline of link extractors
+SPYDER_EXTRACTOR_PIPELINE = [
+    'spyder.processor.limiter',
+    'spyder.processor.htmllinkextractor',
+]
+
+# Default HTML Extractor settings
+# maximum number of chars an element name may have
+REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH = 64
+
+
+# The pipeline of scope processors
+SPYDER_SCOPER_PIPELINE = [
+    'spyder.processor.limiter',
+    'spyder.processor.scoper',
+]
+
+# List of positive regular expressions for the crawl scope
+REGEX_SCOPE_POSITIVE = [
+    "http://[^/]+/.*\.html",
+]
+
+# List of negative regular expressions for the crawl scope
+REGEX_SCOPE_NEGATIVE = [
+    "ftp://[^/]+/.*\.avi",
+]
+
+
+#
+# improved settings
+# only edit if you are usually working behind a nuclear power plant's control
+# panel
+
+# ZeroMQ Master Push
+ZEROMQ_MASTER_PUSH = "ipc:///tmp/spyder-zmq-master-push.sock"
+ZEROMQ_MASTER_PUSH_HWM = 10
+
+# ZeroMQ Fetcher
+ZEROMQ_WORKER_PROC_FETCHER_PULL = ZEROMQ_MASTER_PUSH
+ZEROMQ_WORKER_PROC_FETCHER_PUSH = "inproc://processing/fetcher/push"
+ZEROMQ_WORKER_PROC_FETCHER_PUSH_HWM = 10
+
+# ZeroMQ Extractor
+ZEROMQ_WORKER_PROC_EXTRACTOR_PULL = ZEROMQ_WORKER_PROC_FETCHER_PUSH
+ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH = "inproc://processing/extractor/push"
+ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH_HWM = 10
+
+# ZeroMQ Scoper
+ZEROMQ_WORKER_PROC_SCOPER_PULL = ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH
+ZEROMQ_WORKER_PROC_SCOPER_PUB = "ipc:///tmp/spyder-zmq-master-sub.sock"
+
+# ZeroMQ Master Sub
+ZEROMQ_MASTER_SUB = ZEROMQ_WORKER_PROC_SCOPER_PUB
+
+# ZeroMQ Management Sockets
+ZEROMQ_MGMT_MASTER = "ipc:///tmp/spyder-zmq-mgmt-master.sock"
+ZEROMQ_MGMT_WORKER = "ipc:///tmp/spyder-zmq-mgmt-worker.sock"

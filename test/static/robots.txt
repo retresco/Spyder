@@ -1,0 +1,22 @@
+User-agent: *
+Disallow: /RealMedia/
+Disallow: /archiv/
+Disallow: /forum/
+Disallow: /cgi-bin/
+Disallow: /werbung/
+Disallow: /artikelversand/
+Disallow: /grossbild/
+Disallow: /druckbild/
+Disallow: /druckrezension/
+Disallow: /druckversion/
+Disallow: /active/
+Disallow: /staticgen/mobil/
+
+#User-agent: Firefly/1.0
+#Disallow: /
+
+User-agent: WebReaper
+Disallow: /
+
+User-agent: Slurp
+Crawl-delay: 18
