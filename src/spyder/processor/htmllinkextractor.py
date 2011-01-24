@@ -33,6 +33,7 @@ import re
 from urlparse import urlparse
 
 from spyder.core.constants import CURI_EXTRACTED_URLS
+from spyder.core.constants import CURI_OPTIONAL_TRUE, CURI_EXTRACTION_FINISHED
 from spyder.processor.fetcher import get_content_type_encoding
 
 # Maximum number of chars an element name may have
@@ -97,6 +98,10 @@ class DefaultHtmlLinkExtractor(object):
         But: only if the content type allows us to do so.
         """
         if not self._restrict_content_type(curi):
+            return curi
+
+        if CURI_EXTRACTION_FINISHED in curi.optional_vars and \
+            curi.optional_vars[CURI_EXTRACTION_FINISHED] == CURI_OPTIONAL_TRUE:
             return curi
 
         content = curi.content_body
