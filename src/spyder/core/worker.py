@@ -105,6 +105,13 @@ class ZmqWorker(object):
         self._in_stream.flush()
         self._out_stream.flush()
 
+    def close(self):
+        """
+        Close all open sockets.
+        """
+        self._in_stream.close()
+        self._out_stream.close()
+
 
 class AsyncZmqWorker(ZmqWorker):
     """

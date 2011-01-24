@@ -53,7 +53,7 @@ class RegexScoper(object):
         """
         Filter all newly extracted URLs for those we want in this crawl.
         """
-        if not curi.optional_vars[CURI_EXTRACTED_URLS]:
+        if CURI_EXTRACTED_URLS not in curi.optional_vars:
             return curi
 
         urls = []

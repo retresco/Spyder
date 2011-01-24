@@ -87,6 +87,13 @@ class ZmqMgmt(object):
                 data=ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
         self._out_stream.send_multipart(msg)
 
+    def close(self):
+        """
+        Close all open sockets.
+        """
+        self._in_stream.close()
+        self._out_stream.close()
+
     def add_callback(self, topic, callback):
         """
         Add a callback to the specified topic.

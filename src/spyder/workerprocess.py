@@ -36,7 +36,11 @@ the newly extracted URLs are within the scope of the crawl.
 """
 
 import zmq
+from zmq.eventloop.ioloop import IOLoop, DelayedCallback
 
+from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
+from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_AVAIL
+from spyder.core.messages import MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import ZmqWorker, AsyncZmqWorker
 from spyder.processor.fetcher import FetchProcessor
@@ -53,7 +57,7 @@ def create_worker_management(settings, zmq_context, io_loop):
     publishing_socket = zmq_context.socket(zmq.PUB)
     publishing_socket.connect(settings.ZEROMQ_MGMT_WORKER)
 
-    return ZmqMgmt(listening_socket, publishing_socket, ioloop=io_loop)
+    return ZmqMgmt(listening_socket, publishing_socket, io_loop=io_loop)
 
 
 def create_worker_fetcher(settings, mgmt, zmq_context, io_loop):
@@ -150,3 +154,55 @@ def create_worker_scoper(settings, mgmt, zmq_context, io_loop):
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
         io_loop=io_loop)
+
+
+def main(settings):
+    """
+    The :meth:`main` method for worker processes.
+
+    Here we will:
+
+     - create a :class:`ZmqMgmt` instance
+
+     - create a :class:`Fetcher` instance
+
+     - initialize and instantiate the extractor chain
+
+     - initialize and instantiate the scoper chain
+
+    The `settings` have to be loaded already.
+    """
+    ctx = zmq.Context()
+    io_loop = IOLoop.instance()
+
+    mgmt = create_worker_management(settings, ctx, io_loop)
+
+    fetcher = create_worker_fetcher(settings, mgmt, ctx, io_loop)
+    fetcher.start()
+    extractor = create_worker_extractor(settings, mgmt, ctx, io_loop)
+    extractor.start()
+    scoper = create_worker_scoper(settings, mgmt, ctx, io_loop)
+    scoper.start()
+
+    def quit_worker():
+        """
+        When the worker should quit, stop the io_loop after 2 seconds.
+        """
+        DelayedCallback(io_loop.stop, 2000, io_loop)
+
+    mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, quit_worker)
+    mgmt.start()
+
+    # notify the master that we are online
+    msg = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=None,
+            data=ZMQ_SPYDER_MGMT_WORKER_AVAIL)
+    mgmt._out_stream.send_multipart(msg.serialize())
+
+    # this will block until the worker quits
+    io_loop.start()
+
+    for mod in [fetcher, extractor, scoper, mgmt]:
+        mod.close()
+    ctx.term()
+
+    print "Worker stopped."

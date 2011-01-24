@@ -36,6 +36,7 @@ USE_GZIP = True
 # The pipeline of link extractors
 SPYDER_EXTRACTOR_PIPELINE = [
     'spyder.processor.limiter',
+    'spyder.processor.htmllinkextractor',
 ]
 
 # Default HTML Extractor settings
@@ -46,6 +47,7 @@ REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH = 64
 # The pipeline of scope processors
 SPYDER_SCOPER_PIPELINE = [
     'spyder.processor.limiter',
+    'spyder.processor.scoper',
 ]
 
 # List of positive regular expressions for the crawl scope

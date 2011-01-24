@@ -25,7 +25,7 @@ Serveral constants mainly for ZeroMQ topics and messages.
 ZMQ_SPYDER_MGMT = 'spyder.'
 
 ZMQ_SPYDER_MGMT_WORKER = ZMQ_SPYDER_MGMT + 'worker.'
-
+ZMQ_SPYDER_MGMT_WORKER_AVAIL = 'be here now'.encode()
 ZMQ_SPYDER_MGMT_WORKER_QUIT = 'quit'.encode()
 ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK = 'quit.ack'.encode()
 
