@@ -21,7 +21,70 @@
 The Spyder.
 """
 
+import os
+import shutil
+import stat
+import sys
+
+import spyder
+
 __version__ = '0.0-dev'
+
 
 __all__ = ["core", "processor", "defaultsettings", "spyder_template", "thrift",
         "workerprocess"]
+
+
+def copy_skeleton_dir(destination):
+    """
+    Copy the skeleton directory (spyder_template) to a new directory.
+    """
+    if not os.path.exists(destination):
+        os.makedirs(destination)
+    template_dir = os.path.join(spyder.__path__[0], 'spyder_template')
+
+    for root, subdirs, files in os.walk(template_dir):
+        relative = root[len(template_dir) + 1:]
+        if relative:
+            os.mkdir(os.path.join(destination, relative))
+
+        for subdir in subdirs:
+            if subdir.startswith('.'):
+                subdirs.remove(subdir)
+
+        for f in files:
+            if not f.endswith('.py'):
+                continue
+            path_old = os.path.join(root, f)
+            path_new = os.path.join(destination, relative, f)
+            fp_old = open(path_old, 'r')
+            fp_new = open(path_new, 'w')
+            fp_new.write(fp_old.read())
+            fp_old.close()
+            fp_new.close()
+
+            try:
+                shutil.copymode(path_old, path_new)
+                if sys.platform.startswith('java'):
+                    # On Jython there is no os.access()
+                    return
+                if not os.access(path_new, os.W_OK):
+                    st = os.stat(path_new)
+                    new_permissions = stat.S_IMODE(st.st_mode) | stat.S_IWUSR
+                    os.chmod(path_new, new_permissions)
+            except OSError:
+                sys.stderr.write("Could not set permission bits on %s" %
+                    path_new)
+
+
+def main(args=None):
+    """
+    Method for creating new environments for Spyders.
+    """
+    if len(sys.argv) != 2 or "start" != sys.argv[1]:
+        sys.stderr.write(
+"""Usage: 'spyder start'
+    to start a new spyder in the current directory\n""")
+        sys.exit(1)
+
+    copy_skeleton_dir(os.getcwd())
