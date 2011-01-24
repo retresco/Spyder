@@ -40,6 +40,7 @@ from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import AsyncZmqWorker
 from spyder.core.settings import Settings
 from spyder.processor.fetcher import FetchProcessor
+from spyder.processor.fetcher import get_content_type_encoding
 from spyder.thrift.gen.ttypes import CrawlUri
 
 
@@ -151,6 +152,13 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
     def tearDown(self):
         ZmqTornadoIntegrationTest.tearDown(self)
         self._server.stop()
+
+    def test_content_type_encoding(self):
+        rep_header = dict()
+        rep_header["Content-Type"] = "text/html; charset=ISO-8859-1"
+        (ct, encoding) = get_content_type_encoding(rep_header)
+        self.assertEqual("text/html", ct)
+        self.assertEqual("iso_8859_1", encoding)
 
     def test_fetching_works(self):
 

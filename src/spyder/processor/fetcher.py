@@ -179,7 +179,7 @@ def get_content_type_encoding(rep_header):
     for part in rep_header["Content-Type"].split(";"):
         part = part.strip().lower()
         if part.startswith("charset"):
-            charset = part.split("=")[2]
+            charset = part.split("=")[1]
             charset = charset.replace("-", "_")
         else:
             content_type = part
