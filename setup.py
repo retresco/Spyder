@@ -56,8 +56,6 @@ setup(
     entry_points = {
         'console_scripts' : [
             'spyder = spyder:main',
-            'spyder-master = spyder.master:main',
-            'spyder-worker = spyder.worker:main',
         ]
     },
 )
