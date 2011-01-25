@@ -48,6 +48,8 @@ class SqliteQueuesTest(unittest.TestCase):
         self.assertEqual(queue, queue_res)
         self.assertEqual(last_date, last_date_res)
 
+        q.close()
+
     def test_updating_works(self):
 
         uri = ("http://localhost", "etag", int(time.time()*1000), 1,
