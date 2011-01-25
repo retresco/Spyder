@@ -48,6 +48,7 @@ setup(
         'thrift>=0.5.0',
         'pycurl>=7.19.0',
         'pytz>=2010o',
+        'brownie>=0.4.1',
     ],
     tests_require = tests_require,
     extras_require = {'test': tests_require},

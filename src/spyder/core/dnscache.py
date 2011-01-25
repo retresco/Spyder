@@ -29,7 +29,7 @@ version.
 
 import socket
 
-from spyder.collections.lrudict import LRUDict
+from brownie.caching import LRUCache as LRUDict
 
 
 class DnsCache(object):
@@ -41,7 +41,7 @@ class DnsCache(object):
         """
         Initialize the cache.
         """
-        self._cache = LRUDict(max_capacity=max_size)
+        self._cache = LRUDict(maxsize=max_size)
 
     def __getitem__(self, hostname, port=80):
         """
