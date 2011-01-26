@@ -43,7 +43,7 @@ class DnsCache(object):
         """
         self._cache = LRUDict(maxsize=max_size)
 
-    def __getitem__(self, hostname, port=80):
+    def __getitem__(self, host_port_string):
         """
         Retrieve the item from the cache or resolve the hostname and store the
         result in the cache.
@@ -51,12 +51,12 @@ class DnsCache(object):
         Returns a tuple of `(ip, port)`. At the moment we only support IPv4 but
         this will probably change in the future.
         """
-        key = "%s:%s" % (hostname, port)
-        if key not in self._cache:
+        if host_port_string not in self._cache:
+            (hostname, port) = host_port_string.split(":")
             infos = socket.getaddrinfo(hostname, port, 0, 0, socket.SOL_TCP)
             for (family, socktype, proto, canoname, sockaddr) in infos:
                 if len(sockaddr) == 2:
                     # IPv4 (which we prefer)
-                    self._cache[key] = sockaddr
+                    self._cache[host_port_string] = sockaddr
 
-        return self._cache[key]
+        return self._cache[host_port_string]

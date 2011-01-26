@@ -30,8 +30,9 @@ class DnsCacheTest(unittest.TestCase):
 
     def test_dns_cache(self):
         dns = DnsCache(1)
-        self.assertEqual(('127.0.0.1', 80), dns["localhost"])
-        dns['www.google.de']
+        self.assertEqual(('127.0.0.1', 80), dns["localhost:80"])
+        self.assertEqual(('127.0.0.1', 81), dns["localhost:81"])
+        dns['www.google.de:80']
         self.assertTrue(1, len(dns._cache))
 
 
