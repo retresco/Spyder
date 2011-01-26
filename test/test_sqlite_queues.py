@@ -40,13 +40,13 @@ class SqliteQueuesTest(unittest.TestCase):
 
         cursor = q._connection.execute("SELECT * FROM queues")
         uri_res = cursor.fetchone()
-        (url, etag, mod_date, queue, last_date) = uri
-        (url_res, etag_res, mod_date_res, queue_res, last_date_res) = uri_res
+        (url, etag, mod_date, queue, next_date) = uri
+        (url_res, etag_res, mod_date_res, queue_res, next_date_res) = uri_res
         self.assertEqual(url, url_res)
         self.assertEqual(etag, etag_res)
         self.assertEqual(mod_date, mod_date_res)
         self.assertEqual(queue, queue_res)
-        self.assertEqual(last_date, last_date_res)
+        self.assertEqual(next_date, next_date_res)
 
         q.close()
 
@@ -65,13 +65,13 @@ class SqliteQueuesTest(unittest.TestCase):
 
         cursor = q._connection.execute("SELECT * FROM queues")
         uri_res = cursor.fetchone()
-        (url, etag, mod_date, queue, last_date) = uri
-        (url_res, etag_res, mod_date_res, queue_res, last_date_res) = uri_res
+        (url, etag, mod_date, queue, next_date) = uri
+        (url_res, etag_res, mod_date_res, queue_res, next_date_res) = uri_res
         self.assertEqual(url, url_res)
         self.assertEqual(etag, etag_res)
         self.assertEqual(mod_date, mod_date_res)
         self.assertEqual(queue, queue_res)
-        self.assertEqual(last_date, last_date_res)
+        self.assertEqual(next_date, next_date_res)
 
     def test_adding_lists_works(self):
 
@@ -84,13 +84,13 @@ class SqliteQueuesTest(unittest.TestCase):
 
         cursor = q._connection.execute("SELECT * FROM queues")
         uri_res = cursor.fetchone()
-        (url, etag, mod_date, queue, last_date) = uris[0]
-        (url_res, etag_res, mod_date_res, queue_res, last_date_res) = uri_res
+        (url, etag, mod_date, queue, next_date) = uris[0]
+        (url_res, etag_res, mod_date_res, queue_res, next_date_res) = uri_res
         self.assertEqual(url, url_res)
         self.assertEqual(etag, etag_res)
         self.assertEqual(mod_date, mod_date_res)
         self.assertEqual(queue, queue_res)
-        self.assertEqual(last_date, last_date_res)
+        self.assertEqual(next_date, next_date_res)
 
     def test_updating_lists_works(self):
 
@@ -109,13 +109,13 @@ class SqliteQueuesTest(unittest.TestCase):
 
         cursor = q._connection.execute("SELECT * FROM queues")
         uri_res = cursor.fetchone()
-        (url, etag, mod_date, queue, last_date) = uris[0]
-        (url_res, etag_res, mod_date_res, queue_res, last_date_res) = uri_res
+        (url, etag, mod_date, queue, next_date) = uris[0]
+        (url_res, etag_res, mod_date_res, queue_res, next_date_res) = uri_res
         self.assertEqual(url, url_res)
         self.assertEqual(etag, etag_res)
         self.assertEqual(mod_date, mod_date_res)
         self.assertEqual(queue, queue_res)
-        self.assertEqual(last_date, last_date_res)
+        self.assertEqual(next_date, next_date_res)
 
     def test_removing_lists_works(self):
 
@@ -144,48 +144,48 @@ class SqliteQueuesTest(unittest.TestCase):
         q = SQLiteUriQueues(":memory:")
         q.add_uris(uris)
 
-        (url1, etag1, mod_date1, queue1, last_date1) = uris[0]
-        (url2, etag2, mod_date2, queue2, last_date2) = uris[1]
+        (url1, etag1, mod_date1, queue1, next_date1) = uris[0]
+        (url2, etag2, mod_date2, queue2, next_date2) = uris[1]
 
         for uri_res in q.queue_head(1):
-            (url_res, etag_res, mod_date_res, queue_res, last_date_res) = uri_res
+            (url_res, etag_res, mod_date_res, queue_res, next_date_res) = uri_res
             self.assertEqual(url1, url_res)
             self.assertEqual(etag1, etag_res)
             self.assertEqual(mod_date1, mod_date_res)
             self.assertEqual(queue1, queue_res)
-            self.assertEqual(last_date1, last_date_res)
+            self.assertEqual(next_date1, next_date_res)
 
         for uri_res in q.queue_head(2):
-            (url_res, etag_res, mod_date_res, queue_res, last_date_res) = uri_res
+            (url_res, etag_res, mod_date_res, queue_res, next_date_res) = uri_res
             self.assertEqual(url2, url_res)
             self.assertEqual(etag2, etag_res)
             self.assertEqual(mod_date2, mod_date_res)
             self.assertEqual(queue2, queue_res)
-            self.assertEqual(last_date2, last_date_res)
+            self.assertEqual(next_date2, next_date_res)
 
         uris.append(("http://localhost/1", "eTag", int(time.time()*1000), 1,
                     int(time.time()*1000)))
-        (url3, etag3, mod_date3, queue3, last_date3) = uris[2]
+        (url3, etag3, mod_date3, queue3, next_date3) = uris[2]
         q.add_uri(uris[2])
 
         for uri_res in q.queue_head(1, n=1, offset=1):
-            (url_res, etag_res, mod_date_res, queue_res, last_date_res) = uri_res
+            (url_res, etag_res, mod_date_res, queue_res, next_date_res) = uri_res
             self.assertEqual(url3, url_res)
             self.assertEqual(etag3, etag_res)
             self.assertEqual(mod_date3, mod_date_res)
             self.assertEqual(queue3, queue_res)
-            self.assertEqual(last_date3, last_date_res)
+            self.assertEqual(next_date3, next_date_res)
 
         index = [0, 2]
         i = 0
         for uri_res in q.queue_head(1, n=10):
-            (url, etag, mod_date, queue, last_date) = uris[index[i]]
-            (url_res, etag_res, mod_date_res, queue_res, last_date_res) = uri_res
+            (url, etag, mod_date, queue, next_date) = uris[index[i]]
+            (url_res, etag_res, mod_date_res, queue_res, next_date_res) = uri_res
             self.assertEqual(url, url_res)
             self.assertEqual(etag, etag_res)
             self.assertEqual(mod_date, mod_date_res)
             self.assertEqual(queue, queue_res)
-            self.assertEqual(last_date, last_date_res)
+            self.assertEqual(next_date, next_date_res)
             i += 1
 
 

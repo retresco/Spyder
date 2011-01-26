@@ -25,7 +25,7 @@ Implement an URI Queue stored in SQLite.
 
 Within this module an URI is represented as a tuple
 
-   uri = (url, etag, mod_date, queue, last_date)
+   uri = (url, etag, mod_date, queue, next_date)
 
 """
 
@@ -75,12 +75,12 @@ class SQLiteUriQueues(SQLiteStore):
                     etag TEXT,
                     mod_date INTEGER,
                     queue INTEGER,
-                    last_date INTEGER
+                    next_date INTEGER
                 );
 
                 CREATE INDEX IF NOT EXISTS queue_fifo ON queues(
                     queue ASC,
-                    last_date ASC
+                    next_date ASC
                 );
                 """)
 
@@ -88,36 +88,36 @@ class SQLiteUriQueues(SQLiteStore):
         """
         Add a :class:`CrawlUri` to the specified queue.
         """
-        (url, etag, mod_date, queue, last_date) = uri
+        (url, etag, mod_date, queue, next_date) = uri
         self._connection.execute("""INSERT INTO queues 
-                (url, etag, mod_date, queue, last_date) VALUES
-                (?, ?, ?, ?, ?)""", (url, etag, mod_date, queue, last_date))
+                (url, etag, mod_date, queue, next_date) VALUES
+                (?, ?, ?, ?, ?)""", (url, etag, mod_date, queue, next_date))
 
     def add_uris(self, urls):
         """
         Add a list of uris.
         """
         self._connection.executemany("""INSERT INTO queues
-                (url, etag, mod_date, queue, last_date) VALUES
+                (url, etag, mod_date, queue, next_date) VALUES
                 (?, ?, ?, ?, ?)""", urls)
 
     def update_uri(self, uri):
         """
         Update the uri.
         """
-        (url, etag, mod_date, queue, last_date) = uri
+        (url, etag, mod_date, queue, next_date) = uri
         self._connection.execute("""UPDATE queues SET
-                etag=?, mod_date=?, queue=?, last_date=?
-                WHERE url=?""", (etag, mod_date, queue, last_date, url))
+                etag=?, mod_date=?, queue=?, next_date=?
+                WHERE url=?""", (etag, mod_date, queue, next_date, url))
 
     def update_uris(self, uris):
         """
         Update the list of uris in the database.
         """
-        update_uris = [(etag, mod_date, queue, last_date, url)
-            for (url, etag, mod_date, queue, last_date) in uris]
+        update_uris = [(etag, mod_date, queue, next_date, url)
+            for (url, etag, mod_date, queue, next_date) in uris]
         self._connection.executemany("""UPDATE queues SET
-                etag=?, mod_date=?, queue=?, last_date=?
+                etag=?, mod_date=?, queue=?, next_date=?
                 WHERE url=?""", update_uris)
 
     def queue_head(self, queue, n=1, offset=0):
@@ -129,13 +129,13 @@ class SQLiteUriQueues(SQLiteStore):
         """
         cursor = self._connection.execute("""SELECT * FROM queues
                 WHERE queue=?
-                ORDER BY last_date ASC
+                ORDER BY next_date ASC
                 LIMIT ?
                 OFFSET ?""", (queue,n, offset))
         results = []
         for row in cursor:
             results.append((row['url'], row['etag'], row['mod_date'], row['queue'],
-                row['last_date']))
+                row['next_date']))
 
         return results
 
@@ -143,6 +143,6 @@ class SQLiteUriQueues(SQLiteStore):
         """
         Remove all uris.
         """
-        del_uris = [(url,) for (url, etag, mod_date, queue, last_date) in uris]
+        del_uris = [(url,) for (url, etag, mod_date, queue, next_date) in uris]
         self._connection.executemany("DELETE FROM queues WHERE url=?",
                 del_uris)
