@@ -30,7 +30,7 @@ queue with a bias towards lower numbered queues.
 import random
 
 
-class DefaultQueueSelector(object):
+class BiasedQueueSelector(object):
     """
     The default queue selector based on radom selection with bias towards lower
     numbered queues.

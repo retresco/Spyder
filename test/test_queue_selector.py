@@ -25,15 +25,15 @@ import unittest
 
 from collections import defaultdict
 
-from spyder.core.queueselector import DefaultQueueSelector
+from spyder.core.queueselector import BiasedQueueSelector
 
 
-class DefaultQueueSelectorTest(unittest.TestCase):
+class BiasedQueueSelectorTest(unittest.TestCase):
 
     def test_histogram(self):
 
         # create a selector with 10 queues
-        selector = DefaultQueueSelector(10)
+        selector = BiasedQueueSelector(10)
 
         histogram = defaultdict(int)
 
