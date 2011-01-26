@@ -33,6 +33,23 @@ MAX_REDIRECTS = 1
 USE_GZIP = True
 
 
+# Filename storing the frontier state
+FRONTIER_STATE_FILE = "./state.db"
+# The number of priority levels where URIs are being assigned to (lowest means
+# highest priority)
+FRONTIER_NUM_PRIORITIES = 10
+# default priority for new urls
+FRONTIER_DEFAULT_PRIORITY = 1
+# The number of simultaneous hosts to crawl
+FRONTIER_SIMULTANEOUS_HOSTS = 100
+# The number of URIs to keep inside the HEAP
+FRONTIER_HEAP_SIZE = 500
+# Minimum number of URIs in the HEAP
+FRONTIER_HEAP_MIN = 100
+# Size of the DNS Cache
+FRONTIER_SIZE_DNS_CACHE = 1000
+
+
 # The pipeline of link extractors
 SPYDER_EXTRACTOR_PIPELINE = [
     'spyder.processor.limiter',
