@@ -26,7 +26,6 @@ Implement an URI Queue stored in SQLite.
 Within this module an URI is represented as a tuple
 
    uri = (url, etag, mod_date, queue, next_date)
-
 """
 
 import sqlite3 as sqlite

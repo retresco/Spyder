@@ -35,6 +35,8 @@ are represented as :class:`spyder.thrift.gen.ttypes.CrawlUri`.
 import time
 from datetime import datetime
 
+from sqlite3 import IntegrityError
+
 from collections import defaultdict
 from Queue import PriorityQueue, Empty, Full
 from urlparse import urlparse
@@ -42,7 +44,7 @@ from urlparse import urlparse
 from brownie.abstract import ABCMeta, VirtualSubclassMeta
 
 from spyder.core.dnscache import DnsCache
-from spyder.core.messages import deserialize_date_time
+from spyder.core.messages import serialize_date_time, deserialize_date_time
 from spyder.core.sqlitequeues import SQLiteUriQueues
 from spyder.thrift.gen.ttypes import CrawlUri
 
@@ -80,8 +82,8 @@ class AbstractBaseFrontier(object):
         self._heap = PriorityQueue(maxsize=settings.FRONTIER_HEAP_SIZE)
         self._heap_min_size = settings.FRONTIER_HEAP_MIN
 
-        # a dict of uris currently being crawled.
-        self._current_uris = dict()
+        # a list of uris currently being crawled.
+        self._current_uris = []
 
         self._dns_cache = DnsCache(settings.FRONTIER_SIZE_DNS_CACHE)
 
@@ -108,8 +110,10 @@ class AbstractBaseFrontier(object):
                 mod_date = time.mktime(deserialize_date_time(
                     curi.rep_header["Date"]).timetuple())
 
+        next_crawl_date = time.mktime(next_date.timetuple())
+
         self._front_end_queues.add_uri((curi.url, etag, mod_date,
-                    self._default_priority, next_date))
+            self._default_priority, next_crawl_date))
 
     def get_next(self):
         """
@@ -122,13 +126,17 @@ class AbstractBaseFrontier(object):
             next_uri = self._heap.get_nowait()
         except Empty:
             # heap is empty, there is nothing to crawl right now!
-            return
+            # mabe log this in the future
+            raise
 
         return crawluri_from_uri(next_uri)
 
     def _update_heap(self):
         """
         Abstract method. Implement this in the actual Frontier.
+
+        The implementation should really only add uris to the heap if they can
+        be downloaded right away.
         """
         pass
 
