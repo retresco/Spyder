@@ -35,12 +35,10 @@ are represented as :class:`spyder.thrift.gen.ttypes.CrawlUri`.
 import time
 from datetime import datetime
 
-from sqlite3 import IntegrityError
-
-from collections import defaultdict
 from Queue import PriorityQueue, Empty, Full
 from urlparse import urlparse
 
+from spyder.core.constants import CURI_SITE_USERNAME, CURI_SITE_PASSWORD
 from spyder.core.dnscache import DnsCache
 from spyder.core.messages import serialize_date_time, deserialize_date_time
 from spyder.core.sqlitequeues import SQLiteUriQueues
@@ -49,11 +47,11 @@ from spyder.thrift.gen.ttypes import CrawlUri
 
 # some default port numbers as of /etc/services
 PROTOCOLS_DEFAULT_PORT = {
-    "http" : 80,
-    "https" : 443,
-    "ftp" : 21,
-    "ftps" : 990,
-    "sftp" : 115,
+    "http": 80,
+    "https": 443,
+    "ftp": 21,
+    "ftps": 990,
+    "sftp": 115,
 }
 
 
@@ -125,7 +123,7 @@ class AbstractBaseFrontier(object):
             # mabe log this in the future
             raise
 
-        return crawluri_from_uri(next_uri)
+        return self._crawluri_from_uri(next_uri)
 
     def _update_heap(self):
         """

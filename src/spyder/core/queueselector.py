@@ -40,17 +40,17 @@ class BiasedQueueSelector(object):
         """
         Initialize the queue selector with the number of available queues.
         """
-        self._weights = [1/(float(i) * number_of_queues)
+        self._weights = [1 / (float(i) * number_of_queues)
             for i in range(1, number_of_queues + 1)]
         self._sum_weights = sum(self._weights)
-        self._enumerate_weights = [(i,w) for i,w in enumerate(self._weights)]
+        self._enumerate_weights = [(i, w) for i, w in enumerate(self._weights)]
 
     def get_queue(self):
         """
         Return the next queue to use.
         """
         md = random.random() * self._sum_weights
-        for (i,w) in self._enumerate_weights:
+        for (i, w) in self._enumerate_weights:
             md -= w
             if md < 0:
                 return i

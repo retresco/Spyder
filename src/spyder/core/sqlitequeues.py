@@ -88,7 +88,7 @@ class SQLiteUriQueues(SQLiteStore):
         Add a :class:`CrawlUri` to the specified queue.
         """
         (url, etag, mod_date, queue, next_date) = uri
-        self._connection.execute("""INSERT INTO queues 
+        self._connection.execute("""INSERT INTO queues
                 (url, etag, mod_date, queue, next_date) VALUES
                 (?, ?, ?, ?, ?)""", (url, etag, mod_date, queue, next_date))
 
@@ -130,11 +130,11 @@ class SQLiteUriQueues(SQLiteStore):
                 WHERE queue=?
                 ORDER BY next_date ASC
                 LIMIT ?
-                OFFSET ?""", (queue,n, offset))
+                OFFSET ?""", (queue, n, offset))
         results = []
         for row in cursor:
-            results.append((row['url'], row['etag'], row['mod_date'], row['queue'],
-                row['next_date']))
+            results.append((row['url'], row['etag'], row['mod_date'],
+                row['queue'], row['next_date']))
 
         return results
 
