@@ -27,6 +27,7 @@ import unittest
 
 from sqlite3 import IntegrityError
 
+from spyder.core.constants import *
 from spyder.core.frontier import *
 from spyder.core.messages import serialize_date_time, deserialize_date_time
 from spyder.core.settings import Settings
@@ -86,6 +87,30 @@ class BaseFrontierTest(unittest.TestCase):
         self.assertEqual("http://localhost", curi.url)
         self.assertEqual("123", curi.req_header["Etag"])
         self.assertEqual(serialize_date_time(now), curi.req_header["Last-Modified"])
+
+    def test_crawluri_from_uri_with_credentials(self):
+
+        now = datetime(*datetime.fromtimestamp(time.time()).timetuple()[0:6])
+        now_timestamp = time.mktime(now.timetuple())
+        next_crawl_date = now + timedelta(days=1)
+        next_crawl_date_timestamp = time.mktime(next_crawl_date.timetuple())
+
+        s = Settings()
+        s.FRONTIER_STATE_FILE = ":memory:"
+
+        frontier = AbstractBaseFrontier(s)
+
+        uri = ("http://user:passwd@localhost", "123", now_timestamp, 1,
+                next_crawl_date_timestamp)
+
+        curi = frontier._crawluri_from_uri(uri)
+
+        self.assertEqual("http://user:passwd@localhost", curi.url)
+        self.assertEqual("123", curi.req_header["Etag"])
+        self.assertEqual(serialize_date_time(now), curi.req_header["Last-Modified"])
+        self.assertEqual("user", curi.optional_vars[CURI_SITE_USERNAME])
+        self.assertEqual("passwd", curi.optional_vars[CURI_SITE_PASSWORD])
+
 
 if __name__ == '__main__':
     unittest.main()
