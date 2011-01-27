@@ -81,7 +81,7 @@ class AbstractBaseFrontier(object):
 
         self._dns_cache = DnsCache(settings.FRONTIER_SIZE_DNS_CACHE)
 
-    def add_uri(self, curi, next_date):
+    def add_uri(self, curi, next_date, prio=None):
         """
         Add the specified :class:`CrawlUri` to the frontier.
 
@@ -96,6 +96,9 @@ class AbstractBaseFrontier(object):
         """
         assert curi.url not in self._current_uris
 
+        if prio is None:
+            prio = self._default_priority
+
         etag = mod_date = None
         if curi.rep_header:
             if "Etag" in curi.rep_header:
@@ -107,7 +110,7 @@ class AbstractBaseFrontier(object):
         next_crawl_date = time.mktime(next_date.timetuple())
 
         self._front_end_queues.add_uri((curi.url, etag, mod_date,
-            self._default_priority, next_crawl_date))
+            prio, next_crawl_date))
 
     def get_next(self):
         """
@@ -117,7 +120,7 @@ class AbstractBaseFrontier(object):
             self._update_heap()
 
         try:
-            next_uri = self._heap.get_nowait()
+            (next_date, next_uri) = self._heap.get_nowait()
         except Empty:
             # heap is empty, there is nothing to crawl right now!
             # mabe log this in the future
@@ -202,7 +205,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
                     if next_date < now:
                         # add this uri
                         try:
-                            self._heap.put_nowait(uri)
+                            self._heap.put_nowait((next_date, uri))
                         except Full:
                             # heap is full, return to the caller
                             return

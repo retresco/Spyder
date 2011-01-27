@@ -101,15 +101,119 @@ class BaseFrontierTest(unittest.TestCase):
         frontier = AbstractBaseFrontier(s)
 
         uri = ("http://user:passwd@localhost", "123", now_timestamp, 1,
-                next_crawl_date_timestamp)
+            next_crawl_date_timestamp)
 
         curi = frontier._crawluri_from_uri(uri)
 
         self.assertEqual("http://user:passwd@localhost", curi.url)
         self.assertEqual("123", curi.req_header["Etag"])
-        self.assertEqual(serialize_date_time(now), curi.req_header["Last-Modified"])
+        self.assertEqual(serialize_date_time(now),
+            curi.req_header["Last-Modified"])
         self.assertEqual("user", curi.optional_vars[CURI_SITE_USERNAME])
         self.assertEqual("passwd", curi.optional_vars[CURI_SITE_PASSWORD])
+
+
+class SingleHostFrontierTest(unittest.TestCase):
+
+    def test_that_updating_heap_works(self):
+
+        s = Settings()
+        s.FRONTIER_STATE_FILE = ":memory:"
+        s.FRONTIER_NUM_PRIORITIES = 2
+
+        frontier = SingleHostFrontier(s)
+
+        q1 = []
+        q2 = []
+
+        now = datetime(*datetime.fromtimestamp(
+            time.time()).timetuple()[0:6])
+
+        for i in range(1, 20):
+            next_crawl = now - timedelta(minutes=(10-i))
+            next_timestamp = time.mktime(next_crawl.timetuple())
+
+            curi = CrawlUri("http://localhost/test/%s" % i)
+            curi.rep_header = { "Etag" : "123%s" % i, "Date" : serialize_date_time(now) }
+
+            q1.append((curi, next_timestamp))
+            frontier.add_uri(curi, next_crawl)
+
+        frontier._update_heap()
+
+
+        for i in range(0, 10):
+            candidate_uri = frontier._heap.get_nowait()
+            (curi, next_crawl) = q1[i]
+            (nd, (url, etag, mod_date, queue, next_date)) = candidate_uri
+
+            self.assertEqual(curi.url, url)
+            self.assertEqual(curi.rep_header["Etag"], etag)
+            self.assertEqual(curi.rep_header["Date"],
+                    serialize_date_time(datetime.fromtimestamp(mod_date)))
+
+    def test_that_updating_heap_from_multiple_queues_works(self):
+
+        s = Settings()
+        s.FRONTIER_STATE_FILE = ":memory:"
+        s.FRONTIER_NUM_PRIORITIES = 2
+
+        frontier = SingleHostFrontier(s)
+
+        q1 = []
+        q2 = []
+
+        now = datetime(*datetime.fromtimestamp(
+            time.time()).timetuple()[0:6])
+
+        for i in range(1, 20):
+            next_crawl = now - timedelta(minutes=(10-i))
+            next_timestamp = time.mktime(next_crawl.timetuple())
+
+            curi = CrawlUri("http://localhost/q1/%s" % i)
+            curi.rep_header = { "Etag" : "123%s" % i, "Date" : serialize_date_time(now) }
+
+            q1.append((curi, next_timestamp))
+            frontier.add_uri(curi, next_crawl)
+
+            next_crawl = now - timedelta(minutes=(5-i), seconds=50)
+            next_timestamp = time.mktime(next_crawl.timetuple())
+
+            curi = CrawlUri("http://localhost/q2/%s" % i)
+            curi.rep_header = { "Etag" : "123%s" % i, "Date" : serialize_date_time(now) }
+
+            q2.append((curi, next_timestamp))
+            frontier.add_uri(curi, next_crawl)
+
+        self.assertRaises(Empty, frontier._heap.get_nowait)
+
+        frontier._update_heap()
+
+        j = 0
+        k = 0
+        for i in range(0, 15):
+            candidate_uri = frontier._heap.get_nowait()
+
+            n = None
+            if 5 <= i <= 15:
+                if i % 2 > 0:
+                    n = q2[i-5-j]
+                    j += 1
+                else:
+                    n = q1[i-1-k]
+                    k += 1
+            else:
+                n = q1[i]
+            (curi, next_crawl) = n
+
+            (nd, (url, etag, mod_date, queue, next_date)) = candidate_uri
+
+            self.assertEqual(curi.url, url)
+            self.assertEqual(curi.rep_header["Etag"], etag)
+            self.assertEqual(curi.rep_header["Date"],
+                    serialize_date_time(datetime.fromtimestamp(mod_date)))
+
+        self.assertRaises(Empty, frontier._heap.get_nowait)
 
 
 if __name__ == '__main__':
