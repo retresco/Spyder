@@ -41,8 +41,6 @@ from collections import defaultdict
 from Queue import PriorityQueue, Empty, Full
 from urlparse import urlparse
 
-from brownie.abstract import ABCMeta, VirtualSubclassMeta
-
 from spyder.core.dnscache import DnsCache
 from spyder.core.messages import serialize_date_time, deserialize_date_time
 from spyder.core.sqlitequeues import SQLiteUriQueues
@@ -66,8 +64,6 @@ class AbstractBaseFrontier(object):
     Basically this class provides the different general methods and
     configuration parameters used for frontiers.
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self, settings):
         """
@@ -179,13 +175,10 @@ class AbstractBaseFrontier(object):
         return curi
 
 
-class SingleHostFrontier(object):
+class SingleHostFrontier(AbstractBaseFrontier):
     """
     A frontier for crawling a single host.
     """
-    __metaclass__ = VirtualSubclassMeta
-
-    virtual_superclass = (AbstractBaseFrontier,)
 
     def __init__(self, settings):
         """
@@ -212,7 +205,6 @@ class SingleHostFrontier(object):
                         # add this uri
                         try:
                             self._heap.put_nowait(uri)
-                            offset += 1
                         except Full:
                             # heap is full, return to the caller
                             return
