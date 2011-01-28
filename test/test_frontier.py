@@ -62,7 +62,7 @@ class BaseFrontierTest(unittest.TestCase):
             self.assertEqual(now, datetime.fromtimestamp(mod_date))
             self.assertEqual(next_crawl_date,
                     datetime.fromtimestamp(next_date))
-            frontier._current_uris.append(url)
+            frontier._current_uris[url] = uri
 
         self.assertRaises(AssertionError, frontier.add_uri, curi,
             next_crawl_date)
@@ -139,8 +139,9 @@ class SingleHostFrontierTest(unittest.TestCase):
             q1.append((curi, next_timestamp))
             frontier.add_uri(curi, next_crawl)
 
-        frontier._update_heap()
+        self.assertRaises(Empty, frontier._heap.get_nowait)
 
+        frontier._update_heap()
 
         for i in range(0, 10):
             candidate_uri = frontier._heap.get_nowait()
@@ -187,12 +188,10 @@ class SingleHostFrontierTest(unittest.TestCase):
 
         self.assertRaises(Empty, frontier._heap.get_nowait)
 
-        frontier._update_heap()
-
         j = 0
         k = 0
         for i in range(0, 15):
-            candidate_uri = frontier._heap.get_nowait()
+            candidate_uri = frontier.get_next()
 
             n = None
             if 5 <= i <= 15:
@@ -206,14 +205,13 @@ class SingleHostFrontierTest(unittest.TestCase):
                 n = q1[i]
             (curi, next_crawl) = n
 
-            (nd, (url, etag, mod_date, queue, next_date)) = candidate_uri
-
-            self.assertEqual(curi.url, url)
-            self.assertEqual(curi.rep_header["Etag"], etag)
+            self.assertEqual(curi.url, candidate_uri.url)
+            self.assertEqual(curi.rep_header["Etag"],
+                candidate_uri.req_header["Etag"])
             self.assertEqual(curi.rep_header["Date"],
-                    serialize_date_time(datetime.fromtimestamp(mod_date)))
+                candidate_uri.req_header["Last-Modified"])
 
-        self.assertRaises(Empty, frontier._heap.get_nowait)
+        self.assertRaises(Empty, frontier.get_next)
 
 
 if __name__ == '__main__':

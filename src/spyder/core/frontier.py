@@ -77,7 +77,7 @@ class AbstractBaseFrontier(object):
         self._heap_min_size = settings.FRONTIER_HEAP_MIN
 
         # a list of uris currently being crawled.
-        self._current_uris = []
+        self._current_uris = dict()
 
         self._dns_cache = DnsCache(settings.FRONTIER_SIZE_DNS_CACHE)
 
@@ -148,8 +148,8 @@ class AbstractBaseFrontier(object):
         parsed_url = urlparse(url)
 
         # dns resolution and caching
-        port = None
-        if not parsed_url.port:
+        port = parsed_url.port
+        if not port:
             port = PROTOCOLS_DEFAULT_PORT[parsed_url.scheme]
 
         effective_netloc = self._dns_cache["%s:%s" % (parsed_url.hostname,
@@ -201,11 +201,13 @@ class SingleHostFrontier(AbstractBaseFrontier):
 
                 (url, etag, mod_date, queue, next_date) = uri
 
-                if uri not in self._current_uris:
+                if url not in self._current_uris:
                     if next_date < now:
                         # add this uri
                         try:
                             self._heap.put_nowait((next_date, uri))
+                            (url, etag, mod_date, queue, next_date) = uri
+                            self._current_uris[url] = uri
                         except Full:
                             # heap is full, return to the caller
                             return
