@@ -44,6 +44,7 @@ class SQLiteStore(object):
         """
         self._connection = sqlite.connect(db_name)
         self._connection.row_factory = sqlite.Row
+        self._connection.text_factory = sqlite.OptimizedUnicode
         self._connection.execute("PRAGMA encoding=\"UTF-8\";")
         self._connection.execute("PRAGMA locking_mode=EXCLUSIVE;")
 
