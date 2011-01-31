@@ -45,7 +45,8 @@ class BaseFrontierTest(unittest.TestCase):
         curi = CrawlUri("http://localhost")
         curi.rep_header = { "Etag" : "123", "Date" : serialize_date_time(now) }
 
-        frontier = AbstractBaseFrontier(s)
+        frontier = AbstractBaseFrontier(s,
+                SQLiteUriQueues(s.FRONTIER_STATE_FILE))
         frontier.add_uri(curi, next_crawl_date)
 
         for uri in frontier._front_end_queues.queue_head(1):
@@ -70,7 +71,8 @@ class BaseFrontierTest(unittest.TestCase):
         s = Settings()
         s.FRONTIER_STATE_FILE = ":memory:"
 
-        frontier = AbstractBaseFrontier(s)
+        frontier = AbstractBaseFrontier(s,
+                SQLiteUriQueues(s.FRONTIER_STATE_FILE))
 
         uri = ("http://localhost", "123", now_timestamp, 1,
                 next_crawl_date_timestamp)
@@ -91,7 +93,8 @@ class BaseFrontierTest(unittest.TestCase):
         s = Settings()
         s.FRONTIER_STATE_FILE = ":memory:"
 
-        frontier = AbstractBaseFrontier(s)
+        frontier = AbstractBaseFrontier(s,
+                SQLiteUriQueues(s.FRONTIER_STATE_FILE))
 
         uri = ("http://user:passwd@localhost", "123", now_timestamp, 1,
             next_crawl_date_timestamp)

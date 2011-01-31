@@ -64,7 +64,7 @@ class AbstractBaseFrontier(object):
     configuration parameters used for frontiers.
     """
 
-    def __init__(self, settings, unique_hash='sha1'):
+    def __init__(self, settings, front_end_queues, unique_hash='sha1'):
         """
         Initialize the frontier and instantiate the :class:`SQLiteUriQueues`.
 
@@ -72,10 +72,9 @@ class AbstractBaseFrontier(object):
         unique uri filter. For very large crawls you might want to use a
         larger hash function (`sha512`, e.g.)
         """
-        # front end queues
+        # front end queue
         self._default_priority = settings.FRONTIER_DEFAULT_PRIORITY
-        self._max_priorities = settings.FRONTIER_NUM_PRIORITIES
-        self._front_end_queues = SQLiteUriQueues(settings.FRONTIER_STATE_FILE)
+        self._front_end_queues = front_end_queues
 
         # the heap
         self._heap = PriorityQueue(maxsize=settings.FRONTIER_HEAP_SIZE)
@@ -194,6 +193,43 @@ class AbstractBaseFrontier(object):
 
         return curi
 
+    def process_successful_crawl(msg):
+        """
+        Called when an URI has been crawled successfully.
+
+        `msg` is the :class:`DataMessage`.
+
+        Override this method in the actual frontier implementation.
+        """
+        pass
+
+    def process_not_found(msg):
+        """
+        Called when an URL was not found.
+
+        This could mean, that the URL has been removed from the server. If so,
+        do something about it!
+
+        Override this method in the actual frontier implementation.
+        """
+        pass
+
+    def process_redirect(msg):
+        """
+        Called when there were too many redirects for an URL.
+
+        Override this method in the actual frontier implementation.
+        """
+        pass
+
+    def process_server_error(msg):
+        """
+        Called when there was some kind of server error.
+
+        Override this method in the actual frontier implementation.
+        """
+        pass
+
 
 class SingleHostFrontier(AbstractBaseFrontier):
     """
@@ -204,7 +240,9 @@ class SingleHostFrontier(AbstractBaseFrontier):
         """
         Initialize the base frontier.
         """
-        AbstractBaseFrontier.__init__(self, settings)
+        AbstractBaseFrontier.__init__(self, settings,
+                SQLiteUriQueues(settings.FRONTIER_STATE_FILE))
+        self._max_priorities = settings.FRONTIER_NUM_PRIORITIES
 
     def _update_heap(self):
         """
