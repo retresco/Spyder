@@ -42,6 +42,7 @@ from spyder.core.constants import CURI_SITE_USERNAME, CURI_SITE_PASSWORD
 from spyder.core.dnscache import DnsCache
 from spyder.core.messages import serialize_date_time, deserialize_date_time
 from spyder.core.sqlitequeues import SQLiteUriQueues
+from spyder.core.uri_uniq import UniqueUriFilter
 from spyder.thrift.gen.ttypes import CrawlUri
 
 
@@ -63,9 +64,13 @@ class AbstractBaseFrontier(object):
     configuration parameters used for frontiers.
     """
 
-    def __init__(self, settings):
+    def __init__(self, settings, unique_hash='sha1'):
         """
         Initialize the frontier and instantiate the :class:`SQLiteUriQueues`.
+
+        The default frontier we will use the `sha1` hash function for the
+        unique uri filter. For very large crawls you might want to use a
+        larger hash function (`sha512`, e.g.)
         """
         # front end queues
         self._default_priority = settings.FRONTIER_DEFAULT_PRIORITY
@@ -81,6 +86,8 @@ class AbstractBaseFrontier(object):
 
         self._dns_cache = DnsCache(settings.FRONTIER_SIZE_DNS_CACHE)
 
+        self._unique_uri = UniqueUriFilter(unique_hash)
+
     def add_uri(self, curi, next_date, prio=None):
         """
         Add the specified :class:`CrawlUri` to the frontier.
@@ -95,6 +102,10 @@ class AbstractBaseFrontier(object):
         known to the frontier. In this case you should use :meth:`update_uri`.
         """
         assert curi.url not in self._current_uris
+
+        if self._unique_uri.is_known(curi.url):
+            # we already know this uri
+            return
 
         if prio is None:
             prio = self._default_priority

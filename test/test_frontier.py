@@ -25,8 +25,6 @@ import time
 from datetime import datetime, timedelta
 import unittest
 
-from sqlite3 import IntegrityError
-
 from spyder.core.constants import *
 from spyder.core.frontier import *
 from spyder.core.messages import serialize_date_time, deserialize_date_time
@@ -49,11 +47,6 @@ class BaseFrontierTest(unittest.TestCase):
 
         frontier = AbstractBaseFrontier(s)
         frontier.add_uri(curi, next_crawl_date)
-
-        # This should really not happen in production because of the
-        # UniqueUriFilter
-        self.assertRaises(IntegrityError, frontier.add_uri, curi,
-            next_crawl_date)
 
         for uri in frontier._front_end_queues.queue_head(1):
             (url, etag, mod_date, queue, next_date) = uri
