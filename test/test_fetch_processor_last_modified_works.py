@@ -171,7 +171,6 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
                         "robots.txt")).st_mtime)
         mtime = serialize_date_time(mtimestamp)
         curi = CrawlUri(url="http://localhost:%s/robots.txt" % self.port,
-                host_identifier="127.0.0.1",
                 effective_url="http://127.0.0.1:%s/robots.txt" % self.port,
                 req_header = { "Last-Modified" :
                     mtime }

@@ -28,7 +28,7 @@ class TestMessages(unittest.TestCase):
 
     def test_that_serialization_works(self):
     
-        curi = CrawlUri(url="http://localhost", host_identifier="127.0.0.1")
+        curi = CrawlUri(url="http://localhost")
 
         serialized = serialize_crawl_uri(curi)
         deserialized = deserialize_crawl_uri(serialized)
@@ -37,7 +37,7 @@ class TestMessages(unittest.TestCase):
 
     def test_that_data_messages_work(self):
         identity = "me myself and i"
-        curi = CrawlUri(url="http://localhost", host_identifier="127.0.0.1")
+        curi = CrawlUri(url="http://localhost")
         serialized = serialize_crawl_uri(curi)
 
         msg = DataMessage([identity, serialized])

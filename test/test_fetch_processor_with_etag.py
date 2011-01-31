@@ -165,7 +165,6 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
         worker.start()
 
         curi = CrawlUri(url="http://localhost:%s/robots.txt" % self.port,
-                host_identifier="127.0.0.1",
                 effective_url="http://127.0.0.1:%s/robots.txt" % self.port,
                 req_header = { "Etag" :
                     "\"3926227169c58185234888b60000c6eb1169577d\"" }

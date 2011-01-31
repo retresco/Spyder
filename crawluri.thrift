@@ -25,7 +25,7 @@ struct CrawlUri {
     2: string               effective_url,
 
     // the host identifier used for queue selection
-    3: string               host_identifier,
+    3: i16                  current_priority,
 
     // when processing has been started
     4: timestamp            begin_processing,
@@ -52,6 +52,5 @@ struct CrawlUri {
     11: double              queue_time,
 
     // additional values from other processors
-    12: key_value   optional_vars
+    12: key_value           optional_vars
 }
-

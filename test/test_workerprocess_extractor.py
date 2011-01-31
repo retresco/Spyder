@@ -153,7 +153,6 @@ class WorkerExtractorTestCase(ZmqTornadoIntegrationTest):
         self._setup_data_client()
 
         curi = CrawlUri(url="http://localhost:80/robots.txt",
-                host_identifier="127.0.0.1",
                 effective_url="http://127.0.0.1:%s/robots.txt",
                 optional_vars=dict(),
                 )

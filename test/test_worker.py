@@ -144,7 +144,7 @@ class ZmqWorkerIntegrationTest(ZmqTornadoIntegrationTest):
 
         worker.start()
 
-        curi = CrawlUri(url="http://localhost", host_identifier="127.0.0.1")
+        curi = CrawlUri(url="http://localhost")
         msg = DataMessage()
         msg.identity = "me"
         msg.curi = curi
