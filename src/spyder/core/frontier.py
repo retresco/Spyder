@@ -128,6 +128,14 @@ class AbstractBaseFrontier(object):
 
         return self._crawluri_from_uri(next_uri)
 
+    def _add_to_heap(self, uri, next_date):
+        """
+        Add an URI to the heap that is ready to be crawled.
+        """
+        self._heap.put_nowait((next_date, uri))
+        (url, etag, mod_date, queue, next_date) = uri
+        self._current_uris[url] = uri
+
     def _update_heap(self):
         """
         Abstract method. Implement this in the actual Frontier.
@@ -205,9 +213,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
                     if next_date < now:
                         # add this uri
                         try:
-                            self._heap.put_nowait((next_date, uri))
-                            (url, etag, mod_date, queue, next_date) = uri
-                            self._current_uris[url] = uri
+                            self._add_to_heap(uri, next_date)
                         except Full:
                             # heap is full, return to the caller
                             return
