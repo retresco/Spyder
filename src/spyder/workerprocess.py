@@ -34,12 +34,16 @@ the resulting `CrawlUri` to the `Worker Extractor`. At this stage several
 Modules for extracting new URLs are running. The `Worker Scoper` will decide if
 the newly extracted URLs are within the scope of the crawl.
 """
+import os
+import socket
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop, DelayedCallback
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_AVAIL
+from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
+from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
 from spyder.core.messages import MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import ZmqWorker, AsyncZmqWorker
@@ -172,6 +176,9 @@ def main(settings):
 
     The `settings` have to be loaded already.
     """
+    # create my own identity
+    identity = "%s:%s" % (socket.gethostname(), os.getpid())
+
     ctx = zmq.Context()
     io_loop = IOLoop.instance()
 
@@ -184,17 +191,22 @@ def main(settings):
     scoper = create_worker_scoper(settings, mgmt, ctx, io_loop)
     scoper.start()
 
-    def quit_worker():
+    def quit_worker(raw_msg):
         """
         When the worker should quit, stop the io_loop after 2 seconds.
         """
-        DelayedCallback(io_loop.stop, 2000, io_loop)
+        msg = MgmtMessage(raw_msg)
+        if ZMQ_SPYDER_MGMT_WORKER_QUIT == msg.data:
+            DelayedCallback(io_loop.stop, 2000, io_loop)
+            ack = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=identity,
+                    data=ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
+            mgmt._out_stream.send_multipart(ack.serialize())
 
     mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, quit_worker)
     mgmt.start()
 
     # notify the master that we are online
-    msg = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=None,
+    msg = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=identity,
             data=ZMQ_SPYDER_MGMT_WORKER_AVAIL)
     mgmt._out_stream.send_multipart(msg.serialize())
 
