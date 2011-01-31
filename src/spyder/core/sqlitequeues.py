@@ -57,7 +57,8 @@ class SQLiteStore(object):
 
 class SQLiteUriQueues(SQLiteStore):
     """
-    A queue of uris.
+    A queue of uris. In this implementation queues represent a priority, i.e.
+    it will only work with crawling one host!
     """
 
     def __init__(self, db_name):
@@ -86,7 +87,7 @@ class SQLiteUriQueues(SQLiteStore):
 
     def add_uri(self, uri):
         """
-        Add a :class:`CrawlUri` to the specified queue.
+        Add a uri to the specified queue.
         """
         (url, etag, mod_date, queue, next_date) = uri
         self._connection.execute("""INSERT INTO queues
