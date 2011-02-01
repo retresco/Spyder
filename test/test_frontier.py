@@ -29,6 +29,7 @@ from spyder.core.constants import *
 from spyder.core.frontier import *
 from spyder.core.messages import serialize_date_time, deserialize_date_time
 from spyder.core.settings import Settings
+from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
 from spyder.thrift.gen.ttypes import CrawlUri
 
 
@@ -46,10 +47,10 @@ class BaseFrontierTest(unittest.TestCase):
         curi.rep_header = { "Etag" : "123", "Date" : serialize_date_time(now) }
 
         frontier = AbstractBaseFrontier(s,
-                SQLiteUriQueues(s.FRONTIER_STATE_FILE))
+                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE))
         frontier.add_uri(curi, next_crawl_date)
 
-        for uri in frontier._front_end_queues.queue_head(1):
+        for uri in frontier._front_end_queues.queue_head():
             (url, etag, mod_date, queue, next_date) = uri
             self.assertEqual("http://localhost", url)
             self.assertEqual("123", etag)
@@ -57,9 +58,6 @@ class BaseFrontierTest(unittest.TestCase):
             self.assertEqual(next_crawl_date,
                     datetime.fromtimestamp(next_date))
             frontier._current_uris[url] = uri
-
-        self.assertRaises(AssertionError, frontier.add_uri, curi,
-            next_crawl_date)
 
     def test_crawluri_from_uri(self):
 
@@ -72,7 +70,7 @@ class BaseFrontierTest(unittest.TestCase):
         s.FRONTIER_STATE_FILE = ":memory:"
 
         frontier = AbstractBaseFrontier(s,
-                SQLiteUriQueues(s.FRONTIER_STATE_FILE))
+                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE))
 
         uri = ("http://localhost", "123", now_timestamp, 1,
                 next_crawl_date_timestamp)
@@ -94,7 +92,7 @@ class BaseFrontierTest(unittest.TestCase):
         s.FRONTIER_STATE_FILE = ":memory:"
 
         frontier = AbstractBaseFrontier(s,
-                SQLiteUriQueues(s.FRONTIER_STATE_FILE))
+                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE))
 
         uri = ("http://user:passwd@localhost", "123", now_timestamp, 1,
             next_crawl_date_timestamp)

@@ -41,7 +41,7 @@ from urlparse import urlparse
 from spyder.core.constants import CURI_SITE_USERNAME, CURI_SITE_PASSWORD
 from spyder.core.dnscache import DnsCache
 from spyder.core.messages import serialize_date_time, deserialize_date_time
-from spyder.core.sqlitequeues import SQLiteUriQueues
+from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
 from spyder.core.uri_uniq import UniqueUriFilter
 from spyder.thrift.gen.ttypes import CrawlUri
 
@@ -66,7 +66,8 @@ class AbstractBaseFrontier(object):
 
     def __init__(self, settings, front_end_queues, unique_hash='sha1'):
         """
-        Initialize the frontier and instantiate the :class:`SQLiteUriQueues`.
+        Initialize the frontier and instantiate the
+        :class:`SQLiteSingleHostUriQueue`.
 
         The default frontier we will use the `sha1` hash function for the
         unique uri filter. For very large crawls you might want to use a
@@ -100,8 +101,6 @@ class AbstractBaseFrontier(object):
         This method may throw an `AssertionError` when the `curi` is already
         known to the frontier. In this case you should use :meth:`update_uri`.
         """
-        assert curi.url not in self._current_uris
-
         if self._unique_uri.is_known(curi.url):
             # we already know this uri
             return
@@ -120,7 +119,7 @@ class AbstractBaseFrontier(object):
         next_crawl_date = time.mktime(next_date.timetuple())
 
         self._front_end_queues.add_uri((curi.url, etag, mod_date,
-            prio, next_crawl_date))
+            next_crawl_date, prio))
 
     def get_next(self):
         """
@@ -143,7 +142,7 @@ class AbstractBaseFrontier(object):
         Add an URI to the heap that is ready to be crawled.
         """
         self._heap.put_nowait((next_date, uri))
-        (url, etag, mod_date, queue, next_date) = uri
+        (url, etag, mod_date, next_date, prio) = uri
         self._current_uris[url] = uri
 
     def _update_heap(self):
@@ -161,7 +160,7 @@ class AbstractBaseFrontier(object):
 
         Replace the hostname with the real IP in order to cache DNS queries.
         """
-        (url, etag, mod_date, queue, next_date) = uri
+        (url, etag, mod_date, next_date, prio) = uri
 
         parsed_url = urlparse(url)
 
@@ -176,6 +175,7 @@ class AbstractBaseFrontier(object):
         curi = CrawlUri(url)
         curi.effective_url = url.replace(parsed_url.netloc, "%s:%s" %
                 effective_netloc)
+        curi.current_priority = prio
         curi.req_header = dict()
         if etag:
             curi.req_header["Etag"] = etag
@@ -193,13 +193,17 @@ class AbstractBaseFrontier(object):
 
         return curi
 
+    def get_prio_for_uri(self, curi):
+        """
+        Calculate the prio for the :class:`CrawlUri`.
+        """
+        pass
+
     def process_successful_crawl(msg):
         """
         Called when an URI has been crawled successfully.
 
         `msg` is the :class:`DataMessage`.
-
-        Override this method in the actual frontier implementation.
         """
         pass
 
@@ -241,7 +245,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
         Initialize the base frontier.
         """
         AbstractBaseFrontier.__init__(self, settings,
-                SQLiteUriQueues(settings.FRONTIER_STATE_FILE))
+                SQLiteSingleHostUriQueue(settings.FRONTIER_STATE_FILE))
         self._max_priorities = settings.FRONTIER_NUM_PRIORITIES
 
     def _update_heap(self):
@@ -252,20 +256,30 @@ class SingleHostFrontier(AbstractBaseFrontier):
         """
         now = time.time()
 
-        for q in range(1, self._max_priorities):
+        for uri in self._front_end_queues.queue_head(n=50):
 
-            for uri in self._front_end_queues.queue_head(q, n=50):
+            (url, etag, mod_date, next_date, prio) = uri
 
-                (url, etag, mod_date, queue, next_date) = uri
+            if url not in self._current_uris:
+                if next_date < now:
+                    # add this uri
+                    try:
+                        self._add_to_heap(uri, next_date)
+                    except Full:
+                        # heap is full, return to the caller
+                        return
+                else:
+                    # no more uris in this queue
+                    break
 
-                if url not in self._current_uris:
-                    if next_date < now:
-                        # add this uri
-                        try:
-                            self._add_to_heap(uri, next_date)
-                        except Full:
-                            # heap is full, return to the caller
-                            return
-                    else:
-                        # no more uris in this queue
-                        break
+    def process_successful_crawl(msg):
+        pass
+
+    def process_not_found(msg):
+        pass
+
+    def process_redirect(msg):
+        pass
+
+    def process_server_error(msg):
+        pass
