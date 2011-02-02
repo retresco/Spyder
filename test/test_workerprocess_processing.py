@@ -23,7 +23,6 @@
 #
 
 import unittest
-from mockito import when
 
 from spyder.core.constants import CURI_OPTIONAL_TRUE
 from spyder.core.constants import CURI_EXTRACTION_FINISHED
