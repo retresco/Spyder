@@ -58,5 +58,14 @@ setup(
             'spyder = spyder:spyder_admin_main',
         ]
     },
+    classifiers = [
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Information Technology',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python :: 2.6',
+        'Topic :: Internet :: WWW/HTTP',
+        'Topic :: Internet :: WWW/HTTP :: Indexing/Search',
+    ]
 )
 
