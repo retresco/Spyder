@@ -30,6 +30,7 @@ from spyder.core.frontier import *
 from spyder.core.messages import serialize_date_time, deserialize_date_time
 from spyder.core.prioritizer import SimpleTimestampPrioritizer
 from spyder.core.settings import Settings
+from spyder.core.sink import AbstractCrawlUriSink
 from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
 from spyder.thrift.gen.ttypes import CrawlUri
 
@@ -110,6 +111,25 @@ class BaseFrontierTest(unittest.TestCase):
         self.assertEqual("user", curi.optional_vars[CURI_SITE_USERNAME])
         self.assertEqual("passwd", curi.optional_vars[CURI_SITE_PASSWORD])
 
+    def test_sinks(self):
+        now = datetime(*datetime.fromtimestamp(time.time()).timetuple()[0:6])
+        s = Settings()
+        s.FRONTIER_STATE_FILE = ":memory:"
+
+        frontier = AbstractBaseFrontier(s,
+                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE),
+                SimpleTimestampPrioritizer(s))
+        frontier.add_sink(AbstractCrawlUriSink())
+
+        curi = CrawlUri("http://localhost")
+        curi.rep_header = { "Etag" : "123", "Date" : serialize_date_time(now) }
+        curi.current_priority = 2
+
+        frontier.process_successful_crawl(curi)
+        frontier.process_not_found(curi)
+        frontier.process_redirect(curi)
+        frontier.process_server_error(curi)
+
 
 class SingleHostFrontierTest(unittest.TestCase):
 
@@ -144,21 +164,20 @@ class SingleHostFrontierTest(unittest.TestCase):
 
         self.assertRaises(Empty, frontier._heap.get_nowait)
 
-        frontier._update_heap()
-
         for i in range(1, 10):
-            candidate_uri = frontier._heap.get_nowait()
-            (nd, (url, etag, mod_date, next_date, prio)) = candidate_uri
+            candidate_uri = frontier.get_next()
 
-            if url in q1:
-                self.assertTrue(url in q1)
-                q1.remove(url)
-            elif url in q2:
-                self.assertTrue(url in q2)
-                q2.remove(url)
+            if candidate_uri.url in q1:
+                self.assertTrue(candidate_uri.url in q1)
+                q1.remove(candidate_uri.url)
+            elif candidate_uri.url in q2:
+                self.assertTrue(candidate_uri.url in q2)
+                q2.remove(candidate_uri.url)
 
         self.assertEqual(10, len(q1))
         self.assertEqual(0, len(q2))
+
+        self.assertRaises(Empty, frontier.get_next)
 
 
 if __name__ == '__main__':

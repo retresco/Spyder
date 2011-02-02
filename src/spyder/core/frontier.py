@@ -85,10 +85,20 @@ class AbstractBaseFrontier(object):
 
         # a list of uris currently being crawled.
         self._current_uris = dict()
-
+        # dns cache
         self._dns_cache = DnsCache(settings.FRONTIER_SIZE_DNS_CACHE)
-
+        # unique uri filter
+        # TODO refill the filter from previously stored uris.
         self._unique_uri = UniqueUriFilter(unique_hash)
+
+        self._sinks = []
+
+    def add_sink(self, sink):
+        """
+        Add a sink to the frontier. A sink will be responsible for the long
+        term storage of the crawled contents.
+        """
+        self._sinks.append(sink)
 
     def add_uri(self, curi):
         """
@@ -202,15 +212,22 @@ class AbstractBaseFrontier(object):
         """
         pass
 
-    def process_successful_crawl(msg):
+    def process_successful_crawl(self, curi):
         """
         Called when an URI has been crawled successfully.
 
         `msg` is the :class:`DataMessage`.
         """
-        pass
+        self.add_uri(curi)
+        if curi.optional_vars and CURI_EXTRACTED_URLS in curi.optional_vars:
+            for url in curi.optional_vars[CURI_EXTRACTED_URLS]:
+                u = CrawlUri(url)
+                self.add_uri(u)
 
-    def process_not_found(msg):
+        for sink in self._sinks:
+            sink.process_successful_crawl(curi)
+
+    def process_not_found(self, curi):
         """
         Called when an URL was not found.
 
@@ -219,23 +236,26 @@ class AbstractBaseFrontier(object):
 
         Override this method in the actual frontier implementation.
         """
-        pass
+        for sink in self._sinks:
+            sink.process_not_found(curi)
 
-    def process_redirect(msg):
+    def process_redirect(self, curi):
         """
         Called when there were too many redirects for an URL.
 
         Override this method in the actual frontier implementation.
         """
-        pass
+        for sink in self._sinks:
+            sink.process_redirect(curi)
 
-    def process_server_error(msg):
+    def process_server_error(self, curi):
         """
         Called when there was some kind of server error.
 
         Override this method in the actual frontier implementation.
         """
-        pass
+        for sink in self._sinks:
+            sink.process_server_error(curi)
 
 
 class SingleHostFrontier(AbstractBaseFrontier):
@@ -267,15 +287,3 @@ class SingleHostFrontier(AbstractBaseFrontier):
                 except Full:
                     # heap is full, return to the caller
                     return
-
-    def process_successful_crawl(msg):
-        pass
-
-    def process_not_found(msg):
-        pass
-
-    def process_redirect(msg):
-        pass
-
-    def process_server_error(msg):
-        pass
