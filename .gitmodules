@@ -1,3 +1,0 @@
-[submodule "lib/pyzmq"]
-	path = lib/pyzmq
-	url = git://github.com/zeromq/pyzmq.git
