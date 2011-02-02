@@ -28,6 +28,7 @@ import unittest
 from spyder.core.constants import *
 from spyder.core.frontier import *
 from spyder.core.messages import serialize_date_time, deserialize_date_time
+from spyder.core.prioritizer import SimpleTimestampPrioritizer
 from spyder.core.settings import Settings
 from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
 from spyder.thrift.gen.ttypes import CrawlUri
@@ -45,18 +46,19 @@ class BaseFrontierTest(unittest.TestCase):
 
         curi = CrawlUri("http://localhost")
         curi.rep_header = { "Etag" : "123", "Date" : serialize_date_time(now) }
+        curi.current_priority = 2
 
         frontier = AbstractBaseFrontier(s,
-                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE))
-        frontier.add_uri(curi, next_crawl_date)
+                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE),
+                SimpleTimestampPrioritizer(s))
+        frontier.add_uri(curi)
 
         for uri in frontier._front_end_queues.queue_head():
             (url, etag, mod_date, queue, next_date) = uri
             self.assertEqual("http://localhost", url)
             self.assertEqual("123", etag)
             self.assertEqual(now, datetime.fromtimestamp(mod_date))
-            self.assertEqual(next_crawl_date,
-                    datetime.fromtimestamp(next_date))
+            self.assertTrue(next_crawl_date<datetime.fromtimestamp(next_date))
             frontier._current_uris[url] = uri
 
     def test_crawluri_from_uri(self):
@@ -70,7 +72,8 @@ class BaseFrontierTest(unittest.TestCase):
         s.FRONTIER_STATE_FILE = ":memory:"
 
         frontier = AbstractBaseFrontier(s,
-                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE))
+                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE),
+                SimpleTimestampPrioritizer(s))
 
         uri = ("http://localhost", "123", now_timestamp, 1,
                 next_crawl_date_timestamp)
@@ -92,7 +95,8 @@ class BaseFrontierTest(unittest.TestCase):
         s.FRONTIER_STATE_FILE = ":memory:"
 
         frontier = AbstractBaseFrontier(s,
-                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE))
+                SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE),
+                SimpleTimestampPrioritizer(s))
 
         uri = ("http://user:passwd@localhost", "123", now_timestamp, 1,
             next_crawl_date_timestamp)
@@ -113,7 +117,6 @@ class SingleHostFrontierTest(unittest.TestCase):
 
         s = Settings()
         s.FRONTIER_STATE_FILE = ":memory:"
-        s.FRONTIER_NUM_PRIORITIES = 2
 
         frontier = SingleHostFrontier(s)
 
@@ -121,91 +124,41 @@ class SingleHostFrontierTest(unittest.TestCase):
         q2 = []
 
         now = datetime(*datetime.fromtimestamp(
-            time.time()).timetuple()[0:6])
+            time.time()).timetuple()[0:6]) - timedelta(days=2)
 
         for i in range(1, 20):
-            next_crawl = now - timedelta(minutes=(10-i))
-            next_timestamp = time.mktime(next_crawl.timetuple())
-
             curi = CrawlUri("http://localhost/test/%s" % i)
+            curi.current_priority = (i % 2 + 1)
             curi.rep_header = { "Etag" : "123%s" % i, "Date" : serialize_date_time(now) }
 
-            q1.append((curi, next_timestamp))
-            frontier.add_uri(curi, next_crawl)
+            frontier.add_uri(curi)
+
+            if i % 2 == 0:
+                (url, etag, mod_date, next_date, prio) = frontier._uri_from_curi(curi)
+                next_date = next_date - 1000 * 60 * 5
+                frontier._front_end_queues.update_uri((url, etag, mod_date,
+                            next_date, prio))
+                q2.append(curi.url)
+            else:
+                q1.append(curi.url)
 
         self.assertRaises(Empty, frontier._heap.get_nowait)
 
         frontier._update_heap()
 
-        for i in range(0, 10):
+        for i in range(1, 10):
             candidate_uri = frontier._heap.get_nowait()
-            (curi, next_crawl) = q1[i]
-            (nd, (url, etag, mod_date, queue, next_date)) = candidate_uri
+            (nd, (url, etag, mod_date, next_date, prio)) = candidate_uri
 
-            self.assertEqual(curi.url, url)
-            self.assertEqual(curi.rep_header["Etag"], etag)
-            self.assertEqual(curi.rep_header["Date"],
-                    serialize_date_time(datetime.fromtimestamp(mod_date)))
+            if url in q1:
+                self.assertTrue(url in q1)
+                q1.remove(url)
+            elif url in q2:
+                self.assertTrue(url in q2)
+                q2.remove(url)
 
-    def test_that_updating_heap_from_multiple_queues_works(self):
-
-        s = Settings()
-        s.FRONTIER_STATE_FILE = ":memory:"
-        s.FRONTIER_NUM_PRIORITIES = 2
-
-        frontier = SingleHostFrontier(s)
-
-        q1 = []
-        q2 = []
-
-        now = datetime(*datetime.fromtimestamp(
-            time.time()).timetuple()[0:6])
-
-        for i in range(1, 20):
-            next_crawl = now - timedelta(minutes=(10-i))
-            next_timestamp = time.mktime(next_crawl.timetuple())
-
-            curi = CrawlUri("http://localhost/q1/%s" % i)
-            curi.rep_header = { "Etag" : "123%s" % i, "Date" : serialize_date_time(now) }
-
-            q1.append((curi, next_timestamp))
-            frontier.add_uri(curi, next_crawl)
-
-            next_crawl = now - timedelta(minutes=(5-i), seconds=50)
-            next_timestamp = time.mktime(next_crawl.timetuple())
-
-            curi = CrawlUri("http://localhost/q2/%s" % i)
-            curi.rep_header = { "Etag" : "123%s" % i, "Date" : serialize_date_time(now) }
-
-            q2.append((curi, next_timestamp))
-            frontier.add_uri(curi, next_crawl)
-
-        self.assertRaises(Empty, frontier._heap.get_nowait)
-
-        j = 0
-        k = 0
-        for i in range(0, 15):
-            candidate_uri = frontier.get_next()
-
-            n = None
-            if 5 <= i <= 15:
-                if i % 2 > 0:
-                    n = q2[i-5-j]
-                    j += 1
-                else:
-                    n = q1[i-1-k]
-                    k += 1
-            else:
-                n = q1[i]
-            (curi, next_crawl) = n
-
-            self.assertEqual(curi.url, candidate_uri.url)
-            self.assertEqual(curi.rep_header["Etag"],
-                candidate_uri.req_header["Etag"])
-            self.assertEqual(curi.rep_header["Date"],
-                candidate_uri.req_header["Last-Modified"])
-
-        self.assertRaises(Empty, frontier.get_next)
+        self.assertEqual(10, len(q1))
+        self.assertEqual(0, len(q2))
 
 
 if __name__ == '__main__':

@@ -41,6 +41,7 @@ from urlparse import urlparse
 from spyder.core.constants import CURI_SITE_USERNAME, CURI_SITE_PASSWORD
 from spyder.core.dnscache import DnsCache
 from spyder.core.messages import serialize_date_time, deserialize_date_time
+from spyder.core.prioritizer import SimpleTimestampPrioritizer
 from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
 from spyder.core.uri_uniq import UniqueUriFilter
 from spyder.thrift.gen.ttypes import CrawlUri
@@ -64,7 +65,8 @@ class AbstractBaseFrontier(object):
     configuration parameters used for frontiers.
     """
 
-    def __init__(self, settings, front_end_queues, unique_hash='sha1'):
+    def __init__(self, settings, front_end_queues, prioritizer,
+        unique_hash='sha1'):
         """
         Initialize the frontier and instantiate the
         :class:`SQLiteSingleHostUriQueue`.
@@ -74,7 +76,7 @@ class AbstractBaseFrontier(object):
         larger hash function (`sha512`, e.g.)
         """
         # front end queue
-        self._default_priority = settings.FRONTIER_DEFAULT_PRIORITY
+        self._prioritizer = prioritizer
         self._front_end_queues = front_end_queues
 
         # the heap
@@ -88,7 +90,7 @@ class AbstractBaseFrontier(object):
 
         self._unique_uri = UniqueUriFilter(unique_hash)
 
-    def add_uri(self, curi, next_date, prio=None):
+    def add_uri(self, curi):
         """
         Add the specified :class:`CrawlUri` to the frontier.
 
@@ -105,21 +107,7 @@ class AbstractBaseFrontier(object):
             # we already know this uri
             return
 
-        if prio is None:
-            prio = self._default_priority
-
-        etag = mod_date = None
-        if curi.rep_header:
-            if "Etag" in curi.rep_header:
-                etag = curi.rep_header["Etag"]
-            if "Date" in curi.rep_header:
-                mod_date = time.mktime(deserialize_date_time(
-                    curi.rep_header["Date"]).timetuple())
-
-        next_crawl_date = time.mktime(next_date.timetuple())
-
-        self._front_end_queues.add_uri((curi.url, etag, mod_date,
-            next_crawl_date, prio))
+        self._front_end_queues.add_uri(self._uri_from_curi(curi))
 
     def get_next(self):
         """
@@ -145,14 +133,26 @@ class AbstractBaseFrontier(object):
         (url, etag, mod_date, next_date, prio) = uri
         self._current_uris[url] = uri
 
-    def _update_heap(self):
+    def _uri_from_curi(self, curi):
         """
-        Abstract method. Implement this in the actual Frontier.
+        Create the uri tuple from the :class:`CrawlUri` and calculate the
+        priority.
 
-        The implementation should really only add uris to the heap if they can
-        be downloaded right away.
+        Overwrite this method in more specific frontiers.
         """
-        pass
+        etag = mod_date = None
+        if curi.rep_header:
+            if "Etag" in curi.rep_header:
+                etag = curi.rep_header["Etag"]
+            if "Date" in curi.rep_header:
+                mod_date = time.mktime(deserialize_date_time(
+                    curi.rep_header["Date"]).timetuple())
+
+        (prio, delta) = self._prioritizer.calculate_priority(curi)
+        now = datetime.fromtimestamp(time.time())
+        next_crawl_date = time.mktime((now + delta).timetuple())
+
+        return (curi.url, etag, mod_date, next_crawl_date, prio)
 
     def _crawluri_from_uri(self, uri):
         """
@@ -193,9 +193,12 @@ class AbstractBaseFrontier(object):
 
         return curi
 
-    def get_prio_for_uri(self, curi):
+    def _update_heap(self):
         """
-        Calculate the prio for the :class:`CrawlUri`.
+        Abstract method. Implement this in the actual Frontier.
+
+        The implementation should really only add uris to the heap if they can
+        be downloaded right away.
         """
         pass
 
@@ -245,8 +248,8 @@ class SingleHostFrontier(AbstractBaseFrontier):
         Initialize the base frontier.
         """
         AbstractBaseFrontier.__init__(self, settings,
-                SQLiteSingleHostUriQueue(settings.FRONTIER_STATE_FILE))
-        self._max_priorities = settings.FRONTIER_NUM_PRIORITIES
+                SQLiteSingleHostUriQueue(settings.FRONTIER_STATE_FILE),
+                SimpleTimestampPrioritizer(settings))
 
     def _update_heap(self):
         """
@@ -254,23 +257,16 @@ class SingleHostFrontier(AbstractBaseFrontier):
 
         Note: it is possible that the heap is not full after it was updated!
         """
-        now = time.time()
-
         for uri in self._front_end_queues.queue_head(n=50):
 
             (url, etag, mod_date, next_date, prio) = uri
 
             if url not in self._current_uris:
-                if next_date < now:
-                    # add this uri
-                    try:
-                        self._add_to_heap(uri, next_date)
-                    except Full:
-                        # heap is full, return to the caller
-                        return
-                else:
-                    # no more uris in this queue
-                    break
+                try:
+                    self._add_to_heap(uri, next_date)
+                except Full:
+                    # heap is full, return to the caller
+                    return
 
     def process_successful_crawl(msg):
         pass
