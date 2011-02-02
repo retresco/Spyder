@@ -54,7 +54,7 @@ setup(
     extras_require = {'test': tests_require},
     entry_points = {
         'console_scripts' : [
-            'spyder = spyder:main',
+            'spyder = spyder:spyder_admin_main',
         ]
     },
 )

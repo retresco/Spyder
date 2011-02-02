@@ -77,7 +77,7 @@ def copy_skeleton_dir(destination):
                     path_new)
 
 
-def main(args=None):
+def spyder_admin_main(args=None):
     """
     Method for creating new environments for Spyders.
     """
@@ -88,3 +88,37 @@ def main(args=None):
         sys.exit(1)
 
     copy_skeleton_dir(os.getcwd())
+
+
+def spyder_management(settings):
+
+    from optparse import OptionParser
+
+    import spyder.workerprocess
+    import spyder.masterprocess
+
+    from spyder.defaultsettings import Settings
+
+    effective_settings = Settings(settings)
+
+    parser = spyder_management_parse_options()
+    (options, args) = parser.parse_args()
+
+    if "master" == options.startthis:
+        masterprocess.main(effective_settings)
+    elif "worker" == options.startthis:
+        workerprocess.main(effective_settings)
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+def spyder_management_parse_options():
+
+    parser = OptionParser()
+    parser.add_option("master", dest="startthis",
+        help="Start a master process")
+    parser.add_option("worker", dest="startthis",
+        help="Start a worker process")
+
+    return parser
