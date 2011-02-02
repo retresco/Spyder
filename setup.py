@@ -45,8 +45,6 @@ setup(
     install_requires = [
         'pyzmq>=2.0.10',
         'tornado>=1.1',
-        'supervisor>=3.0a9',
-        'supervisor_twiddler>=0.2',
         'thrift>=0.5.0',
         'pycurl>=7.19.0',
         'pytz>=2010o',
