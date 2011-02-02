@@ -177,7 +177,7 @@ def main(settings):
     The `settings` have to be loaded already.
     """
     # create my own identity
-    identity = "%s:%s" % (socket.gethostname(), os.getpid())
+    identity = "worker:%s:%s" % (socket.gethostname(), os.getpid())
 
     ctx = zmq.Context()
     io_loop = IOLoop.instance()
