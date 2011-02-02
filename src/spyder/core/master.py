@@ -142,3 +142,5 @@ class ZmqMaster(object):
         elif 500 <= msg.curi.status_code < 600:
             # some kind of server error
             self._frontier.process_server_error(msg.curi)
+
+        self._send_next_uri()
