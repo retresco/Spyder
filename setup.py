@@ -30,7 +30,7 @@ assert long_description
 tests_require = ['mockito>=0.5.1', 'coverage>=3.4']
 
 setup(
-    name = "sPyder",
+    name = "spyder",
     version = __version__,
     description = "A python spider",
     long_description = long_description,
@@ -39,7 +39,8 @@ setup(
     url = "",
     license = "Apache 2.0",
     package_dir = { '' : 'src' },
-    packages = [ 'spyder', ],
+    packages = ['spyder', 'spyder.core', 'spyder.processor', 'spyder.thrift',
+        'spyder.thrift.gen', 'spyder.spyder_template'],
     include_package_data = True,
     test_suite = 'nose.collector',
     install_requires = [
