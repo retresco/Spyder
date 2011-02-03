@@ -58,7 +58,7 @@ def copy_skeleton_dir(destination):
                 subdirs.remove(subdir)
 
         for f in files:
-            if not f.endswith('.py'):
+            if not f.endswith('.py') or f != ".keep":
                 continue
             path_old = os.path.join(root, f)
             path_new = os.path.join(destination, relative, f)
