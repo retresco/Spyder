@@ -112,3 +112,12 @@ class ZmqMgmt(object):
         """
         if topic in self._callbacks and callback in self._callbacks[topic]:
             self._callbacks[topic].remove(callback)
+
+    def publish(self, topic=None, identity=None, data=None):
+        """
+        Publish a message to the intended audience.
+        """
+        assert topic is not None
+        assert data is not None
+        msg = MgmtMessage(topic=topic, identity=identity, data=data)
+        self._out_stream.send_multipart(msg.serialize())
