@@ -23,6 +23,7 @@ Module for the default spyder settings.
 
 # simple settings
 
+
 # Fetch Processor
 USER_AGENT = "Mozilla/5.0 (compatible; spyder/0.1; " + \
     "+http://github.com/retresco/spyder)"
@@ -109,3 +110,6 @@ ZEROMQ_MASTER_SUB = ZEROMQ_WORKER_PROC_SCOPER_PUB
 # ZeroMQ Management Sockets
 ZEROMQ_MGMT_MASTER = "ipc:///tmp/spyder-zmq-mgmt-master.sock"
 ZEROMQ_MGMT_WORKER = "ipc:///tmp/spyder-zmq-mgmt-worker.sock"
+
+# ZeroMQ logging socket
+ZEROMQ_LOGGING = "ipc:///tmp/spyder-logging.sock"
