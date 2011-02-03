@@ -26,7 +26,12 @@ import shutil
 import stat
 import sys
 
+import spyder.workerprocess
+import spyder.masterprocess
+
 import spyder
+from spyder.core.settings import Settings
+
 
 __version__ = '0.0-dev'
 
@@ -92,33 +97,19 @@ def spyder_admin_main(args=None):
 
 def spyder_management(settings):
 
-    from optparse import OptionParser
-
-    import spyder.workerprocess
-    import spyder.masterprocess
-
-    from spyder.defaultsettings import Settings
-
     effective_settings = Settings(settings)
 
-    parser = spyder_management_parse_options()
-    (options, args) = parser.parse_args()
+    args = [a.lower() for a in sys.argv]
 
-    if "master" == options.startthis:
+    if "master" in args:
+        args.remove("master")
         masterprocess.main(effective_settings)
-    elif "worker" == options.startthis:
+    elif "worker" in args:
         workerprocess.main(effective_settings)
     else:
-        parser.print_help()
+        print >> sys.stderr, """Usage: spyder-ctrl [master|worker]
+
+'master'\tstart a master process.
+'worker'\tstart a worker process.
+"""
         sys.exit(1)
-
-
-def spyder_management_parse_options():
-
-    parser = OptionParser()
-    parser.add_option("master", dest="startthis",
-        help="Start a master process")
-    parser.add_option("worker", dest="startthis",
-        help="Start a worker process")
-
-    return parser
