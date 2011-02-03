@@ -272,6 +272,19 @@ class SingleHostFrontier(AbstractBaseFrontier):
                 SQLiteSingleHostUriQueue(settings.FRONTIER_STATE_FILE),
                 SimpleTimestampPrioritizer(settings))
 
+        self._crawl_delay = settings.FRONTIER_CRAWL_DELAY_FACTOR
+        self._next_possible_crawl = time.time()
+
+    def get_next(self):
+        """
+        Get the next URI.
+
+        Only return the next URI if  we have waited enough.
+        """
+        if time.time() >= self._next_possible_crawl:
+            return AbstractBaseFrontier.get_next(self)
+        raise Empty()
+
     def _update_heap(self):
         """
         Update the heap with URIs we should crawl.
@@ -288,3 +301,11 @@ class SingleHostFrontier(AbstractBaseFrontier):
                 except Full:
                     # heap is full, return to the caller
                     return
+
+    def process_successful_crawl(self, curi):
+        """
+        Add the timebased politeness to this frontier.
+        """
+        AbstractBaseFrontier.process_successful_crawl(self, curi)
+        now = time.time()
+        self._next_possible_crawl = now + self._crawl_delay * curi.req_time

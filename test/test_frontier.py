@@ -179,6 +179,26 @@ class SingleHostFrontierTest(unittest.TestCase):
 
         self.assertRaises(Empty, frontier.get_next)
 
+    def test_that_time_based_politeness_works(self):
+
+        s = Settings()
+        s.FRONTIER_STATE_FILE = ":memory:"
+
+        frontier = SingleHostFrontier(s)
+
+        now = datetime(*datetime.fromtimestamp(
+            time.time()).timetuple()[0:6]) - timedelta(days=2)
+        curi = CrawlUri("http://localhost/test")
+        curi.current_priority = 3
+        curi.rep_header = { "Etag" : "123", "Date" : serialize_date_time(now) }
+        curi.req_time = 0.5
+
+        a = frontier._next_possible_crawl
+        frontier.process_successful_crawl(curi)
+        self.assertTrue(frontier._next_possible_crawl > a)
+        self.assertTrue(frontier._next_possible_crawl > time.time())
+        self.assertRaises(Empty, frontier.get_next)
+
 
 if __name__ == '__main__':
     unittest.main()

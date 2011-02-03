@@ -43,6 +43,8 @@ FRONTIER_HEAP_SIZE = 500
 FRONTIER_HEAP_MIN = 100
 # Size of the DNS Cache
 FRONTIER_SIZE_DNS_CACHE = 1000
+# Download duration times this factor throttles the spyder
+FRONTIER_CRAWL_DELAY_FACTOR = 4
 
 # The number of priority levels where URIs are being assigned to (lowest means
 # highest priority)
