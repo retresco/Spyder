@@ -30,7 +30,7 @@ assert long_description
 tests_require = ['mockito>=0.5.1', 'coverage>=3.4']
 
 setup(
-    name = "sPyder",
+    name = "spyder",
     version = __version__,
     description = "A python spider",
     long_description = long_description,
@@ -39,7 +39,8 @@ setup(
     url = "",
     license = "Apache 2.0",
     package_dir = { '' : 'src' },
-    packages = [ 'spyder', ],
+    packages = ['spyder', 'spyder.core', 'spyder.processor', 'spyder.thrift',
+        'spyder.thrift.gen', 'spyder.spyder_template'],
     include_package_data = True,
     test_suite = 'nose.collector',
     install_requires = [
@@ -48,13 +49,24 @@ setup(
         'thrift>=0.5.0',
         'pycurl>=7.19.0',
         'pytz>=2010o',
+        'brownie>=0.4.1',
     ],
     tests_require = tests_require,
     extras_require = {'test': tests_require},
     entry_points = {
         'console_scripts' : [
-            'spyder = spyder:main',
+            'spyder = spyder:spyder_admin_main',
         ]
     },
+    classifiers = [
+        'Intended Audience :: Developers',
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Information Technology',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python :: 2.6',
+        'Topic :: Internet :: WWW/HTTP',
+        'Topic :: Internet :: WWW/HTTP :: Indexing/Search',
+    ]
 )
 

@@ -26,7 +26,12 @@ import shutil
 import stat
 import sys
 
+import spyder.workerprocess as worker
+import spyder.masterprocess as master
+
 import spyder
+from spyder.core.settings import Settings
+
 
 __version__ = '0.0-dev'
 
@@ -77,7 +82,7 @@ def copy_skeleton_dir(destination):
                     path_new)
 
 
-def main(args=None):
+def spyder_admin_main(args=None):
     """
     Method for creating new environments for Spyders.
     """
@@ -88,3 +93,23 @@ def main(args=None):
         sys.exit(1)
 
     copy_skeleton_dir(os.getcwd())
+
+
+def spyder_management(settings):
+
+    effective_settings = Settings(settings)
+
+    args = [a.lower() for a in sys.argv]
+
+    if "master" in args:
+        args.remove("master")
+        master.main(effective_settings)
+    elif "worker" in args:
+        worker.main(effective_settings)
+    else:
+        print >> sys.stderr, """Usage: spyder-ctrl [master|worker]
+
+'master'\tstart a master process.
+'worker'\tstart a worker process.
+"""
+        sys.exit(1)

@@ -1,7 +1,7 @@
 #
-# Copyright (c) 2008 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
 #
-# __init__.py 10-Jan-2011
+# settings.py 02-Feb-2011
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # under the License.
+# All programs in this directory and
+# subdirectories are published under the GNU General Public License as
+# described below.
 #
 #
 """
-The Spyder skeleton directory.
+Your application specific settings.
+"""
 
-When a new spyder project is being created this directory will mark the basis
-of the new project.
-"""
+

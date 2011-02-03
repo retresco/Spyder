@@ -24,7 +24,7 @@ class CrawlUri(object):
   Attributes:
    - url
    - effective_url
-   - host_identifier
+   - current_priority
    - begin_processing
    - end_processing
    - req_header
@@ -40,7 +40,7 @@ class CrawlUri(object):
     None, # 0
     (1, TType.STRING, 'url', None, None, ), # 1
     (2, TType.STRING, 'effective_url', None, None, ), # 2
-    (3, TType.STRING, 'host_identifier', None, None, ), # 3
+    (3, TType.I16, 'current_priority', None, None, ), # 3
     (4, TType.I64, 'begin_processing', None, None, ), # 4
     (5, TType.I64, 'end_processing', None, None, ), # 5
     (6, TType.MAP, 'req_header', (TType.STRING,None,TType.STRING,None), None, ), # 6
@@ -52,10 +52,10 @@ class CrawlUri(object):
     (12, TType.MAP, 'optional_vars', (TType.STRING,None,TType.STRING,None), None, ), # 12
   )
 
-  def __init__(self, url=None, effective_url=None, host_identifier=None, begin_processing=None, end_processing=None, req_header=None, rep_header=None, content_body=None, status_code=None, req_time=None, queue_time=None, optional_vars=None,):
+  def __init__(self, url=None, effective_url=None, current_priority=None, begin_processing=None, end_processing=None, req_header=None, rep_header=None, content_body=None, status_code=None, req_time=None, queue_time=None, optional_vars=None,):
     self.url = url
     self.effective_url = effective_url
-    self.host_identifier = host_identifier
+    self.current_priority = current_priority
     self.begin_processing = begin_processing
     self.end_processing = end_processing
     self.req_header = req_header
@@ -86,8 +86,8 @@ class CrawlUri(object):
         else:
           iprot.skip(ftype)
       elif fid == 3:
-        if ftype == TType.STRING:
-          self.host_identifier = iprot.readString();
+        if ftype == TType.I16:
+          self.current_priority = iprot.readI16();
         else:
           iprot.skip(ftype)
       elif fid == 4:
@@ -171,9 +171,9 @@ class CrawlUri(object):
       oprot.writeFieldBegin('effective_url', TType.STRING, 2)
       oprot.writeString(self.effective_url)
       oprot.writeFieldEnd()
-    if self.host_identifier != None:
-      oprot.writeFieldBegin('host_identifier', TType.STRING, 3)
-      oprot.writeString(self.host_identifier)
+    if self.current_priority != None:
+      oprot.writeFieldBegin('current_priority', TType.I16, 3)
+      oprot.writeI16(self.current_priority)
       oprot.writeFieldEnd()
     if self.begin_processing != None:
       oprot.writeFieldBegin('begin_processing', TType.I64, 4)

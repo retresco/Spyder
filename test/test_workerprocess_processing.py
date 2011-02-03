@@ -23,7 +23,6 @@
 #
 
 import unittest
-from mockito import when
 
 from spyder.core.constants import CURI_OPTIONAL_TRUE
 from spyder.core.constants import CURI_EXTRACTION_FINISHED
@@ -39,6 +38,11 @@ class WorkerProcessingUnittest(unittest.TestCase):
         settings = Settings()
         processors = settings.SPYDER_SCOPER_PIPELINE
         processors.append('test_workerprocess')
+        self.assertRaises(ImportError, workerprocess.create_processing_function,
+                settings, processors)
+
+        processors.pop()
+        processors.append('test_workerprocess_unspec')
         self.assertRaises(ValueError, workerprocess.create_processing_function,
                 settings, processors)
 
