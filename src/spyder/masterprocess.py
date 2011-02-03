@@ -25,13 +25,10 @@ import signal
 import socket
 
 import zmq
-from zmq.eventloop.ioloop import IOLoop, DelayedCallback
+from zmq.eventloop.ioloop import IOLoop
 
-from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
-from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.frontier import SingleHostFrontier
 from spyder.core.master import ZmqMaster
-from spyder.core.messages import MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 
 

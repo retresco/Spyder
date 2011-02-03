@@ -39,6 +39,7 @@ from Queue import PriorityQueue, Empty, Full
 from urlparse import urlparse
 
 from spyder.core.constants import CURI_SITE_USERNAME, CURI_SITE_PASSWORD
+from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.dnscache import DnsCache
 from spyder.core.messages import serialize_date_time, deserialize_date_time
 from spyder.core.prioritizer import SimpleTimestampPrioritizer

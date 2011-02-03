@@ -23,8 +23,7 @@
 
 from Queue import Empty
 
-import zmq
-from zmq.eventloop.ioloop import IOLoop, PeriodicCallback, DelayedCallback
+from zmq.eventloop.ioloop import IOLoop, PeriodicCallback
 from zmq.eventloop.zmqstream import ZMQStream
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER

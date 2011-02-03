@@ -26,8 +26,8 @@ import shutil
 import stat
 import sys
 
-import spyder.workerprocess
-import spyder.masterprocess
+import spyder.workerprocess as worker
+import spyder.masterprocess as master
 
 import spyder
 from spyder.core.settings import Settings
@@ -103,9 +103,9 @@ def spyder_management(settings):
 
     if "master" in args:
         args.remove("master")
-        masterprocess.main(effective_settings)
+        master.main(effective_settings)
     elif "worker" in args:
-        workerprocess.main(effective_settings)
+        worker.main(effective_settings)
     else:
         print >> sys.stderr, """Usage: spyder-ctrl [master|worker]
 
