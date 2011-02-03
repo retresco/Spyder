@@ -20,12 +20,14 @@
 # described below.
 #
 #
+import logging
 import os
 import signal
 import socket
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop
+from zmq.log.handler import PUBHandler
 
 from spyder.core.frontier import SingleHostFrontier
 from spyder.core.master import ZmqMaster
@@ -62,6 +64,13 @@ def main(settings):
 
     ctx = zmq.Context()
     io_loop = IOLoop.instance()
+
+    # initialize the logging subsystem
+    log_pub = ctx.socket(zmq.PUB)
+    log_pub.connect(settings.ZEROMQ_LOGGING)
+    zmq_logging_handler = PUBHandler(log_pub)
+    zmq_logging_handler.root_topic = "spyder.master"
+    logging.getLogger().addHandler(zmq_logging_handler)
 
     mgmt = create_master_management(settings, ctx, io_loop)
     frontier = create_frontier(settings)
