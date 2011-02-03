@@ -21,13 +21,17 @@
 #
 #
 import os
+import signal
 import socket
 
 import zmq
-from zmq.eventloop.ioloop import IOLoop
+from zmq.eventloop.ioloop import IOLoop, DelayedCallback
 
+from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
+from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.frontier import SingleHostFrontier
 from spyder.core.master import ZmqMaster
+from spyder.core.messages import MgmtMessage
 from spyder.core.mgmt import ZmqMgmt
 
 
@@ -67,7 +71,7 @@ def main(settings):
 
     publishing_socket = ctx.socket(zmq.PUSH)
     publishing_socket.setsockopt(zmq.HWM, settings.ZEROMQ_MASTER_PUSH_HWM)
-    publishing_socket.bind(settings.ZEROMQ_MGMT_MASTER)
+    publishing_socket.bind(settings.ZEROMQ_MASTER_PUSH)
 
     receiving_socket = ctx.socket(zmq.SUB)
     receiving_socket.setsockopt(zmq.SUBSCRIBE, "")
@@ -75,6 +79,13 @@ def main(settings):
 
     master = ZmqMaster(identity, receiving_socket, publishing_socket, mgmt,
             frontier, io_loop)
+
+    def handle_shutdown_signal(sig, frame):
+        master.shutdown()
+
+    # handle kill signals
+    signal.signal(signal.SIGINT, handle_shutdown_signal)
+    signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
     mgmt.start()
     master.start()
@@ -86,5 +97,3 @@ def main(settings):
     mgmt.close()
 
     ctx.term()
-
-    print "Master down."

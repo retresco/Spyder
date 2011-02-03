@@ -24,7 +24,7 @@
 from Queue import Empty
 
 import zmq
-from zmq.eventloop.ioloop import IOLoop, PeriodicCallback
+from zmq.eventloop.ioloop import IOLoop, PeriodicCallback, DelayedCallback
 from zmq.eventloop.zmqstream import ZMQStream
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
@@ -60,8 +60,12 @@ class ZmqMaster(object):
         self._current_curis = []
 
         # check every minute if there are pending URIs to crawl
-        self._periodic_callback = PeriodicCallback(self._send_next_uri,
+        self._periodic_update = PeriodicCallback(self._send_next_uri,
                 60*1000, io_loop=io_loop)
+        # start this periodic callback when you are waiting for the workers to
+        # finish
+        self._periodic_shutdown = PeriodicCallback(self._shutdown_wait, 500,
+                io_loop=io_loop)
 
     def start(self):
         """
@@ -69,6 +73,7 @@ class ZmqMaster(object):
         """
         self._mgmt.add_callback(ZMQ_SPYDER_MGMT_WORKER, self._worker_msg)
         self._in_stream.on_recv(self._receive_processed_uri)
+        self._periodic_update.start()
         self._running = True
 
     def stop(self):
@@ -77,7 +82,32 @@ class ZmqMaster(object):
         processed.
         """
         self._running = False
-        self._periodic_callback.stop()
+        self._periodic_update.stop()
+
+    def shutdown(self):
+        """
+        Shutdown the master and notify the workers.
+        """
+        self.stop()
+        self._mgmt.publish(topic=ZMQ_SPYDER_MGMT_WORKER,
+                identity=self._identity, data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        self._periodic_shutdown.start()
+
+    def _shutdown_wait(self):
+        """
+        Callback called from `self._periodic_shutdown` in order to wait for the
+        workers to finish.
+        """
+        if 0 == len(self._available_workers):
+            self._periodic_shutdown.stop()
+            self._io_loop.stop()
+
+    def close(self):
+        """
+        Close all open sockets.
+        """
+        self._in_stream.close()
+        self._out_stream.close()
 
     def finished(self):
         """
@@ -107,6 +137,9 @@ class ZmqMaster(object):
         At this point there is a very small heuristic in order to maximize the
         throughput: try to keep the `self._out_stream._send_queue` full.
         """
+        if not self._running:
+            return
+
         num_workers = len(self._available_workers)
 
         if self._running and num_workers > 0:
