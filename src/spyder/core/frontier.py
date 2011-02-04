@@ -95,6 +95,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         self._unique_uri = UniqueUriFilter(unique_hash)
 
         self._sinks = []
+        self._checkpoint_interval = settings.FRONTIER_CHECKPOINTING
         self._logger.debug("frontier::initialized")
 
     def add_sink(self, sink):
@@ -139,6 +140,12 @@ class AbstractBaseFrontier(object, LoggingMixin):
             raise
 
         return self._crawluri_from_uri(next_uri)
+
+    def close(self):
+        """
+        Close the underlying frontend queues.
+        """
+        self._front_end_queues.close()
 
     def _add_to_heap(self, uri, next_date):
         """
@@ -217,6 +224,15 @@ class AbstractBaseFrontier(object, LoggingMixin):
         be downloaded right away.
         """
         pass
+
+    def _maybe_checkpoint(self):
+        """
+        Periodically checkpoint the state db.
+        """
+        self._uris_added += 1
+        if self._uris_added > self._checkpoint_interval:
+            self._front_end_queues.checkpoint()
+            self._uris_added = 0
 
     def process_successful_crawl(self, curi):
         """

@@ -55,6 +55,19 @@ class SQLiteStore(object):
         """
         self._connection.close()
 
+    def checkpoint(self):
+        """
+        Checkpoint the database, i.e. commit everything.
+        """
+        self._connection.commit()
+
+    def close(self):
+        """
+        Close the db saving everything.
+        """
+        self.checkpoint()
+        self._connection.close()
+
 
 class SQLiteSingleHostUriQueue(SQLiteStore):
     """
