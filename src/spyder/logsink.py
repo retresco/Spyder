@@ -33,8 +33,10 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 
 logging.config.fileConfig('logging.conf')
-master_log = logging.getLogger('masterlog')
-worker_log = logging.getLogger('workerlog')
+LOGGERS = { "default" : logging.getLogger() }
+
+LOGGERS['master'] = logging.getLogger('masterlog')
+LOGGERS['worker'] = logging.getLogger('workerlog')
 
 
 def log_zmq_message(msg):
@@ -47,16 +49,16 @@ def log_zmq_message(msg):
 
     `topic` is a string of the form::
 
-        topic = "process.LEVEL.subloggers"
+        topic = "process.LEVEL.subtopics"
     """
     t = msg[0].split(".")
     if len(t) == 3:
         t.append("SUBTOPIC")
-    if "master" == t[1]:
-        l = getattr(master_log, t[2].lower())
+    if t[1] in LOGGERS:
+        l = getattr(LOGGERS[t[1]], t[2].lower())
         l("%s - %s" % (t[3], msg[1].strip()))
-    elif "worker" == t[1]:
-        l = getattr(worker_log, t[2].lower())
+    else:
+        l = getattr(LOGGERS['default'], t[2].lower())
         l("%s: %s)" % (t[3], msg[2].strip()))
 
 
