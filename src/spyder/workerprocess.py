@@ -34,6 +34,7 @@ the resulting `CrawlUri` to the `Worker Extractor`. At this stage several
 Modules for extracting new URLs are running. The `Worker Scoper` will decide if
 the newly extracted URLs are within the scope of the crawl.
 """
+import logging
 import os
 import socket
 
@@ -64,7 +65,7 @@ def create_worker_management(settings, zmq_context, io_loop):
     return ZmqMgmt(listening_socket, publishing_socket, io_loop=io_loop)
 
 
-def create_worker_fetcher(settings, mgmt, zmq_context, io_loop):
+def create_worker_fetcher(settings, mgmt, zmq_context, log_handler, io_loop):
     """
     Create and return a new `Worker Fetcher`.
     """
@@ -79,7 +80,7 @@ def create_worker_fetcher(settings, mgmt, zmq_context, io_loop):
     fetcher = FetchProcessor(settings, io_loop)
 
     return AsyncZmqWorker(pulling_socket, pushing_socket, mgmt, fetcher,
-            io_loop)
+            log_handler, settings.LOG_LEVEL, io_loop)
 
 
 def custom_import(module):
@@ -120,7 +121,7 @@ def create_processing_function(settings, pipeline):
     return processing
 
 
-def create_worker_extractor(settings, mgmt, zmq_context, io_loop):
+def create_worker_extractor(settings, mgmt, zmq_context, log_handler, io_loop):
     """
     Create and return a new `Worker Extractor` that will combine all configured
     extractors to a single :class:`ZmqWorker`.
@@ -139,10 +140,10 @@ def create_worker_extractor(settings, mgmt, zmq_context, io_loop):
     pushing_socket.bind(settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH)
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
-        io_loop=io_loop)
+        log_handler, settings.LOG_LEVEL, io_loop=io_loop)
 
 
-def create_worker_scoper(settings, mgmt, zmq_context, io_loop):
+def create_worker_scoper(settings, mgmt, zmq_context, log_handler, io_loop):
     """
     Create and return a new `Worker Scoper` that will check if the newly
     extracted URLs are within this crawls scope.
@@ -157,7 +158,7 @@ def create_worker_scoper(settings, mgmt, zmq_context, io_loop):
     pushing_socket.connect(settings.ZEROMQ_WORKER_PROC_SCOPER_PUB)
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
-        io_loop=io_loop)
+        log_handler, settings.LOG_LEVEL, io_loop=io_loop)
 
 
 def main(settings):
@@ -182,13 +183,29 @@ def main(settings):
     ctx = zmq.Context()
     io_loop = IOLoop.instance()
 
+    # initialize the logging subsystem
+    log_pub = ctx.socket(zmq.PUB)
+    log_pub.connect(settings.ZEROMQ_LOGGING)
+    zmq_logging_handler = PUBHandler(log_pub)
+    zmq_logging_handler.root_topic = "spyder.worker"
+    logger = logging.getLogger()
+    logger.addHandler(zmq_logging_handler)
+    logger.setLevel(settings.LOG_LEVEL)
+
+    logger.info("process::Starting up another worker")
+
     mgmt = create_worker_management(settings, ctx, io_loop)
 
-    fetcher = create_worker_fetcher(settings, mgmt, ctx, io_loop)
+    logger.debug('process', "Initializing fetcher, extractor and scoper")
+
+    fetcher = create_worker_fetcher(settings, mgmt, ctx, zmq_logging_handler,
+        io_loop)
     fetcher.start()
-    extractor = create_worker_extractor(settings, mgmt, ctx, io_loop)
+    extractor = create_worker_extractor(settings, mgmt, ctx,
+        zmq_logging_handler, io_loop)
     extractor.start()
-    scoper = create_worker_scoper(settings, mgmt, ctx, io_loop)
+    scoper = create_worker_scoper(settings, mgmt, ctx, zmq_logging_handler,
+        io_loop)
     scoper.start()
 
     def quit_worker(raw_msg):
@@ -197,6 +214,7 @@ def main(settings):
         """
         msg = MgmtMessage(raw_msg)
         if ZMQ_SPYDER_MGMT_WORKER_QUIT == msg.data:
+            logger.info("process::We have been asked to shutdown, do so")
             DelayedCallback(io_loop.stop, 2000, io_loop)
             ack = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=identity,
                     data=ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
@@ -210,11 +228,12 @@ def main(settings):
             data=ZMQ_SPYDER_MGMT_WORKER_AVAIL)
     mgmt._out_stream.send_multipart(msg.serialize())
 
+    logger.info("process::waiting for action")
     # this will block until the worker quits
     io_loop.start()
 
     for mod in [fetcher, extractor, scoper, mgmt]:
         mod.close()
-    ctx.term()
 
-    print "Worker stopped."
+    logger.info("process::Houston: Worker down")
+    ctx.term()

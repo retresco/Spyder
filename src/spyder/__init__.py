@@ -26,9 +26,6 @@ import shutil
 import stat
 import sys
 
-import spyder.workerprocess as worker
-import spyder.masterprocess as master
-
 import spyder
 from spyder.core.settings import Settings
 
@@ -47,6 +44,7 @@ def copy_skeleton_dir(destination):
     if not os.path.exists(destination):
         os.makedirs(destination)
     template_dir = os.path.join(spyder.__path__[0], 'spyder_template')
+    wanted_files = [".keep", "logging.conf"]
 
     for root, subdirs, files in os.walk(template_dir):
         relative = root[len(template_dir) + 1:]
@@ -58,7 +56,7 @@ def copy_skeleton_dir(destination):
                 subdirs.remove(subdir)
 
         for f in files:
-            if not f.endswith('.py'):
+            if not f.endswith('.py') and f not in wanted_files:
                 continue
             path_old = os.path.join(root, f)
             path_new = os.path.join(destination, relative, f)
@@ -97,6 +95,10 @@ def spyder_admin_main(args=None):
 
 def spyder_management(settings):
 
+    from spyder import logsink
+    import spyder.workerprocess as worker
+    import spyder.masterprocess as master
+
     effective_settings = Settings(settings)
 
     args = [a.lower() for a in sys.argv]
@@ -106,10 +108,13 @@ def spyder_management(settings):
         master.main(effective_settings)
     elif "worker" in args:
         worker.main(effective_settings)
+    elif "logsink" in args:
+        logsink.main(effective_settings)
     else:
-        print >> sys.stderr, """Usage: spyder-ctrl [master|worker]
+        print >> sys.stderr, """Usage: spyder-ctrl [master|worker|logsink]
 
-'master'\tstart a master process.
-'worker'\tstart a worker process.
+'master'\t\tstart a master process.
+'worker'\t\tstart a worker process.
+'logsink'\t\tstart a sink for logmessages.
 """
         sys.exit(1)

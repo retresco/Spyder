@@ -17,6 +17,9 @@
 # under the License.
 #
 #
+import logging
+from logging import StreamHandler
+import sys
 import unittest
 
 import zmq
@@ -135,6 +138,7 @@ class AsyncZmqWorkerIntegrationTest(ZmqTornadoIntegrationTest):
             self._worker_sockets['worker_pub'],
             self._mgmt,
             self.echo_processing,
+            StreamHandler(sys.stdout),
             self._io_loop)
 
         worker.start()

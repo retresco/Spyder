@@ -31,9 +31,10 @@ from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_AVAIL
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
 from spyder.core.messages import DataMessage, MgmtMessage
+from spyder.core.log import LoggingMixin
 
 
-class ZmqMaster(object):
+class ZmqMaster(object, LoggingMixin):
     """
     This is the ZMQ Master implementation.
 
@@ -41,10 +42,12 @@ class ZmqMaster(object):
     the processed messages. Unknown links will then be added to the frontier.
     """
 
-    def __init__(self, identity, insocket, outsocket, mgmt, frontier, io_loop):
+    def __init__(self, identity, insocket, outsocket, mgmt, frontier,
+            log_handler, log_level, io_loop):
         """
         Initialize the master.
         """
+        LoggingMixin.__init__(self, log_handler, log_level)
         self._identity = identity
         self._io_loop = io_loop or IOLoop.instance()
 
@@ -65,6 +68,7 @@ class ZmqMaster(object):
         # finish
         self._periodic_shutdown = PeriodicCallback(self._shutdown_wait, 500,
                 io_loop=io_loop)
+        self._logger.debug("zmqmaster::initialized")
 
     def start(self):
         """
@@ -74,6 +78,7 @@ class ZmqMaster(object):
         self._in_stream.on_recv(self._receive_processed_uri)
         self._periodic_update.start()
         self._running = True
+        self._logger.debug("zmqmaster::starting...")
 
     def stop(self):
         """
@@ -82,11 +87,13 @@ class ZmqMaster(object):
         """
         self._running = False
         self._periodic_update.stop()
+        self._logger.debug("zmqmaster::stopping...")
 
     def shutdown(self):
         """
         Shutdown the master and notify the workers.
         """
+        self._logger.debug("zmqmaster::shutdown...")
         self.stop()
         self._mgmt.publish(topic=ZMQ_SPYDER_MGMT_WORKER,
                 identity=self._identity, data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
@@ -99,6 +106,7 @@ class ZmqMaster(object):
         """
         if 0 == len(self._available_workers):
             self._periodic_shutdown.stop()
+            self._logger.debug("zmqmaster::bye bye...")
             self._io_loop.stop()
 
     def close(self):
@@ -123,10 +131,14 @@ class ZmqMaster(object):
 
         if ZMQ_SPYDER_MGMT_WORKER_AVAIL == msg.data:
             self._available_workers.append(msg.identity)
+            self._logger("zmqmaster::A new worker is available (%s)" %
+                    msg.identity)
 
         if ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK == msg.data:
             if msg.identity in self._available_workers:
                 self._available_workers.remove(msg.identity)
+                self._logger("zmqmaster::Removing worker (%s)" %
+                        msg.identity)
 
     def _send_next_uri(self):
         """
@@ -150,6 +162,8 @@ class ZmqMaster(object):
                     # well, frontier has nothing to process right now
                     break
 
+                self._logger.info("zmqmaster::Begin crawling next URL (%s)" %
+                        curi.url)
                 self._current_curis.append(next_curi.url)
                 msg = DataMessage(identity=self._identity, curi=next_curi)
                 self._out_stream.send_multipart(msg.serialize())
@@ -160,6 +174,8 @@ class ZmqMaster(object):
         all extracted URLs to the frontier.
         """
         msg = DataMessage(raw_msg)
+        self._logger.info("zmqmaster::Crawling URL (%s) finished" %
+                msg.curi.url)
 
         if 200 <= msg.curi.status_code < 300:
             # we have some kind of success code! yay

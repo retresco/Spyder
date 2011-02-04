@@ -29,10 +29,11 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
+from spyder.core.log import LoggingMixin
 from spyder.core.messages import DataMessage
 
 
-class ZmqWorker(object):
+class ZmqWorker(object, LoggingMixin):
     """
     This is the ZMQ worker implementation.
 
@@ -44,7 +45,8 @@ class ZmqWorker(object):
     configured `zmq.socket`.
     """
 
-    def __init__(self, insocket, outsocket, mgmt, processing, io_loop=None):
+    def __init__(self, insocket, outsocket, mgmt, processing, log_handler,
+            log_level, io_loop=None):
         """
         Initialize the `ZMQStream` with the `insocket` and `io_loop` and store
         the `outsocket`.
@@ -55,6 +57,7 @@ class ZmqWorker(object):
         `mgmt` is an instance of `spyder.core.mgmt.ZmqMgmt` that handles
         communication between master and worker processes.
         """
+        LoggingMixin.__init__(self, log_handler, log_level)
 
         self._insocket = insocket
         self._io_loop = io_loop or IOLoop.instance()

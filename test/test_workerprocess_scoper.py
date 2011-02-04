@@ -20,6 +20,9 @@
 # described below.
 #
 #
+import logging
+from logging import StreamHandler
+import sys
 
 import unittest
 
@@ -146,7 +149,7 @@ class WorkerScoperTestCase(ZmqTornadoIntegrationTest):
         self._settings.SPYDER_SCOPER_PIPELINE = ['spyder.processor.limiter',]
 
         scoper = workerprocess.create_worker_scoper(self._settings,
-                self._mgmt, self._ctx, self._io_loop)
+                self._mgmt, self._ctx, StreamHandler(sys.stdout), self._io_loop)
         scoper.start()
 
         curi = CrawlUri(url="http://localhost:80/robots.txt",
