@@ -3,17 +3,21 @@
 #
 # __init__.py 07-Jan-2011
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
 # under the License.
 #
 #
@@ -26,7 +30,6 @@ import shutil
 import stat
 import sys
 
-import spyder
 from spyder.core.settings import Settings
 
 
@@ -43,7 +46,7 @@ def copy_skeleton_dir(destination):
     """
     if not os.path.exists(destination):
         os.makedirs(destination)
-    template_dir = os.path.join(spyder.__path__[0], 'spyder_template')
+    template_dir = os.path.join(__path__[0], 'spyder_template')
     wanted_files = [".keep", "logging.conf"]
 
     for root, subdirs, files in os.walk(template_dir):
@@ -55,11 +58,11 @@ def copy_skeleton_dir(destination):
             if subdir.startswith('.'):
                 subdirs.remove(subdir)
 
-        for f in files:
-            if not f.endswith('.py') and f not in wanted_files:
+        for filename in files:
+            if not filename.endswith('.py') and filename not in wanted_files:
                 continue
-            path_old = os.path.join(root, f)
-            path_new = os.path.join(destination, relative, f)
+            path_old = os.path.join(root, filename)
+            path_new = os.path.join(destination, relative, filename)
             fp_old = open(path_old, 'r')
             fp_new = open(path_new, 'w')
             fp_new.write(fp_old.read())
@@ -72,15 +75,15 @@ def copy_skeleton_dir(destination):
                     # On Jython there is no os.access()
                     return
                 if not os.access(path_new, os.W_OK):
-                    st = os.stat(path_new)
-                    new_permissions = stat.S_IMODE(st.st_mode) | stat.S_IWUSR
-                    os.chmod(path_new, new_permissions)
+                    st_new = os.stat(path_new)
+                    new_perm = stat.S_IMODE(st_new.st_mode) | stat.S_IWUSR
+                    os.chmod(path_new, new_perm)
             except OSError:
                 sys.stderr.write("Could not set permission bits on %s" %
                     path_new)
 
 
-def spyder_admin_main(args=None):
+def spyder_admin_main():
     """
     Method for creating new environments for Spyders.
     """
@@ -94,6 +97,9 @@ def spyder_admin_main(args=None):
 
 
 def spyder_management(settings):
+    """
+    Start new master/worker/logsink processes.
+    """
 
     from spyder import logsink
     import spyder.workerprocess as worker

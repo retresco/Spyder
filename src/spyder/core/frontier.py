@@ -3,21 +3,22 @@
 #
 # frontier.py 26-Jan-2011
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
 # under the License.
-# All programs in this directory and
-# subdirectories are published under the GNU General Public License as
-# described below.
 #
 #
 """
@@ -96,6 +97,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
         self._sinks = []
         self._checkpoint_interval = settings.FRONTIER_CHECKPOINTING
+        self._uris_added = 0
         self._logger.debug("frontier::initialized")
 
     def add_sink(self, sink):
@@ -133,7 +135,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
             self._update_heap()
 
         try:
-            (next_date, next_uri) = self._heap.get_nowait()
+            (_next_date, next_uri) = self._heap.get_nowait()
         except Empty:
             # heap is empty, there is nothing to crawl right now!
             # mabe log this in the future
@@ -152,7 +154,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         Add an URI to the heap that is ready to be crawled.
         """
         self._heap.put_nowait((next_date, uri))
-        (url, etag, mod_date, next_date, prio) = uri
+        (url, _etag, _mod_date, _next_date, _prio) = uri
         self._current_uris[url] = uri
         self._logger.debug("frontier::Adding '%s' to the heap" % url)
 
@@ -183,7 +185,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
         Replace the hostname with the real IP in order to cache DNS queries.
         """
-        (url, etag, mod_date, next_date, prio) = uri
+        (url, etag, mod_date, _next_date, prio) = uri
 
         parsed_url = urlparse(url)
 
@@ -243,8 +245,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         self.add_uri(curi)
         if curi.optional_vars and CURI_EXTRACTED_URLS in curi.optional_vars:
             for url in curi.optional_vars[CURI_EXTRACTED_URLS]:
-                u = CrawlUri(url)
-                self.add_uri(u)
+                self.add_uri(CrawlUri(url))
 
         for sink in self._sinks:
             sink.process_successful_crawl(curi)
@@ -315,7 +316,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
         self._logger.debug("frontier::Updating heap")
         for uri in self._front_end_queues.queue_head(n=50):
 
-            (url, etag, mod_date, next_date, prio) = uri
+            (url, _etag, _mod_date, next_date, _prio) = uri
 
             if url not in self._current_uris:
                 try:

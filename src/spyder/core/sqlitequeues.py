@@ -3,21 +3,22 @@
 #
 # sqlitequques.py 24-Jan-2011
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
 # under the License.
-# All programs in this directory and
-# subdirectories are published under the GNU General Public License as
-# described below.
 #
 #
 """
@@ -53,6 +54,7 @@ class SQLiteStore(object):
         """
         Close the SQLite connection.
         """
+        self.checkpoint()
         self._connection.close()
 
     def checkpoint(self):
@@ -60,13 +62,6 @@ class SQLiteStore(object):
         Checkpoint the database, i.e. commit everything.
         """
         self._connection.commit()
-
-    def close(self):
-        """
-        Close the db saving everything.
-        """
-        self.checkpoint()
-        self._connection.close()
 
 
 class SQLiteSingleHostUriQueue(SQLiteStore):
@@ -121,7 +116,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         """
         (url, etag, mod_date, next_date, prio) = uri
         self._connection.execute("""UPDATE queue SET
-                etag=?, mod_date=?, next_date=?, priority=? 
+                etag=?, mod_date=?, next_date=?, priority=?
                 WHERE url=?""", (etag, mod_date, next_date, prio, url))
 
     def update_uris(self, uris):
@@ -157,6 +152,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         """
         Remove all uris.
         """
-        del_uris = [(url,) for (url, etag, mod_date, queue, next_date) in uris]
+        del_uris = [(url,) for (url, _etag, _mod_date, _queue, _next_date)
+            in uris]
         self._connection.executemany("DELETE FROM queue WHERE url=?",
                 del_uris)
