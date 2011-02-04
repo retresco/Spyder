@@ -24,6 +24,7 @@
 Module for aggregating spyder logs.
 """
 import logging
+import logging.config
 import signal
 
 import zmq
@@ -48,13 +49,15 @@ def log_zmq_message(msg):
 
         topic = "process.LEVEL.subloggers"
     """
-    t = msg[0].split("\.")
-    if "master" == t[0]:
-        l = getattr(master_log, t[1].lower())
-        l("%s: %s)" % (t[2], msg[1]))
-    elif "worker" == t[0]:
-        l = getattr(worker_log, t[1].lower())
-        l("%s: %s)" % (t[2], msg[1]))
+    t = msg[0].split(".")
+    if len(t) == 3:
+        t.append("SUBTOPIC")
+    if "master" == t[1]:
+        l = getattr(master_log, t[2].lower())
+        l("%s - %s" % (t[3], msg[1].strip()))
+    elif "worker" == t[1]:
+        l = getattr(worker_log, t[2].lower())
+        l("%s: %s)" % (t[3], msg[2].strip()))
 
 
 def main(settings):
@@ -65,7 +68,7 @@ def main(settings):
     ctx = zmq.Context()
     io_loop = IOLoop.instance()
 
-    log_sub = zmq.socket(zmq.SUB)
+    log_sub = ctx.socket(zmq.SUB)
     log_sub.setsockopt(zmq.SUBSCRIBE, "")
     log_sub.bind(settings.ZEROMQ_LOGGING)
 

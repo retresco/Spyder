@@ -26,11 +26,11 @@ import shutil
 import stat
 import sys
 
-import spyder.workerprocess as worker
-import spyder.masterprocess as master
-
 import spyder
 from spyder.core.settings import Settings
+
+import spyder.workerprocess as worker
+import spyder.masterprocess as master
 
 
 __version__ = '0.0-dev'
