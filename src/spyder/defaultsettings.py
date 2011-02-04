@@ -20,8 +20,10 @@
 """
 Module for the default spyder settings.
 """
+import logging
 
 # simple settings
+LOG_LEVEL = logging.DEBUG
 
 
 # Fetch Processor
