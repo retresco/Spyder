@@ -63,7 +63,7 @@ class ZmqMaster(object, LoggingMixin):
 
         # check every minute if there are pending URIs to crawl
         self._periodic_update = PeriodicCallback(self._send_next_uri,
-                60*1000, io_loop=io_loop)
+                60 * 1000, io_loop=io_loop)
         # start this periodic callback when you are waiting for the workers to
         # finish
         self._periodic_shutdown = PeriodicCallback(self._shutdown_wait, 500,

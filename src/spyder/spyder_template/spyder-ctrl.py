@@ -28,7 +28,8 @@ import spyder
 try:
     import settings
 except ImportError:
-    print >> sys.stderr, """Cannot find settings.py in the directory containing %s""" % __file__
+    print >> sys.stderr, \
+        """Cannot find settings.py in the directory containing %s""" % __file__
     sys.exit(1)
 
 

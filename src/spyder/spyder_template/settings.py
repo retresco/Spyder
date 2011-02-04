@@ -23,5 +23,6 @@
 """
 Your application specific settings.
 """
+import logging
 
-
+LOG_LEVEL = logging.ERROR

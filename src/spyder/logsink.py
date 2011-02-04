@@ -35,7 +35,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 if os.path.isfile('logging.conf'):
     logging.config.fileConfig('logging.conf')
-LOGGERS = { "default" : logging.getLogger() }
+LOGGERS = {"default": logging.getLogger()}
 
 LOGGERS['master'] = logging.getLogger('masterlog')
 LOGGERS['worker'] = logging.getLogger('workerlog')

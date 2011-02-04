@@ -115,7 +115,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         """
         (url, etag, mod_date, next_date, prio) = uri
         self._connection.execute("""UPDATE queue SET
-                etag=?, mod_date=?, next_date=?, priority=? 
+                etag=?, mod_date=?, next_date=?, priority=?
                 WHERE url=?""", (etag, mod_date, next_date, prio, url))
 
     def update_uris(self, uris):
