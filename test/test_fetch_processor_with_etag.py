@@ -17,6 +17,9 @@
 # under the License.
 #
 #
+import logging
+from logging import StreamHandler
+import sys
 
 import os.path
 import time
@@ -161,6 +164,7 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
             self._worker_sockets['worker_pub'],
             self._mgmt,
             fetcher,
+            StreamHandler(sys.stdout),
             self._io_loop)
         worker.start()
 

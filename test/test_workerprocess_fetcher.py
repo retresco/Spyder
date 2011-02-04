@@ -20,6 +20,9 @@
 # described below.
 #
 #
+import logging
+from logging import StreamHandler
+import sys
 
 import unittest
 import time
@@ -52,7 +55,7 @@ class WorkerExtractorTestCase(unittest.TestCase):
         master_push.bind(settings.ZEROMQ_MASTER_PUSH)
 
         fetcher = workerprocess.create_worker_fetcher(settings, {}, ctx,
-                io_loop)
+                StreamHandler(sys.stdout), io_loop)
 
         self.assertTrue(isinstance(fetcher._processing, FetchProcessor))
         self.assertTrue(isinstance(fetcher, AsyncZmqWorker))

@@ -20,6 +20,9 @@
 # described below.
 #
 #
+import sys
+import logging
+from logging import StreamHandler
 
 import unittest
 
@@ -147,7 +150,7 @@ class WorkerExtractorTestCase(ZmqTornadoIntegrationTest):
         self._settings.SPYDER_EXTRACTOR_PIPELINE = ['spyder.processor.limiter',]
 
         extractor = workerprocess.create_worker_extractor(self._settings,
-                self._mgmt, self._ctx, self._io_loop)
+                self._mgmt, self._ctx, StreamHandler(sys.stdout), self._io_loop)
         extractor.start()
 
         self._setup_data_client()
