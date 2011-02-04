@@ -26,13 +26,15 @@ Module for aggregating spyder logs.
 import logging
 import logging.config
 import signal
+import os.path
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
 
 
-logging.config.fileConfig('logging.conf')
+if os.path.isfile('logging.conf'):
+    logging.config.fileConfig('logging.conf')
 LOGGERS = { "default" : logging.getLogger() }
 
 LOGGERS['master'] = logging.getLogger('masterlog')
