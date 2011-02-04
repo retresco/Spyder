@@ -164,7 +164,7 @@ class ZmqMaster(object, LoggingMixin):
                     break
 
                 self._logger.info("zmqmaster::Begin crawling next URL (%s)" %
-                        curi.url)
+                        next_curi.url)
                 self._current_curis.append(next_curi.url)
                 msg = DataMessage(identity=self._identity, curi=next_curi)
                 self._out_stream.send_multipart(msg.serialize())

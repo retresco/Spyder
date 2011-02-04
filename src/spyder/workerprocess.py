@@ -40,6 +40,7 @@ import socket
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop, DelayedCallback
+from zmq.log.handlers import PUBHandler
 
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_AVAIL

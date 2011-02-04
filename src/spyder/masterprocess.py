@@ -27,7 +27,7 @@ import socket
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop
-from zmq.log.handlers import PUBHandler, TopicLogger
+from zmq.log.handlers import PUBHandler
 
 from spyder.core.frontier import SingleHostFrontier
 from spyder.core.master import ZmqMaster

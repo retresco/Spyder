@@ -26,8 +26,6 @@ A simple pyzmq logging mixin.
 
 import logging
 
-from zmq.log.handlers import PUBHandler
-
 
 class LoggingMixin:
     """
