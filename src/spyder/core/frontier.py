@@ -42,6 +42,7 @@ from spyder.core.constants import CURI_SITE_USERNAME, CURI_SITE_PASSWORD
 from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.dnscache import DnsCache
 from spyder.core.messages import serialize_date_time, deserialize_date_time
+from spyder.core.log import LoggingMixin
 from spyder.core.prioritizer import SimpleTimestampPrioritizer
 from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
 from spyder.core.uri_uniq import UniqueUriFilter
@@ -58,7 +59,7 @@ PROTOCOLS_DEFAULT_PORT = {
 }
 
 
-class AbstractBaseFrontier(object):
+class AbstractBaseFrontier(object, LoggingMixin):
     """
     A base class for implementing frontiers.
 
@@ -66,8 +67,8 @@ class AbstractBaseFrontier(object):
     configuration parameters used for frontiers.
     """
 
-    def __init__(self, settings, front_end_queues, prioritizer,
-        unique_hash='sha1'):
+    def __init__(self, settings, log_handler, log_level, front_end_queues,
+        prioritizer, unique_hash='sha1'):
         """
         Initialize the frontier and instantiate the
         :class:`SQLiteSingleHostUriQueue`.
@@ -76,6 +77,7 @@ class AbstractBaseFrontier(object):
         unique uri filter. For very large crawls you might want to use a
         larger hash function (`sha512`, e.g.)
         """
+        LoggingMixin.__init__(self, log_handler, log_level)
         # front end queue
         self._prioritizer = prioritizer
         self._front_end_queues = front_end_queues
@@ -93,6 +95,7 @@ class AbstractBaseFrontier(object):
         self._unique_uri = UniqueUriFilter(unique_hash)
 
         self._sinks = []
+        self._logger.debug("frontier::initialized")
 
     def add_sink(self, sink):
         """
@@ -118,6 +121,7 @@ class AbstractBaseFrontier(object):
             # we already know this uri
             return
 
+        self._logger.debug("frontier::Adding '%s' to the frontier" % curi.url)
         self._front_end_queues.add_uri(self._uri_from_curi(curi))
 
     def get_next(self):
@@ -143,6 +147,7 @@ class AbstractBaseFrontier(object):
         self._heap.put_nowait((next_date, uri))
         (url, etag, mod_date, next_date, prio) = uri
         self._current_uris[url] = uri
+        self._logger.debug("frontier::Adding '%s' to the heap" % url)
 
     def _uri_from_curi(self, curi):
         """
@@ -264,11 +269,11 @@ class SingleHostFrontier(AbstractBaseFrontier):
     A frontier for crawling a single host.
     """
 
-    def __init__(self, settings):
+    def __init__(self, settings, log_handler, log_level):
         """
         Initialize the base frontier.
         """
-        AbstractBaseFrontier.__init__(self, settings,
+        AbstractBaseFrontier.__init__(self, settings, log_handler, log_level,
                 SQLiteSingleHostUriQueue(settings.FRONTIER_STATE_FILE),
                 SimpleTimestampPrioritizer(settings))
 
@@ -291,6 +296,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
 
         Note: it is possible that the heap is not full after it was updated!
         """
+        self._logger.debug("frontier::Updating heap")
         for uri in self._front_end_queues.queue_head(n=50):
 
             (url, etag, mod_date, next_date, prio) = uri

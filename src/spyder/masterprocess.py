@@ -27,7 +27,7 @@ import socket
 
 import zmq
 from zmq.eventloop.ioloop import IOLoop
-from zmq.log.handler import PUBHandler
+from zmq.log.handlers import PUBHandler, TopicLogger
 
 from spyder.core.frontier import SingleHostFrontier
 from spyder.core.master import ZmqMaster
@@ -48,11 +48,11 @@ def create_master_management(settings, zmq_context, io_loop):
     return ZmqMgmt(listening_socket, publishing_socket, io_loop=io_loop)
 
 
-def create_frontier(settings):
+def create_frontier(settings, log_handler, log_level):
     """
     Create the frontier to use.
     """
-    return SingleHostFrontier(settings)
+    return SingleHostFrontier(settings, log_handler, log_level)
 
 
 def main(settings):
@@ -70,10 +70,15 @@ def main(settings):
     log_pub.connect(settings.ZEROMQ_LOGGING)
     zmq_logging_handler = PUBHandler(log_pub)
     zmq_logging_handler.root_topic = "spyder.master"
-    logging.getLogger().addHandler(zmq_logging_handler)
+    logger = logging.getLogger()
+    logger.addHandler(zmq_logging_handler)
+    logger.setLevel(settings.LOG_LEVEL)
+
+    logger.info("process::Starting up the master")
 
     mgmt = create_master_management(settings, ctx, io_loop)
-    frontier = create_frontier(settings)
+    frontier = create_frontier(settings, zmq_logging_handler,
+            settings.LOG_LEVEL)
 
     publishing_socket = ctx.socket(zmq.PUSH)
     publishing_socket.setsockopt(zmq.HWM, settings.ZEROMQ_MASTER_PUSH_HWM)
@@ -84,7 +89,7 @@ def main(settings):
     receiving_socket.bind(settings.ZEROMQ_MASTER_SUB)
 
     master = ZmqMaster(identity, receiving_socket, publishing_socket, mgmt,
-            frontier, io_loop)
+            frontier, zmq_logging_handler, settings.LOG_LEVEL, io_loop)
 
     def handle_shutdown_signal(sig, frame):
         master.shutdown()
@@ -101,5 +106,8 @@ def main(settings):
 
     master.close()
     mgmt.close()
+
+    logger.info("process::Master is down.")
+    log_pub.close()
 
     ctx.term()
