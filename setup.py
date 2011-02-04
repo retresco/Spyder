@@ -41,6 +41,9 @@ setup(
     package_dir = { '' : 'src' },
     packages = ['spyder', 'spyder.core', 'spyder.processor', 'spyder.thrift',
         'spyder.thrift.gen', 'spyder.spyder_template'],
+    data_files = [ ("spyder/spyder_template",
+        ["src/spyder/spyder_template/logging.conf"]),
+        ("spyder/spyder_template/log", ["src/spyder/spyder_template/log/.keep"])],
     include_package_data = True,
     test_suite = 'nose.collector',
     install_requires = [
