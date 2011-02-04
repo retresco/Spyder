@@ -20,6 +20,9 @@
 # described below.
 #
 #
+"""
+A ZeroMQ master, i.e. the producer of URIs.
+"""
 
 from Queue import Empty
 

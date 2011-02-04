@@ -49,8 +49,8 @@ class BiasedQueueSelector(object):
         """
         Return the next queue to use.
         """
-        md = random.random() * self._sum_weights
-        for (i, w) in self._enumerate_weights:
-            md -= w
-            if md < 0:
+        random_weight = random.random() * self._sum_weights
+        for (i, weight) in self._enumerate_weights:
+            random_weight -= weight
+            if random_weight < 0:
                 return i

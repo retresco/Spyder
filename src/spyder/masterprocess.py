@@ -20,6 +20,10 @@
 # described below.
 #
 #
+"""
+This module contains the default architecture for master process.
+"""
+
 import logging
 import os
 import signal
@@ -91,7 +95,10 @@ def main(settings):
     master = ZmqMaster(identity, receiving_socket, publishing_socket, mgmt,
             frontier, zmq_logging_handler, settings.LOG_LEVEL, io_loop)
 
-    def handle_shutdown_signal(sig, frame):
+    def handle_shutdown_signal(_sig, _frame):
+        """
+        Called from the os when a shutdown signal is fired.
+        """
         master.shutdown()
 
     # handle kill signals

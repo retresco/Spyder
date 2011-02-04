@@ -20,6 +20,9 @@
 # described below.
 #
 #
+"""
+A simple filter for unique uris.
+"""
 
 import hashlib
 
@@ -51,25 +54,25 @@ class UniqueUriFilter(object):
         """
         hash_method = hashlib.new(self._hash)
         hash_method.update(url)
-        h = hash_method.hexdigest()
+        hash_value = hash_method.hexdigest()
 
-        d = self._hashes
+        dictionary = self._hashes
         for i in range(0, self._depth):
-            if h[i] in d:
-                d = d[h[i]]
+            if hash_value[i] in dictionary:
+                dictionary = dictionary[hash_value[i]]
             else:
                 # unknown dict, add it now
                 if i == self._depth - 1:
-                    d[h[i]] = []
+                    dictionary[hash_value[i]] = []
                 else:
-                    d[h[i]] = dict()
-                d = d[h[i]]
+                    dictionary[hash_value[i]] = dict()
+                dictionary = dictionary[hash_value[i]]
 
-        # now d is the list at the deepest level
-        if h[self._depth:] in d:
+        # now dictionary is the list at the deepest level
+        if hash_value[self._depth:] in dictionary:
             return True
         else:
             # since we still are here, only the nested list does not
             # contain the given rest. Now we know it
-            d.append(h[self._depth:])
+            dictionary.append(hash_value[self._depth:])
             return False

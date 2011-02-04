@@ -54,7 +54,7 @@ class DnsCache(object):
         if host_port_string not in self._cache:
             (hostname, port) = host_port_string.split(":")
             infos = socket.getaddrinfo(hostname, port, 0, 0, socket.SOL_TCP)
-            for (family, socktype, proto, canoname, sockaddr) in infos:
+            for (_family, _socktype, _proto, _canoname, sockaddr) in infos:
                 if len(sockaddr) == 2:
                     # IPv4 (which we prefer)
                     self._cache[host_port_string] = sockaddr

@@ -53,15 +53,15 @@ def log_zmq_message(msg):
 
         topic = "process.LEVEL.subtopics"
     """
-    t = msg[0].split(".")
-    if len(t) == 3:
-        t.append("SUBTOPIC")
-    if t[1] in LOGGERS:
-        l = getattr(LOGGERS[t[1]], t[2].lower())
-        l("%s - %s" % (t[3], msg[1].strip()))
+    topic = msg[0].split(".")
+    if len(topic) == 3:
+        topic.append("SUBTOPIC")
+    if topic[1] in LOGGERS:
+        log = getattr(LOGGERS[topic[1]], topic[2].lower())
+        log("%s - %s" % (topic[3], msg[1].strip()))
     else:
-        l = getattr(LOGGERS['default'], t[2].lower())
-        l("%s: %s)" % (t[3], msg[2].strip()))
+        log = getattr(LOGGERS['default'], topic[2].lower())
+        log("%s: %s)" % (topic[3], msg[2].strip()))
 
 
 def main(settings):
@@ -80,7 +80,10 @@ def main(settings):
 
     log_stream.on_recv(log_zmq_message)
 
-    def handle_shutdown_signal(sig, frame):
+    def handle_shutdown_signal(_sig, _frame):
+        """
+        Called from the os when a shutdown signal is fired.
+        """
         log_stream.stop_on_recv()
         log_stream.flush()
         io_loop.stop()
