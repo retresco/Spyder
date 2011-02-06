@@ -59,8 +59,12 @@ def copy_skeleton_dir(destination):
                 subdirs.remove(subdir)
 
         for filename in files:
-            if not filename.endswith('.py') and filename not in wanted_files:
+            if (not filename.endswith('.py') and \
+                filename not in wanted_files) or \
+                filename == "__init__.py":
+
                 continue
+
             path_old = os.path.join(root, filename)
             path_new = os.path.join(destination, relative, filename)
             fp_old = open(path_old, 'r')
