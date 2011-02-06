@@ -141,12 +141,9 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
                 ORDER BY next_date ASC
                 LIMIT ?
                 OFFSET ?""", (timestamp, n, offset))
-        results = []
         for row in cursor:
-            results.append((row['url'], row['etag'], row['mod_date'],
-                row['next_date'], row['priority']))
-
-        return results
+            yield (row['url'], row['etag'], row['mod_date'],
+                row['next_date'], row['priority'])
 
     def remove_uris(self, uris):
         """
@@ -156,3 +153,21 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
             in uris]
         self._connection.executemany("DELETE FROM queue WHERE url=?",
                 del_uris)
+
+    def __len__(self):
+        """
+        Calculate the number of known uris.
+        """
+        cursor = self._connection.execute("""SELECT count(url) FROM queue""")
+        return cursor.fetchone()[0]
+
+    def all_uris(self):
+        """
+        A generator for iterating over all available urls.
+
+        Note: does not return the full uri object, only the url. This will be
+        used to refill the unique uri filter upon restart.
+        """
+        cursor = self._connection.execute("""SELECT url FROM queue""")
+        for row in cursor:
+            yield row['url']

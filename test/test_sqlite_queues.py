@@ -39,6 +39,8 @@ class SqliteQueuesTest(unittest.TestCase):
         q = SQLiteSingleHostUriQueue(":memory:")
         q.add_uri(uri)
 
+        self.assertEqual(1, len(q))
+
         cursor = q._connection.execute("SELECT * FROM queue")
         uri_res = cursor.fetchone()
         (url, etag, mod_date, next_date, prio) = uri
@@ -133,6 +135,21 @@ class SqliteQueuesTest(unittest.TestCase):
 
         cursor = q._connection.execute("SELECT * FROM queue")
         self.assertTrue(None is cursor.fetchone())
+
+    def test_iterating_over_all_uris_works(self):
+
+        uris = [("http://localhost", "etag", int(time.time()*1000),
+                int(time.time() * 1000), 1),
+            ("http://foreignhost", "ETAG", int(time.time()*1000),
+             int(time.time() * 1000), 2),
+        ]
+        urls = ["http://localhost", "http://foreignhost"]
+
+        q = SQLiteSingleHostUriQueue(":memory:")
+        q.add_uris(uris)
+
+        for url in q.all_uris():
+            self.assertTrue(url in urls)
 
     def test_queue_head_works(self):
 
