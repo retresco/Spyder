@@ -10,9 +10,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -59,8 +59,12 @@ def copy_skeleton_dir(destination):
                 subdirs.remove(subdir)
 
         for filename in files:
-            if not filename.endswith('.py') and filename not in wanted_files:
+            if (not filename.endswith('.py') and \
+                filename not in wanted_files) or \
+                filename == "__init__.py":
+
                 continue
+
             path_old = os.path.join(root, filename)
             path_new = os.path.join(destination, relative, filename)
             fp_old = open(path_old, 'r')
