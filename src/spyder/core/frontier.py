@@ -92,8 +92,9 @@ class AbstractBaseFrontier(object, LoggingMixin):
         # dns cache
         self._dns_cache = DnsCache(settings.FRONTIER_SIZE_DNS_CACHE)
         # unique uri filter
-        # TODO refill the filter from previously stored uris.
         self._unique_uri = UniqueUriFilter(unique_hash)
+        for url in self._front_end_queues.all_uris():
+            assert not self._unique_uri.is_known(url)
 
         self._sinks = []
         self._checkpoint_interval = settings.FRONTIER_CHECKPOINTING
