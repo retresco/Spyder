@@ -148,6 +148,9 @@ class SqliteQueuesTest(unittest.TestCase):
         q = SQLiteSingleHostUriQueue(":memory:")
         q.add_uris(uris)
 
+        uri = q.get_uri("http://foreignhost")
+        self.assertEqual(uris[1], uri)
+
         for url in q.all_uris():
             self.assertTrue(url in urls)
 

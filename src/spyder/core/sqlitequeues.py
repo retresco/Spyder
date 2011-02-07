@@ -171,3 +171,10 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         cursor = self._connection.execute("""SELECT url FROM queue""")
         for row in cursor:
             yield row['url']
+
+    def get_uri(self, url):
+        cursor = self._connection.execute("SELECT * FROM queue WHERE url=?",
+                (url,))
+        row = cursor.fetchone()
+        return (row['url'], row['etag'], row['mod_date'], row['next_date'],
+                row['priority'])
