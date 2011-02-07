@@ -68,8 +68,8 @@ class AbstractBaseFrontier(object, LoggingMixin):
     configuration parameters used for frontiers.
     """
 
-    def __init__(self, settings, log_handler, log_level, front_end_queues,
-        prioritizer, unique_hash='sha1'):
+    def __init__(self, settings, log_handler, front_end_queues, prioritizer,
+        unique_hash='sha1'):
         """
         Initialize the frontier and instantiate the
         :class:`SQLiteSingleHostUriQueue`.
@@ -78,7 +78,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         unique uri filter. For very large crawls you might want to use a
         larger hash function (`sha512`, e.g.)
         """
-        LoggingMixin.__init__(self, log_handler, log_level)
+        LoggingMixin.__init__(self, log_handler, settings.LOG_LEVEL)
         # front end queue
         self._prioritizer = prioritizer
         self._front_end_queues = front_end_queues
@@ -287,11 +287,11 @@ class SingleHostFrontier(AbstractBaseFrontier):
     A frontier for crawling a single host.
     """
 
-    def __init__(self, settings, log_handler, log_level):
+    def __init__(self, settings, log_handler):
         """
         Initialize the base frontier.
         """
-        AbstractBaseFrontier.__init__(self, settings, log_handler, log_level,
+        AbstractBaseFrontier.__init__(self, settings, log_handler,
                 SQLiteSingleHostUriQueue(settings.FRONTIER_STATE_FILE),
                 SimpleTimestampPrioritizer(settings))
 

@@ -40,6 +40,8 @@ MAX_REDIRECTS = 3
 USE_GZIP = True
 
 
+# Frontier implementation to use
+FRONTIER_CLASS = 'spyder.core.frontier.SingleHostFrontier'
 # Filename storing the frontier state
 FRONTIER_STATE_FILE = "./state.db"
 # checkpointing interval (uris added/changed)
