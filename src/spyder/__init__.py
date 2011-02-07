@@ -33,7 +33,7 @@ import sys
 from spyder.core.settings import Settings
 
 
-__version__ = '0.1-rc1'
+__version__ = '0.1-dev'
 
 
 __all__ = ["core", "processor", "defaultsettings", "spyder_template", "thrift",
