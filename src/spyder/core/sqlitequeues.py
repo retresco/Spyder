@@ -33,6 +33,13 @@ import time
 import sqlite3 as sqlite
 
 
+class UriNotFound(Exception):
+    """
+    Exception raised when an URI could not be found.
+    """
+    pass
+
+
 class SQLiteStore(object):
     """
     Simple store managing the simple sqlite stuff.
@@ -176,5 +183,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         cursor = self._connection.execute("SELECT * FROM queue WHERE url=?",
                 (url,))
         row = cursor.fetchone()
-        return (row['url'], row['etag'], row['mod_date'], row['next_date'],
-                row['priority'])
+        if row:
+            return (row['url'], row['etag'], row['mod_date'], row['next_date'],
+                    row['priority'])
+        raise UriNotFound()

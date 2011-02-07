@@ -26,7 +26,7 @@ import unittest
 
 import time
 
-from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
+from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue, UriNotFound
 
 
 class SqliteQueuesTest(unittest.TestCase):
@@ -150,6 +150,8 @@ class SqliteQueuesTest(unittest.TestCase):
 
         uri = q.get_uri("http://foreignhost")
         self.assertEqual(uris[1], uri)
+
+        self.assertRaises(UriNotFound, q.get_uri, "http://gibtsnuesch")
 
         for url in q.all_uris():
             self.assertTrue(url in urls)
