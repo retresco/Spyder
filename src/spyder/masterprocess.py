@@ -34,6 +34,7 @@ import zmq
 from zmq.eventloop.ioloop import IOLoop
 from zmq.log.handlers import PUBHandler
 
+from spyder.import_util import import_class
 from spyder.core.frontier import SingleHostFrontier
 from spyder.core.master import ZmqMaster
 from spyder.core.mgmt import ZmqMgmt
@@ -53,11 +54,12 @@ def create_master_management(settings, zmq_context, io_loop):
     return ZmqMgmt(listening_socket, publishing_socket, io_loop=io_loop)
 
 
-def create_frontier(settings, log_handler, log_level):
+def create_frontier(settings, log_handler):
     """
     Create the frontier to use.
     """
-    return SingleHostFrontier(settings, log_handler, log_level)
+    frontier = import_class(settings.FRONTIER_CLASS)
+    return frontier(settings, log_handler)
 
 
 def main(settings):
@@ -82,8 +84,7 @@ def main(settings):
     logger.info("process::Starting up the master")
 
     mgmt = create_master_management(settings, ctx, io_loop)
-    frontier = create_frontier(settings, zmq_logging_handler,
-            settings.LOG_LEVEL)
+    frontier = create_frontier(settings, zmq_logging_handler)
 
     publishing_socket = ctx.socket(zmq.PUSH)
     publishing_socket.setsockopt(zmq.HWM, settings.ZEROMQ_MASTER_PUSH_HWM)

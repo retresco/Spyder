@@ -46,6 +46,7 @@ import zmq
 from zmq.eventloop.ioloop import IOLoop, DelayedCallback
 from zmq.log.handlers import PUBHandler
 
+from spyder.import_util import custom_import
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_AVAIL
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
@@ -86,18 +87,6 @@ def create_worker_fetcher(settings, mgmt, zmq_context, log_handler, io_loop):
 
     return AsyncZmqWorker(pulling_socket, pushing_socket, mgmt, fetcher,
             log_handler, settings.LOG_LEVEL, io_loop)
-
-
-def custom_import(module):
-    """
-    A custom import method to import a module.
-    see: stackoverflow.com: 547829/how-to-dynamically-load-a-python-class
-    """
-    mod = __import__(module)
-    components = module.split('.')
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
 
 
 def create_processing_function(settings, pipeline):

@@ -54,7 +54,7 @@ class BaseFrontierTest(unittest.TestCase):
         curi.rep_header = { "Etag" : "123", "Date" : serialize_date_time(now) }
         curi.current_priority = 2
 
-        frontier = AbstractBaseFrontier(s, StreamHandler(sys.stdout), logging.DEBUG,
+        frontier = AbstractBaseFrontier(s, StreamHandler(sys.stdout),
                 SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE),
                 SimpleTimestampPrioritizer(s))
         frontier.add_uri(curi)
@@ -77,7 +77,7 @@ class BaseFrontierTest(unittest.TestCase):
         s = Settings()
         s.FRONTIER_STATE_FILE = ":memory:"
 
-        frontier = AbstractBaseFrontier(s, StreamHandler(sys.stdout), logging.DEBUG,
+        frontier = AbstractBaseFrontier(s, StreamHandler(sys.stdout),
                 SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE),
                 SimpleTimestampPrioritizer(s))
 
@@ -100,7 +100,7 @@ class BaseFrontierTest(unittest.TestCase):
         s = Settings()
         s.FRONTIER_STATE_FILE = ":memory:"
 
-        frontier = AbstractBaseFrontier(s, StreamHandler(sys.stdout), logging.DEBUG,
+        frontier = AbstractBaseFrontier(s, StreamHandler(sys.stdout),
                 SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE),
                 SimpleTimestampPrioritizer(s))
 
@@ -121,7 +121,7 @@ class BaseFrontierTest(unittest.TestCase):
         s = Settings()
         s.FRONTIER_STATE_FILE = ":memory:"
 
-        frontier = AbstractBaseFrontier(s, StreamHandler(sys.stdout), logging.DEBUG,
+        frontier = AbstractBaseFrontier(s, StreamHandler(sys.stdout),
                 SQLiteSingleHostUriQueue(s.FRONTIER_STATE_FILE),
                 SimpleTimestampPrioritizer(s))
         frontier.add_sink(AbstractCrawlUriSink())
@@ -143,7 +143,7 @@ class SingleHostFrontierTest(unittest.TestCase):
         s = Settings()
         s.FRONTIER_STATE_FILE = ":memory:"
 
-        frontier = SingleHostFrontier(s, StreamHandler(sys.stdout), logging.DEBUG,)
+        frontier = SingleHostFrontier(s, StreamHandler(sys.stdout))
 
         q1 = []
         q2 = []
@@ -189,7 +189,7 @@ class SingleHostFrontierTest(unittest.TestCase):
         s = Settings()
         s.FRONTIER_STATE_FILE = ":memory:"
 
-        frontier = SingleHostFrontier(s, StreamHandler(sys.stdout), logging.DEBUG,)
+        frontier = SingleHostFrontier(s, StreamHandler(sys.stdout))
 
         now = datetime(*datetime.fromtimestamp(
             time.time()).timetuple()[0:6]) - timedelta(days=2)
