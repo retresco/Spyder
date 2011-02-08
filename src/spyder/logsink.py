@@ -34,8 +34,6 @@ from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
 
 
-if os.path.isfile('logging.conf'):
-    logging.config.fileConfig('logging.conf')
 LOGGERS = {"default": logging.getLogger()}
 
 LOGGERS['master'] = logging.getLogger('masterlog')
@@ -69,6 +67,9 @@ def main(settings):
     """
     Initialize the logger sink.
     """
+
+    if os.path.isfile('logging.conf'):
+        logging.config.fileConfig('logging.conf')
 
     ctx = zmq.Context()
     io_loop = IOLoop.instance()
