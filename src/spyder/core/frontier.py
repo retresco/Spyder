@@ -246,7 +246,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         """
         Called when an URI has been crawled successfully.
 
-        `msg` is the :class:`DataMessage`.
+        `curi` is a :class:`CrawlUri`
         """
         self.add_uri(curi)
         if curi.optional_vars and CURI_EXTRACTED_URLS in curi.optional_vars:
