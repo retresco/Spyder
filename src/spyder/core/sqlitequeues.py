@@ -37,7 +37,12 @@ class UriNotFound(Exception):
     """
     Exception raised when an URI could not be found.
     """
-    pass
+
+    def __init__(self, url):
+        self._url = url
+
+    def __repr__(self):
+        return "UriNotFound(%S)" % (self._url,)
 
 
 class SQLiteStore(object):
