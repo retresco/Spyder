@@ -128,12 +128,10 @@ class ZmqMaster(object, LoggingMixin):
         """
         return not self._running and len(self._current_curis) == 0
 
-    def _worker_msg(self, raw_msg):
+    def _worker_msg(self, msg):
         """
         Called when a worker has sent a :class:`MgmtMessage`.
         """
-        msg = MgmtMessage(raw_msg)
-
         if ZMQ_SPYDER_MGMT_WORKER_AVAIL == msg.data:
             self._available_workers.append(msg.identity)
             self._logger("zmqmaster::A new worker is available (%s)" %
