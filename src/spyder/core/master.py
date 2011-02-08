@@ -72,6 +72,7 @@ class ZmqMaster(object, LoggingMixin):
         # finish
         self._periodic_shutdown = PeriodicCallback(self._shutdown_wait, 500,
                 io_loop=io_loop)
+        self._shutdown_counter = 0
         self._logger.debug("zmqmaster::initialized")
 
     def start(self):
@@ -109,7 +110,8 @@ class ZmqMaster(object, LoggingMixin):
         Callback called from `self._periodic_shutdown` in order to wait for the
         workers to finish.
         """
-        if 0 == len(self._available_workers):
+        self._shutdown_counter += 1
+        if 0 == len(self._available_workers) or self._shutdown_counter > 5:
             self._periodic_shutdown.stop()
             self._logger.debug("zmqmaster::bye bye...")
             self._io_loop.stop()
