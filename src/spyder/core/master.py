@@ -101,8 +101,8 @@ class ZmqMaster(object, LoggingMixin):
         self.stop()
         self._mgmt.publish(topic=ZMQ_SPYDER_MGMT_WORKER,
                 identity=self._identity, data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
-        self._periodic_shutdown.start()
         self._frontier.close()
+        self._periodic_shutdown.start()
 
     def _shutdown_wait(self):
         """
@@ -120,7 +120,6 @@ class ZmqMaster(object, LoggingMixin):
         """
         self._in_stream.close()
         self._out_stream.close()
-        self._frontier.close()
 
     def finished(self):
         """
