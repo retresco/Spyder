@@ -40,6 +40,7 @@ the newly extracted URLs are within the scope of the crawl.
 """
 import logging
 import os
+import signal
 import socket
 
 import zmq
@@ -209,7 +210,7 @@ def main(settings):
         msg = MgmtMessage(raw_msg)
         if ZMQ_SPYDER_MGMT_WORKER_QUIT == msg.data:
             logger.info("process::We have been asked to shutdown, do so")
-            DelayedCallback(io_loop.stop, 2000, io_loop)
+            DelayedCallback(io_loop.stop, 2000, io_loop).start()
             ack = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=identity,
                     data=ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
             mgmt._out_stream.send_multipart(ack.serialize())
@@ -221,6 +222,17 @@ def main(settings):
     msg = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=identity,
             data=ZMQ_SPYDER_MGMT_WORKER_AVAIL)
     mgmt._out_stream.send_multipart(msg.serialize())
+
+    def handle_shutdown_signal(_sig, _frame):
+        """
+        Called from the os when a shutdown signal is fired.
+        """
+        msg = MgmtMessage(data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        quit_worker(msg.serialize())
+
+    # handle kill signals
+    signal.signal(signal.SIGINT, handle_shutdown_signal)
+    signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
     logger.info("process::waiting for action")
     # this will block until the worker quits
