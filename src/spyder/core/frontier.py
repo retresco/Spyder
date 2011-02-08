@@ -137,7 +137,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
             (_next_date, next_uri) = self._heap.get_nowait()
         except Empty:
             # heap is empty, there is nothing to crawl right now!
-            # mabe log this in the future
+            # maybe log this in the future
             raise
 
         return self._crawluri_from_uri(next_uri)
