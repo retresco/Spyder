@@ -35,7 +35,6 @@ from zmq.eventloop.ioloop import IOLoop
 from zmq.log.handlers import PUBHandler
 
 from spyder.import_util import import_class
-from spyder.core.frontier import SingleHostFrontier
 from spyder.core.master import ZmqMaster
 from spyder.core.mgmt import ZmqMgmt
 
@@ -106,6 +105,10 @@ def main(settings):
     # handle kill signals
     signal.signal(signal.SIGINT, handle_shutdown_signal)
     signal.signal(signal.SIGTERM, handle_shutdown_signal)
+
+    if settings.MASTER_CALLBACK:
+        callback = import_class(settings.MASTER_CALLBACK)
+        callback(ctx, io_loop, master)
 
     mgmt.start()
     master.start()

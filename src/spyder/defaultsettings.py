@@ -40,6 +40,10 @@ MAX_REDIRECTS = 3
 USE_GZIP = True
 
 
+# Callback for Master processes.
+MASTER_CALLBACK = None
+
+
 # Frontier implementation to use
 FRONTIER_CLASS = 'spyder.core.frontier.SingleHostFrontier'
 # Filename storing the frontier state
