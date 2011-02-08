@@ -120,6 +120,7 @@ class ZmqMaster(object, LoggingMixin):
         """
         self._in_stream.close()
         self._out_stream.close()
+        self._frontier.close()
 
     def finished(self):
         """
