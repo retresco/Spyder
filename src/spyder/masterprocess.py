@@ -108,7 +108,7 @@ def main(settings):
 
     if settings.MASTER_CALLBACK:
         callback = import_class(settings.MASTER_CALLBACK)
-        callback(ctx, io_loop, master)
+        callback(settings, ctx, io_loop, master)
 
     mgmt.start()
     master.start()
