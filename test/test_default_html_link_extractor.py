@@ -58,7 +58,7 @@ class HtmlLinkExtractorTest(unittest.TestCase):
         xtor = DefaultHtmlLinkExtractor(Settings())
         curi = xtor(curi)
 
-        links = curi.optional_vars[CURI_EXTRACTED_URLS]
+        links = curi.optional_vars[CURI_EXTRACTED_URLS].split("\n")
         self.assertEqual("http://www.google.de", links[0])
         self.assertEqual("http://www.bmg.bund.de/relative.html", links[1])
         self.assertEqual("http://www.bmg.bund.de/test/evenmorerelative.html",

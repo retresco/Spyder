@@ -171,10 +171,11 @@ class DefaultHtmlLinkExtractor(object):
                             parsed_url.netloc + parsed_url.path + link
             links.append(link)
 
+        linkstring = "\n".join(links)
         if not CURI_EXTRACTED_URLS in curi.optional_vars:
-            curi.optional_vars[CURI_EXTRACTED_URLS] = links
+            curi.optional_vars[CURI_EXTRACTED_URLS] = linkstring
         else:
-            curi.optional_vars[CURI_EXTRACTED_URLS].extend(links)
+            curi.optional_vars[CURI_EXTRACTED_URLS] += "\n" + linkstring
 
         return curi
 
