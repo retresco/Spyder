@@ -117,12 +117,10 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
         Note: time based crawling is never strict, it is generally used as some
         kind of prioritization.
-
-        This method may throw an `AssertionError` when the `curi` is already
-        known to the frontier. In this case you should use :meth:`update_uri`.
         """
         if self._unique_uri.is_known(curi.url):
-            # we already know this uri
+            # we already know this uri, update it
+            self._front_end_queues.update_uri(self._uri_from_curi(curi))
             return
 
         self._logger.debug("frontier::Adding '%s' to the frontier" % curi.url)
@@ -148,6 +146,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         """
         Close the underlying frontend queues.
         """
+        self._front_end_queues.checkpoint()
         self._front_end_queues.close()
 
     def _add_to_heap(self, uri, next_date):
@@ -158,6 +157,14 @@ class AbstractBaseFrontier(object, LoggingMixin):
         (url, _etag, _mod_date, _next_date, _prio) = uri
         self._current_uris[url] = uri
         self._logger.debug("frontier::Adding '%s' to the heap" % url)
+
+    def _reschedule_uri(self, curi):
+        """
+        Return the `next_crawl_date` for :class:`CrawlUri`s.
+        """
+        (prio, delta) = self._prioritizer.calculate_priority(curi)
+        now = datetime.fromtimestamp(time.time())
+        return (prio, time.mktime((now + delta).timetuple()))
 
     def _uri_from_curi(self, curi):
         """
@@ -174,9 +181,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
                 mod_date = time.mktime(deserialize_date_time(
                     curi.rep_header["Date"]).timetuple())
 
-        (prio, delta) = self._prioritizer.calculate_priority(curi)
-        now = datetime.fromtimestamp(time.time())
-        next_crawl_date = time.mktime((now + delta).timetuple())
+        (prio, next_crawl_date) = self._reschedule_uri(curi)
 
         return (curi.url, etag, mod_date, next_crawl_date, prio)
 
