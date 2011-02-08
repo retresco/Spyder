@@ -190,7 +190,7 @@ def main(settings):
 
     mgmt = create_worker_management(settings, ctx, io_loop)
 
-    logger.debug('process', "Initializing fetcher, extractor and scoper")
+    logger.debug("process::Initializing fetcher, extractor and scoper")
 
     fetcher = create_worker_fetcher(settings, mgmt, ctx, zmq_logging_handler,
         io_loop)
