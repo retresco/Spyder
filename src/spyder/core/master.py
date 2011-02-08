@@ -134,13 +134,13 @@ class ZmqMaster(object, LoggingMixin):
         """
         if ZMQ_SPYDER_MGMT_WORKER_AVAIL == msg.data:
             self._available_workers.append(msg.identity)
-            self._logger("zmqmaster::A new worker is available (%s)" %
+            self._logger.info("zmqmaster::A new worker is available (%s)" %
                     msg.identity)
 
         if ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK == msg.data:
             if msg.identity in self._available_workers:
                 self._available_workers.remove(msg.identity)
-                self._logger("zmqmaster::Removing worker (%s)" %
+                self._logger.info("zmqmaster::Removing worker (%s)" %
                         msg.identity)
 
     def _send_next_uri(self):
