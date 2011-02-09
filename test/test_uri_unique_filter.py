@@ -32,8 +32,10 @@ class UniqueUriFilterTest(unittest.TestCase):
 
         unique_filter = UniqueUriFilter('sha1')
 
-        self.assertFalse(unique_filter.is_known("http://www.google.de"))
-        self.assertFalse(unique_filter.is_known("http://www.yahoo.com"))
+        self.assertFalse(unique_filter.is_known("http://www.google.de",
+                    add_if_unknown=True))
+        self.assertFalse(unique_filter.is_known("http://www.yahoo.com",
+                    add_if_unknown=True))
         self.assertTrue(unique_filter.is_known("http://www.google.de"))
         self.assertTrue(unique_filter.is_known("http://www.yahoo.com"))
 
