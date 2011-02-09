@@ -47,7 +47,7 @@ from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import AsyncZmqWorker
 from spyder.core.settings import Settings
 from spyder.processor.fetcher import FetchProcessor
-from spyder.processor.fetcher import extract_content_type_encoding
+from spyder.encoding import extract_content_type_encoding
 from spyder.thrift.gen.ttypes import CrawlUri
 
 

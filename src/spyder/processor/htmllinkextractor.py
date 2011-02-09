@@ -35,7 +35,7 @@ from urlparse import urlparse
 
 from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.constants import CURI_OPTIONAL_TRUE, CURI_EXTRACTION_FINISHED
-from spyder.processor.fetcher import extract_content_type_encoding
+from spyder.encoding import extract_content_type_encoding
 
 # Maximum number of chars an element name may have
 MAX_ELEMENT_REPLACE = "MAX_ELEMENT_REPLACE"
