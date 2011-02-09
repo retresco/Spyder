@@ -30,7 +30,8 @@ from datetime import timedelta
 
 
 # simple settings
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL_MASTER = logging.DEBUG
+LOG_LEVEL_WORKER = logging.DEBUG
 
 
 # Fetch Processor

@@ -185,7 +185,7 @@ def main(settings):
     zmq_logging_handler.root_topic = "spyder.worker"
     logger = logging.getLogger()
     logger.addHandler(zmq_logging_handler)
-    logger.setLevel(settings.LOG_LEVEL)
+    logger.setLevel(settings.LOG_LEVEL_WORKER)
 
     logger.info("process::Starting up another worker")
 

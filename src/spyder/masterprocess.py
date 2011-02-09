@@ -78,7 +78,7 @@ def main(settings):
     zmq_logging_handler.root_topic = "spyder.master"
     logger = logging.getLogger()
     logger.addHandler(zmq_logging_handler)
-    logger.setLevel(settings.LOG_LEVEL)
+    logger.setLevel(settings.LOG_LEVEL_MASTER)
 
     logger.info("process::Starting up the master")
 
