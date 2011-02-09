@@ -93,8 +93,9 @@ def main(settings):
     receiving_socket.setsockopt(zmq.SUBSCRIBE, "")
     receiving_socket.bind(settings.ZEROMQ_MASTER_SUB)
 
-    master = ZmqMaster(identity, receiving_socket, publishing_socket, mgmt,
-            frontier, zmq_logging_handler, settings.LOG_LEVEL, io_loop)
+    master = ZmqMaster(settings, identity, receiving_socket,
+            publishing_socket, mgmt, frontier, zmq_logging_handler,
+            settings.LOG_LEVEL, io_loop)
 
     def handle_shutdown_signal(_sig, _frame):
         """

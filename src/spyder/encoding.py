@@ -41,7 +41,7 @@ def get_content_type_encoding(curi):
             ctypestart = first_bytes.find("content=\"", ctypestart)
             ctypeend = first_bytes.find("\"", ctypestart + 9)
             return extract_content_type_encoding(
-                    first_bytes[ctypestart+9:ctypeend])
+                    first_bytes[ctypestart + 9:ctypeend])
 
     return (content_type, charset)
 

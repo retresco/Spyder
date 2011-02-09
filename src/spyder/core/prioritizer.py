@@ -25,7 +25,6 @@
 URL prioritizers will calculate priorities of new URLs and the recrawling
 priority.
 """
-from datetime import timedelta
 
 
 class SimpleTimestampPrioritizer(object):

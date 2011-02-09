@@ -34,7 +34,7 @@ from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_AVAIL
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
-from spyder.core.messages import DataMessage, MgmtMessage
+from spyder.core.messages import DataMessage
 from spyder.core.log import LoggingMixin
 
 
@@ -46,7 +46,7 @@ class ZmqMaster(object, LoggingMixin):
     the processed messages. Unknown links will then be added to the frontier.
     """
 
-    def __init__(self, identity, insocket, outsocket, mgmt, frontier,
+    def __init__(self, settings, identity, insocket, outsocket, mgmt, frontier,
             log_handler, log_level, io_loop):
         """
         Initialize the master.
