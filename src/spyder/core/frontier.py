@@ -177,9 +177,9 @@ class AbstractBaseFrontier(object, LoggingMixin):
         if curi.rep_header:
             if "Etag" in curi.rep_header:
                 etag = curi.rep_header["Etag"]
-            if "Date" in curi.rep_header:
+            if "Last-Modified" in curi.rep_header:
                 mod_date = time.mktime(deserialize_date_time(
-                    curi.rep_header["Date"]).timetuple())
+                    curi.rep_header["Last-Modified"]).timetuple())
 
         (prio, next_crawl_date) = self._reschedule_uri(curi)
 
