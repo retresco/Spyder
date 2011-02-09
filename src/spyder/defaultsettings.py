@@ -26,6 +26,9 @@ Module for the default spyder settings.
 """
 import logging
 
+from datetime import timedelta
+
+
 # simple settings
 LOG_LEVEL = logging.DEBUG
 
@@ -66,11 +69,15 @@ FRONTIER_CRAWL_DELAY_FACTOR = 4
 # Minimum delay to wait before connecting the host again
 FRONTIER_MIN_DELAY = 1000
 
+
 # The number of priority levels where URIs are being assigned to (lowest means
 # highest priority)
 PRIORITIZER_NUM_PRIORITIES = 10
 # default priority for new urls
 PRIORITIZER_DEFAULT_PRIORITY = 1
+# Default crawl delta for known urls
+PRIORITIZER_CRAWL_DELTA = timedelta(days=1)
+
 
 # The pipeline of link extractors
 SPYDER_EXTRACTOR_PIPELINE = [

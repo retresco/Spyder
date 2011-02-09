@@ -34,14 +34,14 @@ class SimpleTimestampPrioritizer(object):
     next scheduled crawl of the URL.
     """
 
-    def __init__(self, settings, priority_delta=timedelta(days=1)):
+    def __init__(self, settings):
         """
         Initialize the number of available priorities and the priority delta
         between the priorities.
         """
         self._priorities = settings.PRIORITIZER_NUM_PRIORITIES
         self._default_priority = settings.PRIORITIZER_DEFAULT_PRIORITY
-        self._delta = priority_delta
+        self._delta = settings.PRIORITIZER_CRAWL_DELTA
 
     def calculate_priority(self, curi):
         """
