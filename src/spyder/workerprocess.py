@@ -87,7 +87,7 @@ def create_worker_fetcher(settings, mgmt, zmq_context, log_handler, io_loop):
     fetcher = FetchProcessor(settings, io_loop)
 
     return AsyncZmqWorker(pulling_socket, pushing_socket, mgmt, fetcher,
-            log_handler, settings.LOG_LEVEL, io_loop)
+            log_handler, settings.LOG_LEVEL_WORKER, io_loop)
 
 
 def create_processing_function(settings, pipeline):
@@ -135,7 +135,7 @@ def create_worker_extractor(settings, mgmt, zmq_context, log_handler, io_loop):
     pushing_socket.bind(settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH)
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
-        log_handler, settings.LOG_LEVEL, io_loop=io_loop)
+        log_handler, settings.LOG_LEVEL_WORKER, io_loop=io_loop)
 
 
 def create_worker_scoper(settings, mgmt, zmq_context, log_handler, io_loop):
@@ -153,7 +153,7 @@ def create_worker_scoper(settings, mgmt, zmq_context, log_handler, io_loop):
     pushing_socket.connect(settings.ZEROMQ_WORKER_PROC_SCOPER_PUB)
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
-        log_handler, settings.LOG_LEVEL, io_loop=io_loop)
+        log_handler, settings.LOG_LEVEL_WORKER, io_loop=io_loop)
 
 
 def main(settings):

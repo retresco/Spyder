@@ -78,7 +78,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         unique uri filter. For very large crawls you might want to use a
         larger hash function (`sha512`, e.g.)
         """
-        LoggingMixin.__init__(self, log_handler, settings.LOG_LEVEL)
+        LoggingMixin.__init__(self, log_handler, settings.LOG_LEVEL_MASTER)
         # front end queue
         self._prioritizer = prioritizer
         self._front_end_queues = front_end_queues
