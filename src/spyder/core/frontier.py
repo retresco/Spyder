@@ -301,6 +301,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
                 SimpleTimestampPrioritizer(settings))
 
         self._crawl_delay = settings.FRONTIER_CRAWL_DELAY_FACTOR
+        self._min_delay = settings.FRONTIER_MIN_DELAY
         self._next_possible_crawl = time.time()
 
     def get_next(self):
@@ -337,4 +338,5 @@ class SingleHostFrontier(AbstractBaseFrontier):
         """
         AbstractBaseFrontier.process_successful_crawl(self, curi)
         now = time.time()
-        self._next_possible_crawl = now + self._crawl_delay * curi.req_time
+        self._next_possible_crawl = now + max(self._crawl_delay *
+                curi.req_time, self._min_delay)
