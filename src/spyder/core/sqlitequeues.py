@@ -191,4 +191,4 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         if row:
             return (row['url'], row['etag'], row['mod_date'], row['next_date'],
                     row['priority'])
-        raise UriNotFound()
+        raise UriNotFound(url)
