@@ -154,6 +154,7 @@ class ZmqMaster(object, LoggingMixin):
         throughput: try to keep the `self._out_stream._send_queue` full.
         """
         if not self._running:
+            self._logger.error("Master is not running, not sending more uris")
             return
 
         num_workers = len(self._available_workers)
