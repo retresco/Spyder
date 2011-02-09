@@ -118,7 +118,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         Note: time based crawling is never strict, it is generally used as some
         kind of prioritization.
         """
-        if self._unique_uri.is_known(curi.url):
+        if self._unique_uri.is_known(curi.url, add_if_unknown=True):
             # we already know this uri, update it
             self._front_end_queues.update_uri(self._uri_from_curi(curi))
             return
