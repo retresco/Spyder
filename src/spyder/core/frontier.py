@@ -119,8 +119,8 @@ class AbstractBaseFrontier(object, LoggingMixin):
         kind of prioritization.
         """
         if self._unique_uri.is_known(curi.url, add_if_unknown=True):
-            # we already know this uri, update it
-            self._front_end_queues.update_uri(self._uri_from_curi(curi))
+            # we already know this uri
+            self._logger.error("Trying to update a known uri... (%s)" % (curi.url,))
             return
 
         self._logger.info("frontier::Adding '%s' to the frontier" % curi.url)
@@ -248,10 +248,12 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
         `curi` is a :class:`CrawlUri`
         """
-        self.add_uri(curi)
+        self._front_end_queues.update_uri(self._uri_from_curi(curi))
+
         if curi.optional_vars and CURI_EXTRACTED_URLS in curi.optional_vars:
             for url in curi.optional_vars[CURI_EXTRACTED_URLS].split("\n"):
-                self.add_uri(CrawlUri(url))
+                if not self._unique_uri.is_known(url):
+                    self.add_uri(CrawlUri(url))
 
         for sink in self._sinks:
             sink.process_successful_crawl(curi)
@@ -270,10 +272,17 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
     def process_redirect(self, curi):
         """
-        Called when there were too many redirects for an URL.
+        Called when there were too many redirects for an URL, or the site has
+        note been updated since the last visit.
 
-        Override this method in the actual frontier implementation.
+        In the latter case, update the internal uri and increase the priority
+        level.
         """
+        if curi.status_code == 304:
+            # the page has not been modified since the last visit! Update it
+            # NOTE: prio increasing happens in the prioritizer
+            self._front_end_queues.update_uri(self._uri_from_curi(curi))
+
         for sink in self._sinks:
             sink.process_redirect(curi)
 
@@ -301,7 +310,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
                 SimpleTimestampPrioritizer(settings))
 
         self._crawl_delay = settings.FRONTIER_CRAWL_DELAY_FACTOR
-        self._min_delay = settings.FRONTIER_MIN_DELAY
+        self._min_delay = settings.FRONTIER_MIN_DELAY / 1000
         self._next_possible_crawl = time.time()
 
     def get_next(self):
