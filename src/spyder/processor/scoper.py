@@ -58,7 +58,7 @@ class RegexScoper(object):
             return curi
 
         urls = []
-        for url in curi.optional_vars[CURI_EXTRACTED_URLS]:
+        for url in curi.optional_vars[CURI_EXTRACTED_URLS].split("\n"):
             add_url = False
             for regex in self._positive_regex:
                 if regex.match(url):
@@ -71,7 +71,7 @@ class RegexScoper(object):
             if add_url:
                 urls.append(url)
 
-        curi.optional_vars[CURI_EXTRACTED_URLS] = urls
+        curi.optional_vars[CURI_EXTRACTED_URLS] = "\n".join(urls)
         return curi
 
 

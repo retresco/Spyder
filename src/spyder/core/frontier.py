@@ -250,7 +250,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         """
         self.add_uri(curi)
         if curi.optional_vars and CURI_EXTRACTED_URLS in curi.optional_vars:
-            for url in curi.optional_vars[CURI_EXTRACTED_URLS]:
+            for url in curi.optional_vars[CURI_EXTRACTED_URLS].split("\n"):
                 self.add_uri(CrawlUri(url))
 
         for sink in self._sinks:
