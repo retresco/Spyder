@@ -164,23 +164,46 @@ def extract_info_from_response(response, msg):
     msg.curi.queue_time = response.time_info["queue"]
 
     (_content_type, encoding) = get_content_type_encoding(
-        response.headers)
+        response)
     # some content types might have no encoding info (text/plain)
     if encoding:
-        msg.curi.content_body = response.body.encode(encoding)
+        LOG.debug("proc.fetch::Detected Encoding: %s" % (encoding,))
+        LOG.debug("proc.fetch::Type: %s" % (type(response.body)))
+        msg.curi.content_body = response.body.decode(encoding)
     else:
-        msg.curi.content_body = response.body.encode()
+        msg.curi.content_body = response.body.decode()
 
     return msg
 
 
-def get_content_type_encoding(rep_header):
+def get_content_type_encoding(response):
     """
     Determine the content encoding based on the `Content-Type` Header.
     """
+    (content_type, charset) = extract_content_type_encoding(
+            response.headers["Content-Type"])
+
+    if charset == "":
+        # no charset information in the http header
+        first_bytes = response.body[:512].lower()
+        ctypestart = first_bytes.find("content-type")
+        if ctypestart:
+            # there is a html header
+            ctypestart = first_bytes.find("content=\"", ctypestart)
+            ctypeend = first_bytes.find("\"", ctypestart + 9)
+            return extract_content_type_encoding(
+                    first_bytes[ctypestart+9:ctypeend])
+
+    return (content_type, charset)
+
+
+def extract_content_type_encoding(content_type_string):
+    """
+    Extract the content type and encoding information.
+    """
     charset = ""
     content_type = ""
-    for part in rep_header["Content-Type"].split(";"):
+    for part in content_type_string.split(";"):
         part = part.strip().lower()
         if part.startswith("charset"):
             charset = part.split("=")[1]
