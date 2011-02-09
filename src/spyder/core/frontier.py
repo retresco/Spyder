@@ -94,12 +94,12 @@ class AbstractBaseFrontier(object, LoggingMixin):
         # unique uri filter
         self._unique_uri = UniqueUriFilter(unique_hash)
         for url in self._front_end_queues.all_uris():
-            assert not self._unique_uri.is_known(url)
+            assert not self._unique_uri.is_known(url, add_if_unknown=True)
 
         self._sinks = []
         self._checkpoint_interval = settings.FRONTIER_CHECKPOINTING
         self._uris_added = 0
-        self._logger.debug("frontier::initialized")
+        self._logger.info("frontier::initialized")
 
     def add_sink(self, sink):
         """
@@ -123,7 +123,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
             self._front_end_queues.update_uri(self._uri_from_curi(curi))
             return
 
-        self._logger.debug("frontier::Adding '%s' to the frontier" % curi.url)
+        self._logger.info("frontier::Adding '%s' to the frontier" % curi.url)
         self._front_end_queues.add_uri(self._uri_from_curi(curi))
 
     def get_next(self):
@@ -320,7 +320,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
 
         Note: it is possible that the heap is not full after it was updated!
         """
-        self._logger.debug("frontier::Updating heap")
+        self._logger.info("frontier::Updating heap")
         for uri in self._front_end_queues.queue_head(n=50):
 
             (url, _etag, _mod_date, next_date, _prio) = uri
