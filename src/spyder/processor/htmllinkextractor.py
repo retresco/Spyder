@@ -108,9 +108,11 @@ class DefaultHtmlLinkExtractor(object):
         (_type, encoding) = extract_content_type_encoding(
                 curi.rep_header["Content-Type"])
         try:
-            content = curi.content_body.decode(encoding)
-        except LookupError:
-            content = curi.content_body
+            content = curi.content_body.decode(encoding).lower()
+        except Exception:
+            content = curi.content_body.lower()
+
+        parsed_url = urlparse(curi.url)
 
         # iterate over all tags
         for tag in self._tag_extractor.finditer(content):
@@ -121,14 +123,16 @@ class DefaultHtmlLinkExtractor(object):
 
             elif tag.start(7) > 0:
                 # a meta tag
-                curi = self._process_meta(curi,
-                        content[tag.start(5):tag.end(5)])
+                curi = self._process_meta(curi, parsed_url, content,
+                        (tag.start(5), tag.end(5)))
 
             elif tag.start(5) > 0:
                 # generic <whatever tag
                 element_name = content[tag.start(6):tag.end(6)]
                 element = content[tag.start(5):tag.end(5)]
-                curi = self._process_generic_tag(curi, element_name, element)
+                curi = self._process_generic_tag(curi, parsed_url, content,
+                        (tag.start(6), tag.end(6)),
+                        (tag.start(5), tag.end(5)))
 
             elif tag.start(1) > 0:
                 # <script> tag
@@ -142,23 +146,34 @@ class DefaultHtmlLinkExtractor(object):
 
         return curi
 
-    def _process_generic_tag(self, curi, element_name, element):
+    def _process_generic_tag(self, curi, parsed_url, content,
+            element_name_tuple, element_tuple):
         """
         Process a generic tag.
 
         This can be anything but `meta`, `script` or `style` tags.
+
+        `content` is the decoded content body.
+        `element_name` is a tuple containing (start,end) integers of the
+            current tag name.
+        `element` is a tuple containing (start,end) integers of the current
+            element
         """
-        if "a" == element_name:
-            curi = self._extract_links(curi, element)
+        (start, end) = element_name_tuple
+        el_name = content[start:end]
+        if "a" == el_name:
+            curi = self._extract_links(curi, parsed_url, content,
+                    element_tuple)
 
         return curi
 
-    def _extract_links(self, curi, element):
+    def _extract_links(self, curi, parsed_url, content, element_tuple):
         """
         Extract links from an element, e.g. href="" attributes.
         """
-        parsed_url = urlparse(curi.url)
         links = []
+        (start, end) = element_tuple
+        element = content[start:end]
         for link_candidate in self._link_extractor.finditer(element):
             link = link_candidate.group(3)[1:-1]
             if "://" not in link:
@@ -184,7 +199,8 @@ class DefaultHtmlLinkExtractor(object):
 
         return curi
 
-    def _process_meta(self, curi, _meta_tag):
+    def _process_meta(self, curi, _parsed_url, _content, _element_tuple,
+            _meta_tag):
         """
         Process a meta tag.
         """
