@@ -50,6 +50,27 @@ class HtmlLinkExtractorTest(unittest.TestCase):
 
         curi = CrawlUri()
         curi.rep_header = dict()
+        curi.rep_header["Content-Type"] = "text/html; charset=utf-8"
+        curi.url = "http://www.bmg.bund.de/test"
+        curi.content_body = src
+        curi.optional_vars = dict()
+
+        xtor = DefaultHtmlLinkExtractor(Settings())
+        curi = xtor(curi)
+
+        links = curi.optional_vars[CURI_EXTRACTED_URLS].split("\n")
+        self.assertEqual("http://www.google.de", links[0])
+        self.assertEqual("http://www.bmg.bund.de/relative.html", links[1])
+        self.assertEqual("http://www.bmg.bund.de/test/evenmorerelative.html",
+                links[2])
+
+    def test_missing_encoding_works(self):
+        src = "<a href='http://www.google.de' title='ups'> viel text</a>" + \
+            "<a title='ups i did it again' href ='/relative.html'>und " + \
+            "noch mehr!</a><a href='evenmorerelative.html'>"
+
+        curi = CrawlUri()
+        curi.rep_header = dict()
         curi.rep_header["Content-Type"] = "text/html"
         curi.url = "http://www.bmg.bund.de/test"
         curi.content_body = src

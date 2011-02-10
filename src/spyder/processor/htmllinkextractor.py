@@ -105,7 +105,12 @@ class DefaultHtmlLinkExtractor(object):
             curi.optional_vars[CURI_EXTRACTION_FINISHED] == CURI_OPTIONAL_TRUE:
             return curi
 
-        content = curi.content_body
+        (_type, encoding) = extract_content_type_encoding(
+                curi.rep_header["Content-Type"])
+        try:
+            content = curi.content_body.decode(encoding)
+        except LookupError:
+            content = curi.content_body
 
         # iterate over all tags
         for tag in self._tag_extractor.finditer(content):
