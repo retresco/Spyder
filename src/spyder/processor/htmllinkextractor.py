@@ -108,9 +108,9 @@ class DefaultHtmlLinkExtractor(object):
         (_type, encoding) = extract_content_type_encoding(
                 curi.rep_header["Content-Type"])
         try:
-            content = curi.content_body.decode(encoding).lower()
+            content = curi.content_body.decode(encoding)
         except Exception:
-            content = curi.content_body.lower()
+            content = curi.content_body
 
         parsed_url = urlparse(curi.url)
 
@@ -161,7 +161,7 @@ class DefaultHtmlLinkExtractor(object):
         """
         (start, end) = element_name_tuple
         el_name = content[start:end]
-        if "a" == el_name:
+        if "a" == el_name.lower():
             curi = self._extract_links(curi, parsed_url, content,
                     element_tuple)
 
