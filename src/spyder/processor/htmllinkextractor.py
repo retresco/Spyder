@@ -35,7 +35,7 @@ from urlparse import urlparse
 
 from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.constants import CURI_OPTIONAL_TRUE, CURI_EXTRACTION_FINISHED
-from spyder.processor.fetcher import get_content_type_encoding
+from spyder.encoding import extract_content_type_encoding
 
 # Maximum number of chars an element name may have
 MAX_ELEMENT_REPLACE = "MAX_ELEMENT_REPLACE"
@@ -105,7 +105,14 @@ class DefaultHtmlLinkExtractor(object):
             curi.optional_vars[CURI_EXTRACTION_FINISHED] == CURI_OPTIONAL_TRUE:
             return curi
 
-        content = curi.content_body
+        (_type, encoding) = extract_content_type_encoding(
+                curi.rep_header["Content-Type"])
+        try:
+            content = curi.content_body.decode(encoding)
+        except Exception:
+            content = curi.content_body
+
+        parsed_url = urlparse(curi.url)
 
         # iterate over all tags
         for tag in self._tag_extractor.finditer(content):
@@ -116,14 +123,16 @@ class DefaultHtmlLinkExtractor(object):
 
             elif tag.start(7) > 0:
                 # a meta tag
-                curi = self._process_meta(curi,
-                        content[tag.start(5):tag.end(5)])
+                curi = self._process_meta(curi, parsed_url, content,
+                        (tag.start(5), tag.end(5)))
 
             elif tag.start(5) > 0:
                 # generic <whatever tag
                 element_name = content[tag.start(6):tag.end(6)]
                 element = content[tag.start(5):tag.end(5)]
-                curi = self._process_generic_tag(curi, element_name, element)
+                curi = self._process_generic_tag(curi, parsed_url, content,
+                        (tag.start(6), tag.end(6)),
+                        (tag.start(5), tag.end(5)))
 
             elif tag.start(1) > 0:
                 # <script> tag
@@ -137,23 +146,34 @@ class DefaultHtmlLinkExtractor(object):
 
         return curi
 
-    def _process_generic_tag(self, curi, element_name, element):
+    def _process_generic_tag(self, curi, parsed_url, content,
+            element_name_tuple, element_tuple):
         """
         Process a generic tag.
 
         This can be anything but `meta`, `script` or `style` tags.
+
+        `content` is the decoded content body.
+        `element_name` is a tuple containing (start,end) integers of the
+            current tag name.
+        `element` is a tuple containing (start,end) integers of the current
+            element
         """
-        if "a" == element_name:
-            curi = self._extract_links(curi, element)
+        (start, end) = element_name_tuple
+        el_name = content[start:end]
+        if "a" == el_name.lower():
+            curi = self._extract_links(curi, parsed_url, content,
+                    element_tuple)
 
         return curi
 
-    def _extract_links(self, curi, element):
+    def _extract_links(self, curi, parsed_url, content, element_tuple):
         """
         Extract links from an element, e.g. href="" attributes.
         """
-        parsed_url = urlparse(curi.url)
         links = []
+        (start, end) = element_tuple
+        element = content[start:end]
         for link_candidate in self._link_extractor.finditer(element):
             link = link_candidate.group(3)[1:-1]
             if "://" not in link:
@@ -171,14 +191,16 @@ class DefaultHtmlLinkExtractor(object):
                             parsed_url.netloc + parsed_url.path + link
             links.append(link)
 
+        linkstring = "\n".join(links)
         if not CURI_EXTRACTED_URLS in curi.optional_vars:
-            curi.optional_vars[CURI_EXTRACTED_URLS] = links
+            curi.optional_vars[CURI_EXTRACTED_URLS] = linkstring
         else:
-            curi.optional_vars[CURI_EXTRACTED_URLS].extend(links)
+            curi.optional_vars[CURI_EXTRACTED_URLS] += "\n" + linkstring
 
         return curi
 
-    def _process_meta(self, curi, _meta_tag):
+    def _process_meta(self, curi, _parsed_url, _content, _element_tuple,
+            _meta_tag):
         """
         Process a meta tag.
         """
@@ -191,7 +213,8 @@ class DefaultHtmlLinkExtractor(object):
         """
         allowed = ["text/html", "application/xhtml", "text/vnd.wap.wml",
             "application/vnd.wap.wml", "application/vnd.wap.xhtm"]
-        (ctype, _enc) = get_content_type_encoding(curi.rep_header)
+        (ctype, _enc) = extract_content_type_encoding(
+                curi.rep_header["Content-Type"])
         return ctype in allowed
 
 

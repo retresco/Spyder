@@ -36,10 +36,10 @@ class RegexScoperTest(unittest.TestCase):
 
         curi = CrawlUri()
         curi.optional_vars = dict()
-        curi.optional_vars[CURI_EXTRACTED_URLS] = [
+        curi.optional_vars[CURI_EXTRACTED_URLS] = "\n".join([
             "http://www.google.de/index.html",
             "ftp://www.google.de/pillepalle.avi",
-        ]
+        ])
 
         settings = Settings()
         scoper = create_processor(settings)

@@ -49,7 +49,7 @@ class UniqueUriFilter(object):
         self._depth = depth
         self._hashes = dict()
 
-    def is_known(self, url):
+    def is_known(self, url, add_if_unknown=False):
         """
         Test whether the given `url` is known. If not, store it from now on.
         """
@@ -75,5 +75,6 @@ class UniqueUriFilter(object):
         else:
             # since we still are here, only the nested list does not
             # contain the given rest. Now we know it
-            dictionary.append(hash_value[self._depth:])
+            if add_if_unknown:
+                dictionary.append(hash_value[self._depth:])
             return False

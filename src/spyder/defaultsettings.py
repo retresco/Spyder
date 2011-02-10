@@ -26,8 +26,12 @@ Module for the default spyder settings.
 """
 import logging
 
+from datetime import timedelta
+
+
 # simple settings
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL_MASTER = logging.DEBUG
+LOG_LEVEL_WORKER = logging.DEBUG
 
 
 # Fetch Processor
@@ -38,6 +42,13 @@ MAX_SIMULTANEOUS_CONNECTIONS = 1
 FOLLOW_REDIRECTS = True
 MAX_REDIRECTS = 3
 USE_GZIP = True
+
+
+# Callback for Master processes.
+MASTER_CALLBACK = None
+# Interval for the periodic updater (surviving times where nothing is to be
+# crawled)
+MASTER_PERIODIC_UPDATE_INTERVAL = 60 * 1000
 
 
 # Frontier implementation to use
@@ -56,12 +67,18 @@ FRONTIER_HEAP_MIN = 100
 FRONTIER_SIZE_DNS_CACHE = 1000
 # Download duration times this factor throttles the spyder
 FRONTIER_CRAWL_DELAY_FACTOR = 4
+# Minimum delay to wait before connecting the host again
+FRONTIER_MIN_DELAY = 1000
+
 
 # The number of priority levels where URIs are being assigned to (lowest means
 # highest priority)
 PRIORITIZER_NUM_PRIORITIES = 10
 # default priority for new urls
 PRIORITIZER_DEFAULT_PRIORITY = 1
+# Default crawl delta for known urls
+PRIORITIZER_CRAWL_DELTA = timedelta(days=1)
+
 
 # The pipeline of link extractors
 SPYDER_EXTRACTOR_PIPELINE = [

@@ -35,7 +35,6 @@ from zmq.eventloop.ioloop import IOLoop
 from zmq.log.handlers import PUBHandler
 
 from spyder.import_util import import_class
-from spyder.core.frontier import SingleHostFrontier
 from spyder.core.master import ZmqMaster
 from spyder.core.mgmt import ZmqMgmt
 
@@ -79,7 +78,7 @@ def main(settings):
     zmq_logging_handler.root_topic = "spyder.master"
     logger = logging.getLogger()
     logger.addHandler(zmq_logging_handler)
-    logger.setLevel(settings.LOG_LEVEL)
+    logger.setLevel(settings.LOG_LEVEL_MASTER)
 
     logger.info("process::Starting up the master")
 
@@ -94,8 +93,9 @@ def main(settings):
     receiving_socket.setsockopt(zmq.SUBSCRIBE, "")
     receiving_socket.bind(settings.ZEROMQ_MASTER_SUB)
 
-    master = ZmqMaster(identity, receiving_socket, publishing_socket, mgmt,
-            frontier, zmq_logging_handler, settings.LOG_LEVEL, io_loop)
+    master = ZmqMaster(settings, identity, receiving_socket,
+            publishing_socket, mgmt, frontier, zmq_logging_handler,
+            settings.LOG_LEVEL, io_loop)
 
     def handle_shutdown_signal(_sig, _frame):
         """
@@ -106,6 +106,10 @@ def main(settings):
     # handle kill signals
     signal.signal(signal.SIGINT, handle_shutdown_signal)
     signal.signal(signal.SIGTERM, handle_shutdown_signal)
+
+    if settings.MASTER_CALLBACK:
+        callback = import_class(settings.MASTER_CALLBACK)
+        callback(settings, ctx, io_loop, frontier)
 
     mgmt.start()
     master.start()

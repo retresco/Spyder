@@ -34,7 +34,7 @@ from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_AVAIL
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
-from spyder.core.messages import DataMessage, MgmtMessage
+from spyder.core.messages import DataMessage
 from spyder.core.log import LoggingMixin
 
 
@@ -46,7 +46,7 @@ class ZmqMaster(object, LoggingMixin):
     the processed messages. Unknown links will then be added to the frontier.
     """
 
-    def __init__(self, identity, insocket, outsocket, mgmt, frontier,
+    def __init__(self, settings, identity, insocket, outsocket, mgmt, frontier,
             log_handler, log_level, io_loop):
         """
         Initialize the master.
@@ -65,13 +65,14 @@ class ZmqMaster(object, LoggingMixin):
         self._available_workers = []
         self._current_curis = []
 
-        # check every minute if there are pending URIs to crawl
+        # periodically check if there are pending URIs to crawl
         self._periodic_update = PeriodicCallback(self._send_next_uri,
-                60 * 1000, io_loop=io_loop)
+                settings.MASTER_PERIODIC_UPDATE_INTERVAL, io_loop=io_loop)
         # start this periodic callback when you are waiting for the workers to
         # finish
         self._periodic_shutdown = PeriodicCallback(self._shutdown_wait, 500,
                 io_loop=io_loop)
+        self._shutdown_counter = 0
         self._logger.debug("zmqmaster::initialized")
 
     def start(self):
@@ -101,15 +102,16 @@ class ZmqMaster(object, LoggingMixin):
         self.stop()
         self._mgmt.publish(topic=ZMQ_SPYDER_MGMT_WORKER,
                 identity=self._identity, data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
-        self._periodic_shutdown.start()
         self._frontier.close()
+        self._periodic_shutdown.start()
 
     def _shutdown_wait(self):
         """
         Callback called from `self._periodic_shutdown` in order to wait for the
         workers to finish.
         """
-        if 0 == len(self._available_workers):
+        self._shutdown_counter += 1
+        if 0 == len(self._available_workers) or self._shutdown_counter > 5:
             self._periodic_shutdown.stop()
             self._logger.debug("zmqmaster::bye bye...")
             self._io_loop.stop()
@@ -128,21 +130,19 @@ class ZmqMaster(object, LoggingMixin):
         """
         return not self._running and len(self._current_curis) == 0
 
-    def _worker_msg(self, raw_msg):
+    def _worker_msg(self, msg):
         """
         Called when a worker has sent a :class:`MgmtMessage`.
         """
-        msg = MgmtMessage(raw_msg)
-
         if ZMQ_SPYDER_MGMT_WORKER_AVAIL == msg.data:
             self._available_workers.append(msg.identity)
-            self._logger("zmqmaster::A new worker is available (%s)" %
+            self._logger.info("zmqmaster::A new worker is available (%s)" %
                     msg.identity)
 
         if ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK == msg.data:
             if msg.identity in self._available_workers:
                 self._available_workers.remove(msg.identity)
-                self._logger("zmqmaster::Removing worker (%s)" %
+                self._logger.info("zmqmaster::Removing worker (%s)" %
                         msg.identity)
 
     def _send_next_uri(self):
@@ -154,6 +154,7 @@ class ZmqMaster(object, LoggingMixin):
         throughput: try to keep the `self._out_stream._send_queue` full.
         """
         if not self._running:
+            self._logger.error("Master is not running, not sending more uris")
             return
 
         num_workers = len(self._available_workers)

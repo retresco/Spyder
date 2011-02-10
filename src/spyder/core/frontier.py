@@ -78,7 +78,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         unique uri filter. For very large crawls you might want to use a
         larger hash function (`sha512`, e.g.)
         """
-        LoggingMixin.__init__(self, log_handler, settings.LOG_LEVEL)
+        LoggingMixin.__init__(self, log_handler, settings.LOG_LEVEL_MASTER)
         # front end queue
         self._prioritizer = prioritizer
         self._front_end_queues = front_end_queues
@@ -94,12 +94,12 @@ class AbstractBaseFrontier(object, LoggingMixin):
         # unique uri filter
         self._unique_uri = UniqueUriFilter(unique_hash)
         for url in self._front_end_queues.all_uris():
-            assert not self._unique_uri.is_known(url)
+            assert not self._unique_uri.is_known(url, add_if_unknown=True)
 
         self._sinks = []
         self._checkpoint_interval = settings.FRONTIER_CHECKPOINTING
         self._uris_added = 0
-        self._logger.debug("frontier::initialized")
+        self._logger.info("frontier::initialized")
 
     def add_sink(self, sink):
         """
@@ -118,12 +118,13 @@ class AbstractBaseFrontier(object, LoggingMixin):
         Note: time based crawling is never strict, it is generally used as some
         kind of prioritization.
         """
-        if self._unique_uri.is_known(curi.url):
-            # we already know this uri, update it
-            self._front_end_queues.update_uri(self._uri_from_curi(curi))
+        if self._unique_uri.is_known(curi.url, add_if_unknown=True):
+            # we already know this uri
+            self._logger.error("Trying to update a known uri... (%s)" % \
+                    (curi.url,))
             return
 
-        self._logger.debug("frontier::Adding '%s' to the frontier" % curi.url)
+        self._logger.info("frontier::Adding '%s' to the frontier" % curi.url)
         self._front_end_queues.add_uri(self._uri_from_curi(curi))
 
     def get_next(self):
@@ -137,7 +138,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
             (_next_date, next_uri) = self._heap.get_nowait()
         except Empty:
             # heap is empty, there is nothing to crawl right now!
-            # mabe log this in the future
+            # maybe log this in the future
             raise
 
         return self._crawluri_from_uri(next_uri)
@@ -177,9 +178,9 @@ class AbstractBaseFrontier(object, LoggingMixin):
         if curi.rep_header:
             if "Etag" in curi.rep_header:
                 etag = curi.rep_header["Etag"]
-            if "Date" in curi.rep_header:
+            if "Last-Modified" in curi.rep_header:
                 mod_date = time.mktime(deserialize_date_time(
-                    curi.rep_header["Date"]).timetuple())
+                    curi.rep_header["Last-Modified"]).timetuple())
 
         (prio, next_crawl_date) = self._reschedule_uri(curi)
 
@@ -246,12 +247,14 @@ class AbstractBaseFrontier(object, LoggingMixin):
         """
         Called when an URI has been crawled successfully.
 
-        `msg` is the :class:`DataMessage`.
+        `curi` is a :class:`CrawlUri`
         """
-        self.add_uri(curi)
+        self._front_end_queues.update_uri(self._uri_from_curi(curi))
+
         if curi.optional_vars and CURI_EXTRACTED_URLS in curi.optional_vars:
-            for url in curi.optional_vars[CURI_EXTRACTED_URLS]:
-                self.add_uri(CrawlUri(url))
+            for url in curi.optional_vars[CURI_EXTRACTED_URLS].split("\n"):
+                if not self._unique_uri.is_known(url):
+                    self.add_uri(CrawlUri(url))
 
         for sink in self._sinks:
             sink.process_successful_crawl(curi)
@@ -270,10 +273,17 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
     def process_redirect(self, curi):
         """
-        Called when there were too many redirects for an URL.
+        Called when there were too many redirects for an URL, or the site has
+        note been updated since the last visit.
 
-        Override this method in the actual frontier implementation.
+        In the latter case, update the internal uri and increase the priority
+        level.
         """
+        if curi.status_code == 304:
+            # the page has not been modified since the last visit! Update it
+            # NOTE: prio increasing happens in the prioritizer
+            self._front_end_queues.update_uri(self._uri_from_curi(curi))
+
         for sink in self._sinks:
             sink.process_redirect(curi)
 
@@ -301,6 +311,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
                 SimpleTimestampPrioritizer(settings))
 
         self._crawl_delay = settings.FRONTIER_CRAWL_DELAY_FACTOR
+        self._min_delay = settings.FRONTIER_MIN_DELAY / 1000
         self._next_possible_crawl = time.time()
 
     def get_next(self):
@@ -319,7 +330,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
 
         Note: it is possible that the heap is not full after it was updated!
         """
-        self._logger.debug("frontier::Updating heap")
+        self._logger.info("frontier::Updating heap")
         for uri in self._front_end_queues.queue_head(n=50):
 
             (url, _etag, _mod_date, next_date, _prio) = uri
@@ -337,4 +348,5 @@ class SingleHostFrontier(AbstractBaseFrontier):
         """
         AbstractBaseFrontier.process_successful_crawl(self, curi)
         now = time.time()
-        self._next_possible_crawl = now + self._crawl_delay * curi.req_time
+        self._next_possible_crawl = now + max(self._crawl_delay *
+                curi.req_time, self._min_delay)

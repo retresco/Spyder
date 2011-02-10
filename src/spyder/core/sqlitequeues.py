@@ -37,7 +37,12 @@ class UriNotFound(Exception):
     """
     Exception raised when an URI could not be found.
     """
-    pass
+
+    def __init__(self, url):
+        self._url = url
+
+    def __repr__(self):
+        return "UriNotFound(%S)" % (self._url,)
 
 
 class SQLiteStore(object):
@@ -186,4 +191,4 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         if row:
             return (row['url'], row['etag'], row['mod_date'], row['next_date'],
                     row['priority'])
-        raise UriNotFound()
+        raise UriNotFound(url)

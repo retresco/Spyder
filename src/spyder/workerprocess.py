@@ -40,6 +40,7 @@ the newly extracted URLs are within the scope of the crawl.
 """
 import logging
 import os
+import signal
 import socket
 
 import zmq
@@ -86,7 +87,7 @@ def create_worker_fetcher(settings, mgmt, zmq_context, log_handler, io_loop):
     fetcher = FetchProcessor(settings, io_loop)
 
     return AsyncZmqWorker(pulling_socket, pushing_socket, mgmt, fetcher,
-            log_handler, settings.LOG_LEVEL, io_loop)
+            log_handler, settings.LOG_LEVEL_WORKER, io_loop)
 
 
 def create_processing_function(settings, pipeline):
@@ -134,7 +135,7 @@ def create_worker_extractor(settings, mgmt, zmq_context, log_handler, io_loop):
     pushing_socket.bind(settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH)
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
-        log_handler, settings.LOG_LEVEL, io_loop=io_loop)
+        log_handler, settings.LOG_LEVEL_WORKER, io_loop=io_loop)
 
 
 def create_worker_scoper(settings, mgmt, zmq_context, log_handler, io_loop):
@@ -152,7 +153,7 @@ def create_worker_scoper(settings, mgmt, zmq_context, log_handler, io_loop):
     pushing_socket.connect(settings.ZEROMQ_WORKER_PROC_SCOPER_PUB)
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
-        log_handler, settings.LOG_LEVEL, io_loop=io_loop)
+        log_handler, settings.LOG_LEVEL_WORKER, io_loop=io_loop)
 
 
 def main(settings):
@@ -184,13 +185,13 @@ def main(settings):
     zmq_logging_handler.root_topic = "spyder.worker"
     logger = logging.getLogger()
     logger.addHandler(zmq_logging_handler)
-    logger.setLevel(settings.LOG_LEVEL)
+    logger.setLevel(settings.LOG_LEVEL_WORKER)
 
     logger.info("process::Starting up another worker")
 
     mgmt = create_worker_management(settings, ctx, io_loop)
 
-    logger.debug('process', "Initializing fetcher, extractor and scoper")
+    logger.debug("process::Initializing fetcher, extractor and scoper")
 
     fetcher = create_worker_fetcher(settings, mgmt, ctx, zmq_logging_handler,
         io_loop)
@@ -209,7 +210,7 @@ def main(settings):
         msg = MgmtMessage(raw_msg)
         if ZMQ_SPYDER_MGMT_WORKER_QUIT == msg.data:
             logger.info("process::We have been asked to shutdown, do so")
-            DelayedCallback(io_loop.stop, 2000, io_loop)
+            DelayedCallback(io_loop.stop, 2000, io_loop).start()
             ack = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=identity,
                     data=ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
             mgmt._out_stream.send_multipart(ack.serialize())
@@ -221,6 +222,17 @@ def main(settings):
     msg = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=identity,
             data=ZMQ_SPYDER_MGMT_WORKER_AVAIL)
     mgmt._out_stream.send_multipart(msg.serialize())
+
+    def handle_shutdown_signal(_sig, _frame):
+        """
+        Called from the os when a shutdown signal is fired.
+        """
+        msg = MgmtMessage(data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
+        quit_worker(msg.serialize())
+
+    # handle kill signals
+    signal.signal(signal.SIGINT, handle_shutdown_signal)
+    signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
     logger.info("process::waiting for action")
     # this will block until the worker quits
