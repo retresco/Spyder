@@ -128,8 +128,6 @@ class DefaultHtmlLinkExtractor(object):
 
             elif tag.start(5) > 0:
                 # generic <whatever tag
-                element_name = content[tag.start(6):tag.end(6)]
-                element = content[tag.start(5):tag.end(5)]
                 curi = self._process_generic_tag(curi, parsed_url, content,
                         (tag.start(6), tag.end(6)),
                         (tag.start(5), tag.end(5)))
