@@ -49,9 +49,9 @@ class SimpleTimestampPrioritizer(object):
         This should return a tuple of
             (prio_level, prio)
         """
-        if curi.current_priority:
+        if curi.current_priority and curi.status_code == 304:
             prio_level = min(curi.current_priority + 1, self._priorities)
         else:
-            prio_level = 0
+            prio_level = 1
         prio = self._delta * prio_level
         return (prio_level, prio)
