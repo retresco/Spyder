@@ -130,6 +130,8 @@ class BaseFrontierTest(unittest.TestCase):
         curi.rep_header = { "Etag" : "123", "Date" : serialize_date_time(now) }
         curi.current_priority = 2
 
+        frontier._add_to_heap(frontier._uri_from_curi(curi), 0)
+
         frontier.process_successful_crawl(curi)
         frontier.process_not_found(curi)
         frontier.process_redirect(curi)
@@ -170,6 +172,7 @@ class SingleHostFrontierTest(unittest.TestCase):
         self.assertRaises(Empty, frontier._heap.get_nowait)
 
         for i in range(1, 10):
+            frontier._next_possible_crawl = time.time()
             candidate_uri = frontier.get_next()
 
             if candidate_uri.url in q1:
@@ -197,6 +200,8 @@ class SingleHostFrontierTest(unittest.TestCase):
         curi.current_priority = 3
         curi.rep_header = { "Etag" : "123", "Date" : serialize_date_time(now) }
         curi.req_time = 0.5
+
+        frontier._add_to_heap(frontier._uri_from_curi(curi), 0)
 
         a = frontier._next_possible_crawl
         frontier.process_successful_crawl(curi)
