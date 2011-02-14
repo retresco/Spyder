@@ -120,7 +120,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         """
         if self._unique_uri.is_known(curi.url, add_if_unknown=True):
             # we already know this uri
-            self._logger.error("Trying to update a known uri... (%s)" % \
+            self._logger.debug("frontier::Trying to update a known uri... (%s)" % \
                     (curi.url,))
             return
 
@@ -256,6 +256,9 @@ class AbstractBaseFrontier(object, LoggingMixin):
                 if not self._unique_uri.is_known(url):
                     self.add_uri(CrawlUri(url))
 
+        del self._current_uris[curi.url]
+        self._maybe_checkpoint()
+
         for sink in self._sinks:
             sink.process_successful_crawl(curi)
 
@@ -321,6 +324,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
         Only return the next URI if  we have waited enough.
         """
         if time.time() >= self._next_possible_crawl:
+            self._next_possible_crawl = time.time() + self._min_delay
             return AbstractBaseFrontier.get_next(self)
         raise Empty()
 
@@ -340,6 +344,8 @@ class SingleHostFrontier(AbstractBaseFrontier):
                     self._add_to_heap(uri, next_date)
                 except Full:
                     # heap is full, return to the caller
+                    self._logger.error("singlehostfrontier::Heap is full " + \
+                            "during update")
                     return
 
     def process_successful_crawl(self, curi):
