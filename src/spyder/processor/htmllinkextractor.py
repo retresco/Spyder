@@ -197,8 +197,7 @@ class DefaultHtmlLinkExtractor(object):
 
         return curi
 
-    def _process_meta(self, curi, _parsed_url, _content, _element_tuple,
-            _meta_tag):
+    def _process_meta(self, curi, _parsed_url, _content, _element_tuple):
         """
         Process a meta tag.
         """
