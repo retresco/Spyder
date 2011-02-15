@@ -45,7 +45,7 @@ from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
 from spyder.core.messages import DataMessage, MgmtMessage
-from spyder.core.messages import serialize_date_time
+from spyder.time import serialize_date_time
 from spyder.core.mgmt import ZmqMgmt
 from spyder.core.worker import AsyncZmqWorker
 from spyder.core.settings import Settings
