@@ -38,7 +38,7 @@ from zmq.eventloop.ioloop import IOLoop
 
 from spyder.core.constants import CURI_SITE_USERNAME
 from spyder.core.constants import CURI_SITE_PASSWORD
-from spyder.core.messages import deserialize_date_time
+from spyder.time import deserialize_date_time
 
 LOG = logging.getLogger('fetcher')
 

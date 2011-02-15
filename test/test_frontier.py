@@ -32,7 +32,7 @@ import sys
 
 from spyder.core.constants import *
 from spyder.core.frontier import *
-from spyder.core.messages import serialize_date_time, deserialize_date_time
+from spyder.time import serialize_date_time, deserialize_date_time
 from spyder.core.prioritizer import SimpleTimestampPrioritizer
 from spyder.core.settings import Settings
 from spyder.core.sink import AbstractCrawlUriSink
