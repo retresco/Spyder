@@ -42,7 +42,7 @@ from urlparse import urlparse
 from spyder.core.constants import CURI_SITE_USERNAME, CURI_SITE_PASSWORD
 from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.dnscache import DnsCache
-from spyder.core.messages import serialize_date_time, deserialize_date_time
+from spyder.time import serialize_date_time, deserialize_date_time
 from spyder.core.log import LoggingMixin
 from spyder.core.prioritizer import SimpleTimestampPrioritizer
 from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
@@ -82,6 +82,9 @@ class AbstractBaseFrontier(object, LoggingMixin):
         # front end queue
         self._prioritizer = prioritizer
         self._front_end_queues = front_end_queues
+        # checkpointing
+        self._checkpoint_interval = settings.FRONTIER_CHECKPOINTING
+        self._uris_added = 0
 
         # the heap
         self._heap = PriorityQueue(maxsize=settings.FRONTIER_HEAP_SIZE)
@@ -96,9 +99,11 @@ class AbstractBaseFrontier(object, LoggingMixin):
         for url in self._front_end_queues.all_uris():
             assert not self._unique_uri.is_known(url, add_if_unknown=True)
 
+        # the sinks
         self._sinks = []
-        self._checkpoint_interval = settings.FRONTIER_CHECKPOINTING
-        self._uris_added = 0
+
+        # timezone
+        self._timezone = settings.LOCAL_TIMEZONE
         self._logger.info("frontier::initialized")
 
     def add_sink(self, sink):
@@ -126,6 +131,14 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
         self._logger.info("frontier::Adding '%s' to the frontier" % curi.url)
         self._front_end_queues.add_uri(self._uri_from_curi(curi))
+        self._maybe_checkpoint()
+
+    def update_uri(self, curi):
+        """
+        Update a given uri.
+        """
+        self._front_end_queues.update_uri(self._uri_from_curi(curi))
+        self._maybe_checkpoint()
 
     def get_next(self):
         """
@@ -164,7 +177,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         Return the `next_crawl_date` for :class:`CrawlUri`s.
         """
         (prio, delta) = self._prioritizer.calculate_priority(curi)
-        now = datetime.fromtimestamp(time.time())
+        now = datetime.now(self._timezone)
         return (prio, time.mktime((now + delta).timetuple()))
 
     def _uri_from_curi(self, curi):
@@ -234,12 +247,12 @@ class AbstractBaseFrontier(object, LoggingMixin):
         """
         pass
 
-    def _maybe_checkpoint(self):
+    def _maybe_checkpoint(self, force_checkpoint=False):
         """
         Periodically checkpoint the state db.
         """
         self._uris_added += 1
-        if self._uris_added > self._checkpoint_interval:
+        if self._uris_added > self._checkpoint_interval or force_checkpoint:
             self._front_end_queues.checkpoint()
             self._uris_added = 0
 
@@ -249,7 +262,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
         `curi` is a :class:`CrawlUri`
         """
-        self._front_end_queues.update_uri(self._uri_from_curi(curi))
+        self.update_uri(curi)
 
         if curi.optional_vars and CURI_EXTRACTED_URLS in curi.optional_vars:
             for url in curi.optional_vars[CURI_EXTRACTED_URLS].split("\n"):
@@ -257,7 +270,6 @@ class AbstractBaseFrontier(object, LoggingMixin):
                     self.add_uri(CrawlUri(url))
 
         del self._current_uris[curi.url]
-        self._maybe_checkpoint()
 
         for sink in self._sinks:
             sink.process_successful_crawl(curi)
@@ -323,9 +335,22 @@ class SingleHostFrontier(AbstractBaseFrontier):
 
         Only return the next URI if  we have waited enough.
         """
+        if self._heap.qsize() < self._heap_min_size:
+            self._update_heap()
+
         if time.time() >= self._next_possible_crawl:
+            (next_date, next_uri) = self._heap.get_nowait()
+
+            now = datetime.now(self._timezone)
+            localized_next_date = self._timezone.fromutc(
+                    datetime.utcfromtimestamp(next_date))
+
+            if now < localized_next_date:
+                raise Empty()
+
             self._next_possible_crawl = time.time() + self._min_delay
-            return AbstractBaseFrontier.get_next(self)
+            return self._crawluri_from_uri(next_uri)
+
         raise Empty()
 
     def _update_heap(self):
@@ -356,3 +381,5 @@ class SingleHostFrontier(AbstractBaseFrontier):
         now = time.time()
         self._next_possible_crawl = now + max(self._crawl_delay *
                 curi.req_time, self._min_delay)
+        self._logger.debug("singlehostfrontier::Next possible crawl: %s" %
+                (self._next_possible_crawl,))
