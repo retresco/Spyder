@@ -125,8 +125,8 @@ class AbstractBaseFrontier(object, LoggingMixin):
         """
         if self._unique_uri.is_known(curi.url, add_if_unknown=True):
             # we already know this uri
-            self._logger.debug("frontier::Trying to update a known uri... (%s)" % \
-                    (curi.url,))
+            self._logger.debug("frontier::Trying to update a known uri... " + \
+                    "(%s)" % (curi.url,))
             return
 
         self._logger.info("frontier::Adding '%s' to the frontier" % curi.url)
