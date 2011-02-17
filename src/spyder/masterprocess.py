@@ -95,7 +95,7 @@ def main(settings):
 
     master = ZmqMaster(settings, identity, receiving_socket,
             publishing_socket, mgmt, frontier, zmq_logging_handler,
-            settings.LOG_LEVEL, io_loop)
+            settings.LOG_LEVEL_MASTER, io_loop)
 
     def handle_shutdown_signal(_sig, _frame):
         """
