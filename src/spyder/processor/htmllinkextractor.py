@@ -35,7 +35,7 @@ from urlparse import urlparse
 
 from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.constants import CURI_OPTIONAL_TRUE, CURI_EXTRACTION_FINISHED
-from spyder.encoding import extract_content_type_encoding
+from spyder.encoding import get_content_type_encoding
 
 # Maximum number of chars an element name may have
 MAX_ELEMENT_REPLACE = "MAX_ELEMENT_REPLACE"
@@ -105,8 +105,8 @@ class DefaultHtmlLinkExtractor(object):
             curi.optional_vars[CURI_EXTRACTION_FINISHED] == CURI_OPTIONAL_TRUE:
             return curi
 
-        (_type, encoding) = extract_content_type_encoding(
-                curi.rep_header["Content-Type"])
+        (_type, encoding) = get_content_type_encoding(curi)
+
         try:
             content = curi.content_body.decode(encoding)
         except Exception:
@@ -210,8 +210,7 @@ class DefaultHtmlLinkExtractor(object):
         """
         allowed = ["text/html", "application/xhtml", "text/vnd.wap.wml",
             "application/vnd.wap.wml", "application/vnd.wap.xhtm"]
-        (ctype, _enc) = extract_content_type_encoding(
-                curi.rep_header["Content-Type"])
+        (ctype, _enc) = get_content_type_encoding(curi)
         return ctype in allowed
 
 
