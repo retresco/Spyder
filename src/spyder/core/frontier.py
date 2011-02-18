@@ -283,6 +283,8 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
         Override this method in the actual frontier implementation.
         """
+        del self._current_uris[curi.url]
+
         for sink in self._sinks:
             sink.process_not_found(curi)
 
@@ -294,6 +296,8 @@ class AbstractBaseFrontier(object, LoggingMixin):
         In the latter case, update the internal uri and increase the priority
         level.
         """
+        del self._current_uris[curi.url]
+
         if curi.status_code == 304:
             # the page has not been modified since the last visit! Update it
             # NOTE: prio increasing happens in the prioritizer
@@ -308,6 +312,8 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
         Override this method in the actual frontier implementation.
         """
+        del self._current_uris[curi.url]
+
         for sink in self._sinks:
             sink.process_server_error(curi)
 
