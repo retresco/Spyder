@@ -29,10 +29,14 @@ def get_content_type_encoding(curi):
 
     `curi` is the :class:`CrawlUri`.
     """
-    (content_type, charset) = extract_content_type_encoding(
-            curi.rep_header["Content-Type"])
+    content_type = "text/plain"
+    charset = ""
 
-    if charset == "":
+    if curi.rep_header and "Content-Type" in curi.rep_header:
+        (content_type, charset) = extract_content_type_encoding(
+                curi.rep_header["Content-Type"])
+
+    if charset == "" and curi.content_body and len(curi.content_body) >= 512:
         # no charset information in the http header
         first_bytes = curi.content_body[:512].lower()
         ctypestart = first_bytes.find("content-type")
