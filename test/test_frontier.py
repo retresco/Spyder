@@ -131,10 +131,15 @@ class BaseFrontierTest(unittest.TestCase):
         curi.current_priority = 2
 
         frontier._add_to_heap(frontier._uri_from_curi(curi), 0)
-
         frontier.process_successful_crawl(curi)
+
+        frontier._add_to_heap(frontier._uri_from_curi(curi), 0)
         frontier.process_not_found(curi)
+
+        frontier._add_to_heap(frontier._uri_from_curi(curi), 0)
         frontier.process_redirect(curi)
+
+        frontier._add_to_heap(frontier._uri_from_curi(curi), 0)
         frontier.process_server_error(curi)
 
 
