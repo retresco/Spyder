@@ -198,7 +198,12 @@ class AbstractBaseFrontier(object, LoggingMixin):
                 mod_date = time.mktime(deserialize_date_time(
                     curi.rep_header["Date"]).timetuple())
 
-        (prio, next_crawl_date) = self._reschedule_uri(curi)
+        if mod_date:
+            # only reschedule if it has been crawled before
+            (prio, next_crawl_date) = self._reschedule_uri(curi)
+        else:
+            (prio, next_crawl_date) = (1,
+                    time.mktime(datetime.now(self._timezone).timetuple()))
 
         return (curi.url, etag, mod_date, next_crawl_date, prio)
 
