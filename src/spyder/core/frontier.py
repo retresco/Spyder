@@ -360,6 +360,8 @@ class SingleHostFrontier(AbstractBaseFrontier):
                     datetime.utcfromtimestamp(next_date))
 
             if now < localized_next_date:
+                # reschedule the uri for crawling
+                self._heap.put_nowait((next_date, uri))
                 raise Empty()
 
             self._next_possible_crawl = time.time() + self._min_delay
