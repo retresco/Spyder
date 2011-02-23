@@ -340,7 +340,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
                 SimpleTimestampPrioritizer(settings))
 
         self._crawl_delay = settings.FRONTIER_CRAWL_DELAY_FACTOR
-        self._min_delay = settings.FRONTIER_MIN_DELAY / 1000
+        self._min_delay = settings.FRONTIER_MIN_DELAY
         self._next_possible_crawl = time.time()
 
     def get_next(self):
@@ -360,6 +360,8 @@ class SingleHostFrontier(AbstractBaseFrontier):
                     datetime.utcfromtimestamp(next_date))
 
             if now < localized_next_date:
+                # reschedule the uri for crawling
+                self._heap.put_nowait((next_date, uri))
                 raise Empty()
 
             self._next_possible_crawl = time.time() + self._min_delay
