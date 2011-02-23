@@ -72,8 +72,8 @@ FRONTIER_HEAP_MIN = 100
 FRONTIER_SIZE_DNS_CACHE = 1000
 # Download duration times this factor throttles the spyder
 FRONTIER_CRAWL_DELAY_FACTOR = 4
-# Minimum delay to wait before connecting the host again
-FRONTIER_MIN_DELAY = 1000
+# Minimum delay to wait before connecting the host again (s)
+FRONTIER_MIN_DELAY = 5
 
 
 # The number of priority levels where URIs are being assigned to (lowest means

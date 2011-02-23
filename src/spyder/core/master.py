@@ -166,6 +166,7 @@ class ZmqMaster(object, LoggingMixin):
                     next_curi = self._frontier.get_next()
                 except Empty:
                     # well, frontier has nothing to process right now
+                    self._logger.debug("zmqmaster::Nothing to crawl right now")
                     break
 
                 self._logger.info("zmqmaster::Begin crawling next URL (%s)" %
