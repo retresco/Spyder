@@ -63,7 +63,6 @@ class ZmqMaster(object, LoggingMixin):
 
         self._running = False
         self._available_workers = []
-        self._current_curis = []
 
         # periodically check if there are pending URIs to crawl
         self._periodic_update = PeriodicCallback(self._send_next_uri,
@@ -128,7 +127,7 @@ class ZmqMaster(object, LoggingMixin):
         Return true if all uris have been processed and the master is ready to
         be shut down.
         """
-        return not self._running and len(self._current_curis) == 0
+        return not self._running
 
     def _worker_msg(self, msg):
         """
@@ -138,6 +137,7 @@ class ZmqMaster(object, LoggingMixin):
             self._available_workers.append(msg.identity)
             self._logger.info("zmqmaster::A new worker is available (%s)" %
                     msg.identity)
+            self._send_next_uri()
 
         if ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK == msg.data:
             if msg.identity in self._available_workers:
@@ -170,7 +170,6 @@ class ZmqMaster(object, LoggingMixin):
 
                 self._logger.info("zmqmaster::Begin crawling next URL (%s)" %
                         next_curi.url)
-                self._current_curis.append(next_curi.url)
                 msg = DataMessage(identity=self._identity, curi=next_curi)
                 self._out_stream.send_multipart(msg.serialize())
 

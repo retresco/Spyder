@@ -194,8 +194,16 @@ class AbstractBaseFrontier(object, LoggingMixin):
             if "Last-Modified" in curi.rep_header:
                 mod_date = time.mktime(deserialize_date_time(
                     curi.rep_header["Last-Modified"]).timetuple())
+            if not mod_date and 'Date' in curi.rep_header:
+                mod_date = time.mktime(deserialize_date_time(
+                    curi.rep_header["Date"]).timetuple())
 
-        (prio, next_crawl_date) = self._reschedule_uri(curi)
+        if mod_date:
+            # only reschedule if it has been crawled before
+            (prio, next_crawl_date) = self._reschedule_uri(curi)
+        else:
+            (prio, next_crawl_date) = (1,
+                    time.mktime(datetime.now(self._timezone).timetuple()))
 
         return (curi.url, etag, mod_date, next_crawl_date, prio)
 
@@ -301,7 +309,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         if curi.status_code == 304:
             # the page has not been modified since the last visit! Update it
             # NOTE: prio increasing happens in the prioritizer
-            self._front_end_queues.update_uri(self._uri_from_curi(curi))
+            self.update_uri(curi)
 
         for sink in self._sinks:
             sink.process_redirect(curi)
