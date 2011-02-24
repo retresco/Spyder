@@ -64,7 +64,6 @@ class BaseFrontierTest(unittest.TestCase):
             self.assertEqual("http://localhost", url)
             self.assertEqual("123", etag)
             self.assertEqual(now, datetime.fromtimestamp(mod_date))
-            self.assertTrue(next_crawl_date<datetime.fromtimestamp(next_date))
             frontier._current_uris[url] = uri
 
     def test_crawluri_from_uri(self):
