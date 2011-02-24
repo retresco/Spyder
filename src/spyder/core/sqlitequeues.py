@@ -59,8 +59,9 @@ class SQLiteStore(object):
         self._connection = sqlite.connect(db_name)
         self._connection.row_factory = sqlite.Row
         self._connection.text_factory = sqlite.OptimizedUnicode
-        self._connection.execute("PRAGMA encoding=\"UTF-8\";")
-        self._connection.execute("PRAGMA locking_mode=EXCLUSIVE;")
+        self._cursor = self._connection.cursor()
+        self._cursor.execute("PRAGMA encoding=\"UTF-8\";")
+        self._cursor.execute("PRAGMA locking_mode=EXCLUSIVE;")
 
     def close(self):
         """
@@ -90,7 +91,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         SQLiteStore.__init__(self, db_name)
 
         # create the tables if they do not exist
-        self._connection.executescript("""
+        self._cursor.executescript("""
                 CREATE TABLE IF NOT EXISTS queue(
                     url TEXT PRIMARY KEY ASC,
                     etag TEXT,
@@ -110,7 +111,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         Add a uri to the specified queue.
         """
         (url, etag, mod_date, next_date, prio) = uri
-        self._connection.execute("""INSERT INTO queue
+        self._cursor.execute("""INSERT INTO queue
                 (url, etag, mod_date, next_date, priority) VALUES
                 (?, ?, ?, ?, ?)""", (url, etag, mod_date, next_date, prio))
 
@@ -118,7 +119,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         """
         Add a list of uris.
         """
-        self._connection.executemany("""INSERT INTO queue
+        self._cursor.executemany("""INSERT INTO queue
                 (url, etag, mod_date, next_date, priority) VALUES
                 (?, ?, ?, ?, ?)""", urls)
 
@@ -127,7 +128,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         Update the uri.
         """
         (url, etag, mod_date, next_date, prio) = uri
-        self._connection.execute("""UPDATE queue SET
+        self._cursor.execute("""UPDATE queue SET
                 etag=?, mod_date=?, next_date=?, priority=?
                 WHERE url=?""", (etag, mod_date, next_date, prio, url))
 
@@ -137,23 +138,22 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         """
         update_uris = [(etag, mod_date, next_date, priority, url)
             for (url, etag, mod_date, next_date, priority) in uris]
-        self._connection.executemany("""UPDATE queue SET
+        self._cursor.executemany("""UPDATE queue SET
                 etag=?, mod_date=?, next_date=?, priority=?
                 WHERE url=?""", update_uris)
 
-    def queue_head(self, timestamp=time.time(), n=1, offset=0):
+    def queue_head(self, n=1, offset=0):
         """
         Return the top `n` elements from the queue. By default, return the top
         element from the queue.
 
         If you specify `offset` the first `offset` entries are ignored.
         """
-        cursor = self._connection.execute("""SELECT * FROM queue
-                WHERE next_date < ?
+        self._cursor.execute("""SELECT * FROM queue
                 ORDER BY next_date ASC
                 LIMIT ?
-                OFFSET ?""", (timestamp, n, offset))
-        for row in cursor:
+                OFFSET ?""", (n, offset))
+        for row in self._cursor:
             yield (row['url'], row['etag'], row['mod_date'],
                 row['next_date'], row['priority'])
 
@@ -163,14 +163,14 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         """
         del_uris = [(url,) for (url, _etag, _mod_date, _queue, _next_date)
             in uris]
-        self._connection.executemany("DELETE FROM queue WHERE url=?",
+        self._cursor.executemany("DELETE FROM queue WHERE url=?",
                 del_uris)
 
     def __len__(self):
         """
         Calculate the number of known uris.
         """
-        cursor = self._connection.execute("""SELECT count(url) FROM queue""")
+        cursor = self._cursor.execute("""SELECT count(url) FROM queue""")
         return cursor.fetchone()[0]
 
     def all_uris(self):
@@ -180,14 +180,14 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         Note: does not return the full uri object, only the url. This will be
         used to refill the unique uri filter upon restart.
         """
-        cursor = self._connection.execute("""SELECT url FROM queue""")
-        for row in cursor:
+        self._cursor.execute("""SELECT url FROM queue""")
+        for row in self._cursor:
             yield row['url']
 
     def get_uri(self, url):
-        cursor = self._connection.execute("SELECT * FROM queue WHERE url=?",
+        self._cursor.execute("SELECT * FROM queue WHERE url=?",
                 (url,))
-        row = cursor.fetchone()
+        row = self._cursor.fetchone()
         if row:
             return (row['url'], row['etag'], row['mod_date'], row['next_date'],
                     row['priority'])
