@@ -28,8 +28,6 @@ Within this module an URI is represented as a tuple
 
    uri = (url, etag, mod_date, next_date, priority)
 """
-import time
-
 import sqlite3 as sqlite
 
 
@@ -142,14 +140,25 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
                 etag=?, mod_date=?, next_date=?, priority=?
                 WHERE url=?""", update_uris)
 
+    def ignore_uri(self, url, status):
+        """
+        Called when an URI should be ignored. This is usually the case when
+        there is a HTTP 404 or recurring HTTP 500's.
+        """
+        self.update_uri((url, None, None, status, 1))
+
     def queue_head(self, n=1, offset=0):
         """
         Return the top `n` elements from the queue. By default, return the top
         element from the queue.
 
         If you specify `offset` the first `offset` entries are ignored.
+
+        Any entries with a `next_date` below `1000` are being ignored. This
+        enables the crawler to ignore URIs _and_ storing the status code.
         """
         self._cursor.execute("""SELECT * FROM queue
+                WHERE next_date > 1000
                 ORDER BY next_date ASC
                 LIMIT ?
                 OFFSET ?""", (n, offset))
