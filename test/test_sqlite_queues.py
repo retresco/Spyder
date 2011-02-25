@@ -191,7 +191,9 @@ class SqliteQueuesTest(unittest.TestCase):
         (url3, etag3, mod_date3, next_date3, prio3) = uris[2]
         q.add_uri(uris[2])
 
-        for uri_res in q.queue_head(n=1, offset=2):
+        q.ignore_uri("http://localhost", 404)
+
+        for uri_res in q.queue_head(n=1, offset=1):
             (url_res, etag_res, mod_date_res, next_date_res, prio_res) = uri_res
             self.assertEqual(url3, url_res)
             self.assertEqual(etag3, etag_res)
