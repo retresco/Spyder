@@ -180,6 +180,12 @@ class AbstractBaseFrontier(object, LoggingMixin):
         now = datetime.now(self._timezone)
         return (prio, time.mktime((now + delta).timetuple()))
 
+    def _ignore_uri(self, curi):
+        """
+        Ignore a :class:`CrawlUri` from now on.
+        """
+        self._front_end_queues.ignore_uri(curi.url, curi.status_code)
+
     def _uri_from_curi(self, curi):
         """
         Create the uri tuple from the :class:`CrawlUri` and calculate the
@@ -292,6 +298,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         Override this method in the actual frontier implementation.
         """
         del self._current_uris[curi.url]
+        self._ignore_uri(curi)
 
         for sink in self._sinks:
             sink.process_not_found(curi)
@@ -321,6 +328,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         Override this method in the actual frontier implementation.
         """
         del self._current_uris[curi.url]
+        self._ignore_uri(curi)
 
         for sink in self._sinks:
             sink.process_server_error(curi)
@@ -361,7 +369,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
 
             if now < localized_next_date:
                 # reschedule the uri for crawling
-                self._heap.put_nowait((next_date, uri))
+                self._heap.put_nowait((next_date, next_uri))
                 raise Empty()
 
             self._next_possible_crawl = time.time() + self._min_delay
