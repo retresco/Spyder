@@ -1,6 +1,7 @@
 .. vim: set fileencoding=UTF-8 :
 .. vim: set tw=80 :
 .. include:: globals.rst
+.. _zmq:
 
 ZeroMQ
 ======
@@ -89,8 +90,7 @@ hosts you possibly want to connect. While the number of |urls| might not be the
 limiting part, the number of hosts can be as they require a lot of queue
 switching.
 
-.. note:: For more info on this, see the `Crawler Design`_
-    document.
+.. note:: For more info on this, see the :ref:`crawlerdesign` document.
 
 What does all that mean in practice
 -----------------------------------
