@@ -1,13 +1,14 @@
 .. vim: set fileencoding=UTF-8 :
 .. vim: set tw=80 :
 .. include:: globals.rst
+
+Libraries used in |spyder|
+==========================
+
 .. _zmq:
 
 ZeroMQ
-======
-
-Why ZeroMQ
-----------
+------
 
 Not only with the emergence of multicore systems Python's `Global Interpreter
 Lock <http://www.python.org/NEEDSLINK>`_ becomes a major issue for scaling
@@ -54,8 +55,9 @@ only one of the available clients (the common producer/consumer pattern). With
 `REQ/REP` a simple request and response pattern is possible. Most of the
 patterns have a `non-blocking` equivalent.
 
+
 Messaging Patterns used in |spyder|
------------------------------------
++++++++++++++++++++++++++++++++++++
 
 |zmq| is used as messaging layer to distribute the workload to an arbitrary
 number of worker processes which in return send the result back to the master.
@@ -92,8 +94,9 @@ switching.
 
 .. note:: For more info on this, see the :ref:`crawlerdesign` document.
 
+
 What does all that mean in practice
------------------------------------
++++++++++++++++++++++++++++++++++++
 
 The master process binds to one socket with a `PUSH` type and to another socket
 using the `SUB` type. On the `SUB` socket the master registers a |zmq| filter to
@@ -108,3 +111,31 @@ that sent this |url| receives the answer.
 
 Future version of |spyder| will thus be able to work with **n** master and **m**
 worker processes.
+
+
+.. _tornado:
+
+|tornado|
+---------
+
+`Tornado <http://github.com/facebook/tornado>`_ is a *non-blocking* or *evented
+IO* library developed at FriendFeed (now Facebook) to run their python front-end
+servers.  Basically this is a
+
+.. code-block:: python
+
+    while True:
+        callback_for_event(event)
+
+loop. The events are any *read* or *write* event on a number of sockets or files
+that are registered with the loop. So instead of starting one thread for each
+socket connection everything runs in one thread or even process. Although this
+might feel strange it has been shown to be **alot** faster for network intensive
+applications that potentially serve a large number of clients.
+
+.. note:: For more info see the `C10k Problem <http://NEEDS-A-LINK>`_
+
+
+An additional reason for choosing |tornado| was the nice integration with |zmq|.
+This not only makes programming with |zmq| easier but also makes it possible to
+easily write *non-blocking, evented* IO programms with Python and |zmq|.
