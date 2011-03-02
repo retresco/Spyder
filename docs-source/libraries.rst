@@ -5,7 +5,7 @@
 Libraries used in |spyder|
 ==========================
 
-.. _zmq:
+.. _seczmq:
 
 ZeroMQ
 ------
@@ -113,7 +113,7 @@ Future version of |spyder| will thus be able to work with **n** master and **m**
 worker processes.
 
 
-.. _tornado:
+.. _sectornado:
 
 |tornado|
 ---------
