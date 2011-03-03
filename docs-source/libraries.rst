@@ -92,7 +92,7 @@ hosts you possibly want to connect. While the number of |urls| might not be the
 limiting part, the number of hosts can be as they require a lot of queue
 switching.
 
-.. note:: For more info on this, see the :ref:`crawlerdesign` document.
+.. note:: For more info on this, see the :ref:`seccrawlerdesign` document.
 
 
 What does all that mean in practice
