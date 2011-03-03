@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 """
-A sink of :class:`CrawlUri`s.
+A sink of :class:`CrawlUri`.
 """
 
 
@@ -56,7 +56,7 @@ class AbstractCrawlUriSink(object):
 
 class CouchDbSink(object):
     """
-    Simple sink that will store :class:`CrawlUri`s inside a CouchDB instance.
+    Simple sink that will store :class:`CrawlUri` inside a CouchDB instance.
     """
 
     def __init__(self, host_port="127.0.0.1:5984", database="spyder"):

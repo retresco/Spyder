@@ -3,7 +3,7 @@
 .. include:: globals.rst
 
 Welcome to |spyder|
-==================================
+===================
 
 |spyder| is a scalable web-spider written in Python using the non-blocking
 |tornado| library and |zmq| as messaging layer. The messages are serialized
@@ -24,6 +24,9 @@ Table of Contents
 
    crawler-design
    libraries
+   getting-started
+   api/spyderapi
+   roadmap
 
 Indices and tables
 ==================
