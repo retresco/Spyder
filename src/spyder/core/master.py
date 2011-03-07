@@ -200,5 +200,6 @@ class ZmqMaster(object, LoggingMixin):
         except:
             self._logger.CRITICAL("zmqmaster::Uncaught exception in the sink")
             self._logger.CRITICAL("zmqmaster::%s" % (traceback.format_exc(),))
+            self.shutdown()
 
         self._send_next_uri()
