@@ -27,6 +27,7 @@ This module contains a ZeroMQ based Worker abstraction.
 The `ZmqWorker` class expects an incoming and one outgoing `zmq.socket` as well
 as an instance of the `spyder.core.mgmt.ZmqMgmt` class.
 """
+import traceback
 
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
@@ -87,8 +88,15 @@ class ZmqWorker(object, LoggingMixin):
         """
         message = DataMessage(msg)
 
-        # this is the real work we want to do
-        curi = self._processing(message.curi)
+        try:
+            # this is the real work we want to do
+            curi = self._processing(message.curi)
+        except:
+            # catch any uncaught exception and only log it as CRITICAL
+            self._logger.CRITICAL(
+                    "Uncaught exception executing the worker for URL %s!" %
+                    (curi.url,))
+            self._logger.CRITICAL(traceback.format_exc())
 
         # finished, now send the result back to the master
         message.curi = curi
@@ -137,4 +145,10 @@ class AsyncZmqWorker(ZmqWorker):
         the `self._processing` method.
         """
         message = DataMessage(msg)
-        self._processing(message, self._out_stream)
+
+        try:
+            self._processing(message, self._out_stream)
+        except:
+            # catch any uncaught exception and only log it as CRITICAL
+            self._logger.CRITICAL("Uncaught exception executing the worker!")
+            self._logger.CRITICAL(traceback.format_exc())

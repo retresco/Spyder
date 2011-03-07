@@ -383,7 +383,7 @@ class SingleHostFrontier(AbstractBaseFrontier):
 
         Note: it is possible that the heap is not full after it was updated!
         """
-        self._logger.info("frontier::Updating heap")
+        self._logger.debug("frontier::Updating heap")
         for uri in self._front_end_queues.queue_head(n=50):
 
             (url, _etag, _mod_date, next_date, _prio) = uri
