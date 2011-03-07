@@ -42,8 +42,10 @@ import logging
 import os
 import signal
 import socket
+import traceback
 
 import zmq
+from zmq.core.error import ZMQError
 from zmq.eventloop.ioloop import IOLoop, DelayedCallback
 from zmq.log.handlers import PUBHandler
 
@@ -236,7 +238,11 @@ def main(settings):
 
     logger.info("process::waiting for action")
     # this will block until the worker quits
-    io_loop.start()
+    try:
+        io_loop.start()
+    except ZMQError:
+        logger.debug("Caught a ZMQError. Hopefully during shutdown")
+        logger.debug(traceback.format_exc())
 
     for mod in [fetcher, extractor, scoper, mgmt]:
         mod.close()
