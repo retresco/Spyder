@@ -94,9 +94,9 @@ class ZmqWorker(object, LoggingMixin):
         except:
             # catch any uncaught exception and only log it as CRITICAL
             self._logger.CRITICAL(
-                    "Uncaught exception executing the worker for URL %s!" %
+                    "worker::Uncaught exception executing the worker for URL %s!" %
                     (curi.url,))
-            self._logger.CRITICAL(traceback.format_exc())
+            self._logger.CRITICAL("worker::%s" % (traceback.format_exc(),))
 
         # finished, now send the result back to the master
         message.curi = curi

@@ -28,8 +28,10 @@ import logging
 import logging.config
 import signal
 import os.path
+import traceback
 
 import zmq
+from zmq.core.error import ZMQError
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
 
@@ -94,7 +96,11 @@ def main(settings):
     signal.signal(signal.SIGINT, handle_shutdown_signal)
     signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
-    io_loop.start()
+    try:
+        io_loop.start()
+    except ZMQError:
+        LOGGERS['master'].debug("Caught a ZMQError. Hopefully during shutdown")
+        LOGGERS['master'].debug(traceback.format_exc())
 
     log_stream.close()
     ctx.term()

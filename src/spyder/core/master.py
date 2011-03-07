@@ -183,18 +183,23 @@ class ZmqMaster(object, LoggingMixin):
         self._logger.info("zmqmaster::Crawling URL (%s) finished" %
                 msg.curi.url)
 
-        if 200 <= msg.curi.status_code < 300:
-            # we have some kind of success code! yay
-            self._frontier.process_successful_crawl(msg.curi)
-        elif 300 <= msg.curi.status_code < 400:
-            # Some kind of redirect code. This will only happen if the number
-            # of redirects exceeds settings.MAX_REDIRECTS
-            self._frontier.process_redirect(msg.curi)
-        elif 400 <= msg.curi.status_code < 500:
-            # some kind of error where the resource could not be found.
-            self._frontier.process_not_found(msg.curi)
-        elif 500 <= msg.curi.status_code < 600:
-            # some kind of server error
-            self._frontier.process_server_error(msg.curi)
+        try:
+            if 200 <= msg.curi.status_code < 300:
+                # we have some kind of success code! yay
+                self._frontier.process_successful_crawl(msg.curi)
+            elif 300 <= msg.curi.status_code < 400:
+                # Some kind of redirect code. This will only happen if the number
+                # of redirects exceeds settings.MAX_REDIRECTS
+                self._frontier.process_redirect(msg.curi)
+            elif 400 <= msg.curi.status_code < 500:
+                # some kind of error where the resource could not be found.
+                self._frontier.process_not_found(msg.curi)
+            elif 500 <= msg.curi.status_code < 600:
+                # some kind of server error
+                    self._frontier.process_server_error(msg.curi)
+        except:
+            self._logger.CRITICAL("zmqmaster::Uncaught exception in the sink")
+            self._logger.CRITICAL("zmqmaster::%s" % (traceback.format_exc(),))
+            self.shutdown()
 
         self._send_next_uri()
