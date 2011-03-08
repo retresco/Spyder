@@ -91,6 +91,7 @@ class ZmqWorker(object, LoggingMixin):
         try:
             # this is the real work we want to do
             curi = self._processing(message.curi)
+            message.curi = curi
         except:
             # catch any uncaught exception and only log it as CRITICAL
             self._logger.critical(
@@ -99,7 +100,6 @@ class ZmqWorker(object, LoggingMixin):
             self._logger.critical("worker::%s" % (traceback.format_exc(),))
 
         # finished, now send the result back to the master
-        message.curi = curi
         self._out_stream.send_multipart(message.serialize())
 
     def start(self):
