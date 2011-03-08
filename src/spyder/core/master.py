@@ -24,7 +24,7 @@
 """
 A ZeroMQ master, i.e. the producer of URIs.
 """
-
+import traceback
 from Queue import Empty
 
 from zmq.eventloop.ioloop import IOLoop, PeriodicCallback
