@@ -93,10 +93,10 @@ class ZmqWorker(object, LoggingMixin):
             curi = self._processing(message.curi)
         except:
             # catch any uncaught exception and only log it as CRITICAL
-            self._logger.CRITICAL(
+            self._logger.critical(
                     "worker::Uncaught exception executing the worker for URL %s!" %
                     (curi.url,))
-            self._logger.CRITICAL("worker::%s" % (traceback.format_exc(),))
+            self._logger.critical("worker::%s" % (traceback.format_exc(),))
 
         # finished, now send the result back to the master
         message.curi = curi
@@ -150,5 +150,5 @@ class AsyncZmqWorker(ZmqWorker):
             self._processing(message, self._out_stream)
         except:
             # catch any uncaught exception and only log it as CRITICAL
-            self._logger.CRITICAL("Uncaught exception executing the worker!")
-            self._logger.CRITICAL(traceback.format_exc())
+            self._logger.critical("Uncaught exception executing the worker!")
+            self._logger.critical(traceback.format_exc())
