@@ -49,6 +49,15 @@ MAX_REDIRECTS = 3
 USE_GZIP = True
 
 
+#
+# static dns mappings. Mapping has to be like this:
+#    "hostname:port" => ("xxx.xxx.xxx.xxx", port)
+#
+STATIC_DNS_MAPPINGS = dict()
+# Size of the DNS Cache.
+SIZE_DNS_CACHE = 1000
+
+
 # Callback for Master processes.
 MASTER_CALLBACK = None
 # Interval for the periodic updater (surviving times where nothing is to be
@@ -68,8 +77,6 @@ FRONTIER_SIMULTANEOUS_HOSTS = 100
 FRONTIER_HEAP_SIZE = 500
 # Minimum number of URIs in the HEAP
 FRONTIER_HEAP_MIN = 100
-# Size of the DNS Cache
-FRONTIER_SIZE_DNS_CACHE = 1000
 # Download duration times this factor throttles the spyder
 FRONTIER_CRAWL_DELAY_FACTOR = 4
 # Minimum delay to wait before connecting the host again (s)
@@ -113,13 +120,17 @@ REGEX_SCOPE_NEGATIVE = [
 ]
 
 
+# define a parent directory for unix sockets that will be created
+PARENT_SOCKET_DIRECTORY = "/tmp"
+
 #
 # improved settings
 # only edit if you are usually working behind a nuclear power plant's control
 # panel
 
 # ZeroMQ Master Push
-ZEROMQ_MASTER_PUSH = "ipc:///tmp/spyder-zmq-master-push.sock"
+ZEROMQ_MASTER_PUSH = "ipc://%s/spyder-zmq-master-push.sock" % \
+    (PARENT_SOCKET_DIRECTORY,)
 ZEROMQ_MASTER_PUSH_HWM = 10
 
 # ZeroMQ Fetcher
@@ -134,14 +145,17 @@ ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH_HWM = 10
 
 # ZeroMQ Scoper
 ZEROMQ_WORKER_PROC_SCOPER_PULL = ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH
-ZEROMQ_WORKER_PROC_SCOPER_PUB = "ipc:///tmp/spyder-zmq-master-sub.sock"
+ZEROMQ_WORKER_PROC_SCOPER_PUB = "ipc://%s/spyder-zmq-master-sub.sock" % \
+    (PARENT_SOCKET_DIRECTORY,)
 
 # ZeroMQ Master Sub
 ZEROMQ_MASTER_SUB = ZEROMQ_WORKER_PROC_SCOPER_PUB
 
 # ZeroMQ Management Sockets
-ZEROMQ_MGMT_MASTER = "ipc:///tmp/spyder-zmq-mgmt-master.sock"
-ZEROMQ_MGMT_WORKER = "ipc:///tmp/spyder-zmq-mgmt-worker.sock"
+ZEROMQ_MGMT_MASTER = "ipc://%s/spyder-zmq-mgmt-master.sock" % \
+    (PARENT_SOCKET_DIRECTORY,)
+ZEROMQ_MGMT_WORKER = "ipc://%s/spyder-zmq-mgmt-worker.sock" % \
+    (PARENT_SOCKET_DIRECTORY,)
 
 # ZeroMQ logging socket
-ZEROMQ_LOGGING = "ipc:///tmp/spyder-logging.sock"
+ZEROMQ_LOGGING = "ipc://%s/spyder-logging.sock" % (PARENT_SOCKET_DIRECTORY,)
