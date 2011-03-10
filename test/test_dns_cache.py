@@ -25,14 +25,25 @@
 import unittest
 
 from spyder.core.dnscache import DnsCache
+from spyder.core.settings import Settings
 
 
 class DnsCacheTest(unittest.TestCase):
 
     def test_dns_cache(self):
-        dns = DnsCache(1)
+        s = Settings()
+        s.SIZE_DNS_CACHE = 1
+        dns = DnsCache(s)
         self.assertEqual(('127.0.0.1', 80), dns["localhost:80"])
         self.assertEqual(('127.0.0.1', 81), dns["localhost:81"])
+        self.assertTrue(1, len(dns._cache))
+
+    def test_static_dns_mapping(self):
+        s = Settings()
+        s.STATIC_DNS_MAPPINGS = {"localhost:123": ("-1.-1.-1.-1", 123)}
+        dns = DnsCache(s)
+        self.assertEqual(("-1.-1.-1.-1", 123), dns["localhost:123"])
+        self.assertEqual(('127.0.0.1', 80), dns["localhost:80"])
         self.assertTrue(1, len(dns._cache))
 
 
