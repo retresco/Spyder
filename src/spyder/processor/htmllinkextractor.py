@@ -174,6 +174,8 @@ class DefaultHtmlLinkExtractor(object):
         element = content[start:end]
         for link_candidate in self._link_extractor.finditer(element):
             link = link_candidate.group(3)[1:-1]
+            if link.find("mailto:"):
+                continue
             try:
                 if link.find("://") == -1:
                     link = "%s://%s%s" % (parsed_url.scheme, parsed_url.netloc,
