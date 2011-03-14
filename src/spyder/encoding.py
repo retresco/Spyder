@@ -40,7 +40,7 @@ def get_content_type_encoding(curi):
         # no charset information in the http header
         first_bytes = curi.content_body[:512].lower()
         ctypestart = first_bytes.find("content-type")
-        if ctypestart:
+        if ctypestart != -1:
             # there is a html header
             ctypestart = first_bytes.find("content=\"", ctypestart)
             ctypeend = first_bytes.find("\"", ctypestart + 9)
