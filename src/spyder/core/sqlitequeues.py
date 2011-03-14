@@ -201,3 +201,88 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
             return (row['url'], row['etag'], row['mod_date'], row['next_date'],
                     row['priority'])
         raise UriNotFound(url)
+
+
+class SQLiteSingleHostUriQueue(SQLiteStore):
+    """
+    A queue for multiple uris.
+    """
+
+    def __init__(self, db_name):
+        """
+        Initialize the simple uri queue.
+
+        This is a single queue working only with one host!
+        """
+        SQLiteStore.__init__(self, db_name)
+
+        # create the tables if they do not exist
+        self._cursor.executescript("""
+                CREATE TABLE IF NOT EXISTS queues(
+                    url TEXT PRIMARY KEY ASC,
+                    queue INTEGER,
+                    etag TEXT,
+                    mod_date INTEGER,
+                    next_date INTEGER,
+                    priority INTEGER
+                );
+
+                CREATE INDEX IF NOT EXISTS queue_fifo ON queues(
+                    queue,
+                    next_date ASC,
+                    priority ASC
+                );
+                """)
+
+    def add_uri(self, uri):
+        """
+        Add the uri to the given queue.
+        """
+        pass
+
+    def add_uris(self, uris):
+        """
+        Add the list of uris to the given queue.
+        """
+        pass
+
+    def update_uri(self, uri):
+        """
+        """
+        pass
+
+    def update_uris(self, uris):
+        """
+        """
+        pass
+
+    def ignore_uri(self, uri):
+        """
+        """
+        pass
+
+    def queue_head(self, queue, n=1, offset=0):
+        """
+        """
+        pass
+
+    def remove_uris(self, uris):
+        """
+        """
+        pass
+
+    def __len__(self, queue=None):
+        """
+        """
+        pass
+
+    def all_uris(self, queue=None):
+        """
+        """
+        pass
+
+    def get_uri(self, url):
+        """
+        Return the uri tuple corresponding to the given url.
+        """
+        pass
