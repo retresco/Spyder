@@ -35,14 +35,21 @@ from brownie.caching import LRUCache as LRUDict
 
 class DnsCache(object):
     """
-    A simple DNS Cache.
+    This is a least recently used cache for hostname to ip addresses. If the
+    cache has reached it's maximum size, the least used key is being removed
+    and a new DNS lookup is made.
+
+    In addition you may add static mappings via the
+    ``settings.STATIC_DNS_MAPPINGS`` dict.
     """
 
-    def __init__(self, max_size=10):
+    def __init__(self, settings):
         """
-        Initialize the cache.
+        Initialize the lru cache and the static mappings.
         """
-        self._cache = LRUDict(maxsize=max_size)
+        self._cache = LRUDict(maxsize=settings.SIZE_DNS_CACHE)
+        self._static_cache = dict()
+        self._static_cache.update(settings.STATIC_DNS_MAPPINGS)
 
     def __getitem__(self, host_port_string):
         """
@@ -52,6 +59,9 @@ class DnsCache(object):
         Returns a tuple of `(ip, port)`. At the moment we only support IPv4 but
         this will probably change in the future.
         """
+        if host_port_string in self._static_cache.keys():
+            return self._static_cache[host_port_string]
+
         if host_port_string not in self._cache:
             (hostname, port) = host_port_string.split(":")
             infos = socket.getaddrinfo(hostname, port, 0, 0, socket.SOL_TCP)

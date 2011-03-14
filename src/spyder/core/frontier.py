@@ -93,7 +93,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
         # a list of uris currently being crawled.
         self._current_uris = dict()
         # dns cache
-        self._dns_cache = DnsCache(settings.FRONTIER_SIZE_DNS_CACHE)
+        self._dns_cache = DnsCache(settings)
         # unique uri filter
         self._unique_uri = UniqueUriFilter(unique_hash)
         for url in self._front_end_queues.all_uris():

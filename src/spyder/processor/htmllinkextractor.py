@@ -174,20 +174,17 @@ class DefaultHtmlLinkExtractor(object):
         element = content[start:end]
         for link_candidate in self._link_extractor.finditer(element):
             link = link_candidate.group(3)[1:-1]
-            if "://" not in link:
-                # a relative link
-                if link.startswith('/'):
-                    link = parsed_url.scheme + "://" + parsed_url.netloc + \
-                        link
-                else:
-                    if not parsed_url.path.endswith('/'):
-                        link = parsed_url.scheme + "://" + \
-                            parsed_url.netloc + parsed_url.path + '/' + \
-                            link
-                    else:
-                        link = parsed_url.scheme + "://" + \
-                            parsed_url.netloc + parsed_url.path + link
-            links.append(link)
+            try:
+                if link.find("://") == -1:
+                    link = "%s://%s%s" % (parsed_url.scheme, parsed_url.netloc,
+                        adapt_relative_link(link, parsed_url.path))
+                links.append(link)
+            except ValueError:
+                # the value error might be raised within the
+                # adapt_relative_link method, if the link happens to have more
+                # ".." modifiers than path levels are available. At this point
+                # we simply want to ignore this link!
+                pass
 
         linkstring = "\n".join(links)
         if not CURI_EXTRACTED_URLS in curi.optional_vars:
@@ -212,6 +209,32 @@ class DefaultHtmlLinkExtractor(object):
             "application/vnd.wap.wml", "application/vnd.wap.xhtm"]
         (ctype, _enc) = get_content_type_encoding(curi)
         return ctype in allowed
+
+
+def adapt_relative_link(link, curpath):
+    """
+    Adapt a relative link and make it absolute. Take into consideration any of
+    the following cases:
+
+    * test/
+    * /test/
+    * ../test/
+    * ./../test/
+    """
+    if link.startswith('/'):
+        # remove everything from the curpath
+        return link
+    elif link.startswith('..'):
+        if len(curpath) == 0:
+            # we should go up one level, but there is none left, raise an error
+            raise ValueError()
+        # go up one level
+        return adapt_relative_link(link[3:], curpath[:curpath.rfind('/')])
+    elif link.startswith('.'):
+        # stay on the path
+        return adapt_relative_link(link[2:], curpath)
+    else:
+        return curpath + '/' + link
 
 
 def create_processor(settings):

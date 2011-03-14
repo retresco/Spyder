@@ -24,7 +24,7 @@
 """
 A ZeroMQ master, i.e. the producer of URIs.
 """
-
+import traceback
 from Queue import Empty
 
 from zmq.eventloop.ioloop import IOLoop, PeriodicCallback
@@ -198,8 +198,8 @@ class ZmqMaster(object, LoggingMixin):
                 # some kind of server error
                     self._frontier.process_server_error(msg.curi)
         except:
-            self._logger.CRITICAL("zmqmaster::Uncaught exception in the sink")
-            self._logger.CRITICAL("zmqmaster::%s" % (traceback.format_exc(),))
+            self._logger.critical("zmqmaster::Uncaught exception in the sink")
+            self._logger.critical("zmqmaster::%s" % (traceback.format_exc(),))
             self.shutdown()
 
         self._send_next_uri()
