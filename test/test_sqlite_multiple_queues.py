@@ -39,7 +39,7 @@ class SqliteQueuesTest(unittest.TestCase):
         q = SQLiteMultipleHostUriQueue(":memory:")
         q.add_uri(uri)
 
-        self.assertEqual(1, len(q))
+        self.assertEqual(1, q.qsize())
 
         cursor = q._connection.execute("SELECT * FROM queues WHERE queue=1")
         uri_res = cursor.fetchone()
@@ -170,6 +170,9 @@ class SqliteQueuesTest(unittest.TestCase):
         q = SQLiteMultipleHostUriQueue(":memory:")
         q.add_uris(uris)
 
+        self.assertEqual(2, q.qsize())
+        self.assertEqual(2, q.qsize(queue=1))
+
         (url1, queue1,  etag1, mod_date1, next_date1, prio1) = uris[0]
         (url2, queue2, etag2, mod_date2, next_date2, prio2) = uris[1]
 
@@ -198,6 +201,9 @@ class SqliteQueuesTest(unittest.TestCase):
         (url3, queue3, etag3, mod_date3, next_date3, prio3) = uris[2]
         q.add_uri(uris[2])
 
+        self.assertEqual(3, q.qsize())
+        self.assertEqual(3, q.qsize(queue=1))
+
         q.ignore_uri("http://localhost", 404)
 
         for uri_res in q.queue_head(1, n=1, offset=1):
@@ -209,6 +215,25 @@ class SqliteQueuesTest(unittest.TestCase):
             self.assertEqual(mod_date3, mod_date_res)
             self.assertEqual(prio3, prio_res)
             self.assertEqual(next_date3, next_date_res)
+
+        uris.append(("http://localhost2/1", 2, "eTag", int(time.time()*1000),
+                    int(time.time()*1002), 1))
+        (url4, queue4, etag4, mod_date4, next_date4, prio4) = uris[3]
+        q.add_uri(uris[3])
+
+        self.assertEqual(4, q.qsize())
+        self.assertEqual(2, q.qsize(queue=1))
+        self.assertEqual(1, q.qsize(queue=2))
+
+        for uri_res in q.queue_head(2, n=1, offset=0):
+            (url_res, queue_res,  etag_res, mod_date_res, next_date_res,
+                prio_res) = uri_res
+            self.assertEqual(url4, url_res)
+            self.assertEqual(queue4, queue_res)
+            self.assertEqual(etag4, etag_res)
+            self.assertEqual(mod_date4, mod_date_res)
+            self.assertEqual(prio4, prio_res)
+            self.assertEqual(next_date4, next_date_res)
 
 
 if __name__ == '__main__':

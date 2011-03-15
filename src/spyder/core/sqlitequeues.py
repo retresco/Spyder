@@ -318,7 +318,7 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
         self._cursor.executemany("DELETE FROM queues WHERE url=?",
                 del_uris)
 
-    def __len__(self, queue=None):
+    def qsize(self, queue=None):
         """
         Calculate the number of known uris.
 
@@ -327,7 +327,7 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
         """
         if queue:
             cursor = self._cursor.execute("""SELECT count(url) FROM queues
-                    WHERE queue=?""", queue)
+                    WHERE queue=?""", (queue,))
         else:
             cursor = self._cursor.execute("""SELECT count(url) FROM queues""")
         return cursor.fetchone()[0]
