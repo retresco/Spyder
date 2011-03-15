@@ -261,7 +261,7 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
         """
         self._cursor.executemany("""INSERT INTO queues
                 (url, queue, etag, mod_date, next_date, priority) VALUES
-                (?, ?,  ?, ?, ?, ?)""", urls)
+                (?, ?,  ?, ?, ?, ?)""", uris)
 
     def update_uri(self, uri):
         """
@@ -348,7 +348,7 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
             yield row['url']
 
     def get_uri(self, url):
-        self._cursor.execute("SELECT * FROM queue WHERE url=?",
+        self._cursor.execute("SELECT * FROM queues WHERE url=?",
                 (url,))
         row = self._cursor.fetchone()
         if row:
