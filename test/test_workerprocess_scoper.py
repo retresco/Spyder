@@ -145,7 +145,7 @@ class WorkerScoperTestCase(ZmqTornadoIntegrationTest):
 
     def test_that_creating_scoper_works(self):
 
-        self._settings.SPYDER_SCOPER_PIPELINE = ['spyder.processor.limiter',]
+        self._settings.SPYDER_SCOPER_PIPELINE = ['spyder.processor.limiter.DefaultLimiter',]
 
         scoper = workerprocess.create_worker_scoper(self._settings,
                 self._mgmt, self._ctx, StreamHandler(sys.stdout), self._io_loop)

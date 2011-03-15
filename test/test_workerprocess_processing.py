@@ -32,7 +32,7 @@ class WorkerProcessingUnittest(unittest.TestCase):
         settings = Settings()
         processors = settings.SPYDER_SCOPER_PIPELINE
         processors.append('test_workerprocess')
-        self.assertRaises(ImportError, workerprocess.create_processing_function,
+        self.assertRaises(ValueError, workerprocess.create_processing_function,
                 settings, processors)
 
         processors.pop()

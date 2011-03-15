@@ -36,9 +36,7 @@ class RegexScoperTest(unittest.TestCase):
         ])
 
         settings = Settings()
-        settings.REGEX_SCOPE_POSITIVE = ["http://[^/]+/.*\.html"]
-        settings.REGEX_SCOPE_NEGATIVE = ["ftp://[^/]+/.*\.avi"]
-        scoper = create_processor(settings)
+        scoper = RegexScoper()
 
         curi = scoper(curi)
 

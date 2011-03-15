@@ -43,7 +43,7 @@ from zmq.core.error import ZMQError
 from zmq.eventloop.ioloop import IOLoop, DelayedCallback
 from zmq.log.handlers import PUBHandler
 
-from spyder.import_util import custom_import
+from spyder.import_util import import_class
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_AVAIL
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
@@ -93,11 +93,8 @@ def create_processing_function(settings, pipeline):
     """
     processors = []
     for processor in pipeline:
-        processor_module = custom_import(processor)
-        if "create_processor" not in dir(processor_module):
-            raise ValueError("Processor module (%s) does not have a \
-                    'create_processor' method!" % processor)
-        processors.append(processor_module.create_processor(settings))
+        processor_class = import_class(processor)
+        processors.append(processor_class(settings))
 
     def processing(data_message):
         """
