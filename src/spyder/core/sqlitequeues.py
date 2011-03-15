@@ -22,18 +22,14 @@
 #
 #
 """
-Implement an URI Queue stored in SQLite.
-
-Within this module an URI is represented as a tuple
-
-   uri = (url, etag, mod_date, next_date, priority)
+This module contains the default queue storages backed by SQlite.
 """
 import sqlite3 as sqlite
 
 
 class UriNotFound(Exception):
     """
-    Exception raised when an URI could not be found.
+    Exception raised when an URI could not be found in the storage.
     """
 
     def __init__(self, url):
@@ -45,7 +41,8 @@ class UriNotFound(Exception):
 
 class SQLiteStore(object):
     """
-    Simple store managing the simple sqlite stuff.
+    Simple base class for sqlite based queue storages. This class basically
+    creates the default pragmas and initializes all the unicode stuff.
     """
 
     def __init__(self, db_name):
@@ -77,7 +74,12 @@ class SQLiteStore(object):
 
 class SQLiteSingleHostUriQueue(SQLiteStore):
     """
-    A queue of uris.
+    This is a queue that can be used for crawling a single host.
+
+    Internally there is only one queue for all URLs. Each URL is represented as
+    a tuple of the form: ``uri = (url, etag, mod_date, next_date, priority)``.
+
+    The queue is ordered using the ``next_date`` in ascending fashion.
     """
 
     def __init__(self, db_name):
@@ -194,6 +196,9 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
             yield row['url']
 
     def get_uri(self, url):
+        """
+        Mostly for debugging purposes.
+        """
         self._cursor.execute("SELECT * FROM queue WHERE url=?",
                 (url,))
         row = self._cursor.fetchone()
@@ -203,9 +208,18 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         raise UriNotFound(url)
 
 
-class SQLiteSingleHostUriQueue(SQLiteStore):
+class SQLiteMultipleHostUriQueue(SQLiteStore):
     """
-    A queue for multiple uris.
+    A queue storage for multiple queues that can be used for crawling multiple
+    hosts simultaneously.
+
+    Internally all URLs are being stored in one table. Each queue has its own
+    INTEGER identifier.
+
+    Each URL is represented as a tuple of the form
+    ``uri = (url, queue, etag, mod_date, next_date, priority)``.
+
+    The queue is ordered using the ``next_date`` in ascending fashion.
     """
 
     def __init__(self, db_name):
@@ -229,8 +243,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
 
                 CREATE INDEX IF NOT EXISTS queue_fifo ON queues(
                     queue,
-                    next_date ASC,
-                    priority ASC
+                    next_date ASC
                 );
                 """)
 
@@ -238,51 +251,107 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         """
         Add the uri to the given queue.
         """
-        pass
+        self._cursor.execute("""INSERT INTO queues
+                (url, queue, etag, mod_date, next_date, priority) VALUES
+                (?, ?, ?, ?, ?, ?)""", uri)
 
     def add_uris(self, uris):
         """
         Add the list of uris to the given queue.
         """
-        pass
+        self._cursor.executemany("""INSERT INTO queues
+                (url, queue, etag, mod_date, next_date, priority) VALUES
+                (?, ?,  ?, ?, ?, ?)""", urls)
 
     def update_uri(self, uri):
         """
+        Update the uri.
         """
-        pass
+        (url, queue, etag, mod_date, next_date, prio) = uri
+        self._cursor.execute("""UPDATE queues SET queue=?,
+                etag=?, mod_date=?, next_date=?, priority=?
+                WHERE url=?""", (queue, etag, mod_date, next_date, prio, url))
 
     def update_uris(self, uris):
         """
+        Update the list of uris in the database.
         """
-        pass
+        update_uris = [(queue, etag, mod_date, next_date, priority, url)
+            for (url, queue, etag, mod_date, next_date, priority) in uris]
+        self._cursor.executemany("""UPDATE queues SET queue=?,
+                etag=?, mod_date=?, next_date=?, priority=?
+                WHERE url=?""", update_uris)
 
-    def ignore_uri(self, uri):
+    def ignore_uri(self, url, status):
         """
+        Called when an URI should be ignored. This is usually the case when
+        there is a HTTP 404 or recurring HTTP 500's.
         """
-        pass
+        self.update_uri((url, None, None, None, status, 1))
 
     def queue_head(self, queue, n=1, offset=0):
         """
+        Return the top `n` elements from the `queue`. By default, return the top
+        element from the queue.
+
+        If you specify `offset` the first `offset` entries are ignored.
+
+        Any entries with a `next_date` below `1000` are being ignored. This
+        enables the crawler to ignore URIs _and_ storing the status code.
         """
-        pass
+        self._cursor.execute("""SELECT * FROM queues
+                WHERE queue = ?
+                AND next_date > 1000
+                ORDER BY next_date ASC
+                LIMIT ?
+                OFFSET ?""", (queue, n, offset))
+        for row in self._cursor:
+            yield (row['url'], row['queue'], row['etag'], row['mod_date'],
+                row['next_date'], row['priority'])
 
     def remove_uris(self, uris):
         """
+        Remove all uris.
         """
-        pass
+        del_uris = [(url,) for (url, _queue, _etag, _mod_date, _queue,
+                _next_date) in uris]
+        self._cursor.executemany("DELETE FROM queues WHERE url=?",
+                del_uris)
 
     def __len__(self, queue=None):
         """
+        Calculate the number of known uris.
+
+        If ``queue is not None``, then the queues size is being returned.
+        Otherwise the sum of all sizes of all queue is returned.
         """
-        pass
+        if queue:
+            cursor = self._cursor.execute("""SELECT count(url) FROM queues
+                    WHERE queue=?""", queue)
+        else:
+            cursor = self._cursor.execute("""SELECT count(url) FROM queues""")
+        return cursor.fetchone()[0]
 
     def all_uris(self, queue=None):
         """
+        A generator for iterating over all available urls.
+
+        Note: does not return the full uri object, only the url. This will be
+        used to refill the unique uri filter upon restart.
         """
-        pass
+        if queue:
+            self._cursor.execute("""SELECT url FROM queues WHERE queue=?""",
+                    queue)
+        else:
+            self._cursor.execute("""SELECT url FROM queues""")
+        for row in self._cursor:
+            yield row['url']
 
     def get_uri(self, url):
-        """
-        Return the uri tuple corresponding to the given url.
-        """
-        pass
+        self._cursor.execute("SELECT * FROM queue WHERE url=?",
+                (url,))
+        row = self._cursor.fetchone()
+        if row:
+            return (row['url'], row['queue'], row['etag'], row['mod_date'],
+                    row['next_date'], row['priority'])
+        raise UriNotFound(url)
