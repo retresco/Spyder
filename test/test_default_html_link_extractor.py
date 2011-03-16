@@ -58,7 +58,12 @@ class HtmlLinkExtractorTest(unittest.TestCase):
 
         path = "/test"
         link6 = "../../test2"
-        self.assertRaises(ValueError, adapt_relative_link, link5, path)
+        self.assertEqual("/test2",
+                adapt_relative_link(link6, path))
+
+        link7 = "../test2/mehr/test/../achnee/dochnicht"
+        self.assertEqual("/test2/mehr/achnee/dochnicht",
+                adapt_relative_link(link7, path))
 
     def test_that_content_type_restriction_works(self):
         xtor = DefaultHtmlLinkExtractor(Settings())
