@@ -87,9 +87,8 @@ class ZmqMgmt(object):
         Stop the MGMT interface.
         """
         self._in_stream.stop_on_recv()
-        msg = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER, identity=None,
+        self.publish(topic=ZMQ_SPYDER_MGMT_WORKER, identity=None,
                 data=ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK)
-        self._out_stream.send_multipart(msg)
 
     def close(self):
         """
