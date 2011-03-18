@@ -22,9 +22,10 @@ Table of Contents
 .. toctree::
    :maxdepth: 2
 
+   release-notes
+   getting-started
    crawler-design
    libraries
-   getting-started
    api/spyderapi
    roadmap
 
