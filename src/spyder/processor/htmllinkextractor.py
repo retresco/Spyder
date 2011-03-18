@@ -218,23 +218,29 @@ def adapt_relative_link(link, curpath):
 
     * test/
     * /test/
+    * /../test/
+    * /../test/../mehrtest/
     * ../test/
     * ./../test/
     """
-    if link.startswith('/'):
+    if link[0] == '/':
         # remove everything from the curpath
-        return link
-    elif link.startswith('..'):
-        if len(curpath) == 0:
-            # we should go up one level, but there is none left, raise an error
-            raise ValueError()
+        return adapt_relative_link(link[1:], "/")
+    elif link[:2] == '..':
         # go up one level
         return adapt_relative_link(link[3:], curpath[:curpath.rfind('/')])
-    elif link.startswith('.'):
+    elif link[0] == '.':
         # stay on the path
         return adapt_relative_link(link[2:], curpath)
+    elif link.find('/') != -1:
+        # copy the next path element from link to curpath
+        seperator = link.find('/')
+        path_element = link[:seperator]
+        return adapt_relative_link(link[seperator+1:],
+                curpath + '/' + path_element)
     else:
-        return curpath + '/' + link
+        l = curpath + '/' + link
+        return l.replace('//', '/')
 
 
 def create_processor(settings):
