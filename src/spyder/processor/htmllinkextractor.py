@@ -223,7 +223,9 @@ def adapt_relative_link(link, curpath):
     * ../test/
     * ./../test/
     """
-    if link[0] == '/':
+    if len(link) == 0:
+        return curpath
+    elif link[0] == '/':
         # remove everything from the curpath
         return adapt_relative_link(link[1:], "/")
     elif link[:2] == '..':
