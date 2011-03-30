@@ -80,8 +80,6 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
     def tearDown(self):
         # stop the mgmt
         self._mgmt.stop()
-        self._mgmt._in_stream.close()
-        self._mgmt._out_stream.close()
 
         # close all sockets
         for socket in self._mgmt_sockets.itervalues():
@@ -103,6 +101,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         # the master is a ZMQStream because we are sending msgs from the test
         sock = self._ctx.socket(zmq.PUB)
         sock.bind(mgmt_master_worker)
+        self._mgmt_sockets['tmp1'] = sock
         self._mgmt_sockets['master_pub'] = ZMQStream(sock, self._io_loop)
         # the worker stream is created inside the ZmqMgmt class
         self._mgmt_sockets['worker_sub'] = self._ctx.socket(zmq.SUB)
@@ -118,6 +117,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
         sock.connect(mgmt_worker_master)
+        self._mgmt_sockets['tmp2'] = sock
         self._mgmt_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
     def _setup_data_servers(self):
@@ -129,6 +129,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 
         sock = self._ctx.socket(zmq.PUSH)
         sock.bind(data_master_worker)
+        self._worker_sockets['tmp3'] = sock
         self._worker_sockets['master_push'] = ZMQStream(sock, self._io_loop)
 
     def _setup_data_client(self):
@@ -138,6 +139,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
         sock.connect(data_worker_master)
+        self._worker_sockets['tmp4'] = sock
         self._worker_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
     def on_mgmt_end(self, _msg):
@@ -184,7 +186,9 @@ class WorkerExtractorTestCase(ZmqTornadoIntegrationTest):
         self._io_loop.start()
 
         extractor._out_stream.close()
+        extractor._outsocket.close()
         extractor._in_stream.close()
+        extractor._insocket.close()
 
 
 if __name__ == '__main__':

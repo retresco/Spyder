@@ -103,6 +103,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         # the master is a ZMQStream because we are sending msgs from the test
         sock = self._ctx.socket(zmq.PUB)
         sock.bind(mgmt_master_worker)
+        self._mgmt_sockets['tmp1'] = sock
         self._mgmt_sockets['master_pub'] = ZMQStream(sock, self._io_loop)
         # the worker stream is created inside the ZmqMgmt class
         self._mgmt_sockets['worker_sub'] = self._ctx.socket(zmq.SUB)
@@ -118,6 +119,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
         sock.connect(mgmt_worker_master)
+        self._mgmt_sockets['tmp2'] = sock
         self._mgmt_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
     def _setup_data_servers(self):
@@ -129,6 +131,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 
         sock = self._ctx.socket(zmq.PUSH)
         sock.bind(data_master_worker)
+        self._worker_sockets['tmp3'] = sock
         self._worker_sockets['master_push'] = ZMQStream(sock, self._io_loop)
 
         # address for worker -> master communication
@@ -137,6 +140,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
         sock.bind(data_worker_master)
+        self._worker_sockets['tmp4'] = sock
         self._worker_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
     def on_mgmt_end(self, _msg):
@@ -180,7 +184,9 @@ class WorkerScoperTestCase(ZmqTornadoIntegrationTest):
 
         self._io_loop.start()
         scoper._in_stream.close()
+        scoper._insocket.close()
         scoper._out_stream.close()
+        scoper._outsocket.close()
 
 
 if __name__ == '__main__':

@@ -85,8 +85,12 @@ class WorkerProcessTestCase(unittest.TestCase):
 
         mgmt._out_stream.close()
         mgmt._in_stream.close()
+        mgmt._publisher.close()
+        mgmt._subscriber.close()
         pub_stream.close()
+        pubsocket.close()
         sub_stream.close()
+        subsocket.close()
         ctx.term()
 
 
