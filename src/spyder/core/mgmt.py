@@ -95,7 +95,9 @@ class ZmqMgmt(object):
         Close all open sockets.
         """
         self._in_stream.close()
+        self._subscriber.close()
         self._out_stream.close()
+        self._publisher.close()
 
     def add_callback(self, topic, callback):
         """

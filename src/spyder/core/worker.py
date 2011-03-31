@@ -125,7 +125,9 @@ class ZmqWorker(object, LoggingMixin):
         Close all open sockets.
         """
         self._in_stream.close()
+        self._insocket.close()
         self._out_stream.close()
+        self._outsocket.close()
 
 
 class AsyncZmqWorker(ZmqWorker):
