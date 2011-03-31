@@ -41,6 +41,12 @@ class BiasedQueueSelector(object):
         """
         Initialize the queue selector with the number of available queues.
         """
+        self._weights = []
+        self._sum_weights = 0
+        self._enumerate_weights = []
+        self.reset_queues(number_of_queues)
+
+    def reset_queues(self, number_of_queues):
         self._weights = [1 / (float(i) * number_of_queues)
             for i in range(1, number_of_queues + 1)]
         self._sum_weights = sum(self._weights)
