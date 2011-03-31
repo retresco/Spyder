@@ -27,7 +27,13 @@ This module contains the default queue storages backed by SQlite.
 import sqlite3 as sqlite
 
 
-class UriNotFound(Exception):
+class QueueException(Exception):
+    """
+    Base exception for errors in the queues.
+    """
+    pass
+
+class UriNotFound(QueueException):
     """
     Exception raised when an URI could not be found in the storage.
     """
@@ -36,7 +42,19 @@ class UriNotFound(Exception):
         self._url = url
 
     def __repr__(self):
-        return "UriNotFound(%S)" % (self._url,)
+        return "UriNotFound(%s)" % (self._url,)
+
+
+class QueueNotFound(QueueException):
+    """
+    Exception raised when a ``queue`` could not be found.
+    """
+
+    def __init__(self, identifier):
+        self._identifier = identifier
+
+    def __repr__(self):
+        return "QueueNotFound(%s)" % (self._identifier,)
 
 
 class SQLiteStore(object):
@@ -241,6 +259,12 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
                     priority INTEGER
                 );
 
+                CREATE TABLE IF NOT EXISTS queue_identifiers(
+                    queue INTEGER,
+                    identifier TEXT,
+                    PRIMARY KEY (queue, identifier)
+                );
+
                 CREATE INDEX IF NOT EXISTS queue_fifo ON queues(
                     queue,
                     next_date ASC
@@ -322,8 +346,7 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
         """
         Calculate the number of known uris.
 
-        If ``queue is not None``, then the queues size is being returned.
-        Otherwise the sum of all sizes of all queue is returned.
+        @param queue: if this is `None`, the size of all queues is returned.
         """
         if queue:
             cursor = self._cursor.execute("""SELECT count(url) FROM queues
@@ -338,6 +361,10 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
 
         Note: does not return the full uri object, only the url. This will be
         used to refill the unique uri filter upon restart.
+
+        @param queue: int of the queue to use. If `None`, all URLs will be
+            returned.
+        @return: URL as str
         """
         if queue:
             self._cursor.execute("""SELECT url FROM queues WHERE queue=?""",
@@ -348,6 +375,11 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
             yield row['url']
 
     def get_uri(self, url):
+        """
+        Return the *URI* tuple for the given ``URL``.
+
+        @return: (url, queue, etag, mod_date, next_date, priority)
+        """
         self._cursor.execute("SELECT * FROM queues WHERE url=?",
                 (url,))
         row = self._cursor.fetchone()
@@ -355,3 +387,54 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
             return (row['url'], row['queue'], row['etag'], row['mod_date'],
                     row['next_date'], row['priority'])
         raise UriNotFound(url)
+
+    def get_all_queues(self):
+        """
+        A generator for iterating over all available queues.
+
+        @return: (queue, identifier) as (int, str)
+        """
+        self._cursor.execute("SELECT * FROM queue_identifiers")
+        for row in self._cursor:
+            yield (row['queue'], row['identifier'])
+
+    def get_queue_for_ident(self, identifier):
+        """
+        Get the ``queue`` for the given identifier if there is one.
+        Raises a `QueueNotFound` error if there is no queue with the
+        identifier.
+
+        @param identifier: str of the identifier
+        @return: the queue's id as int
+        """
+        self._cursor.execute("""SELECT queue FROM queue_identifiers WHERE
+                identifier=?""", (identifier,))
+
+        row = self._cursor.fetchone()
+        if row:
+            return row['queue']
+        raise QueueNotFound(identifier)
+
+    def add_queue(self, identifier):
+        """
+        Add a new queue with the ``identifier``. If the queue already exists,
+        it's id is returned.
+
+        @return: The new queue's id
+        """
+        try:
+            return self.get_queue_for_ident(identifier)
+        except QueueNotFound:
+            pass
+
+        self._cursor.execute("SELECT MAX(queue) AS id FROM queue_identifiers")
+        row = self._cursor.fetchone()
+
+        if row['id']:
+            next_id = row['id'] + 1
+        else:
+            next_id = 1
+
+        self._cursor.execute("INSERT INTO queue_identifiers VALUES(?,?)",
+            (next_id, identifier))
+        return next_id

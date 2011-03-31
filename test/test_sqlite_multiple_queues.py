@@ -235,6 +235,33 @@ class SqliteQueuesTest(unittest.TestCase):
             self.assertEqual(prio4, prio_res)
             self.assertEqual(next_date4, next_date_res)
 
+    def test_that_queues_work(self):
+
+        q = SQLiteMultipleHostUriQueue(':memory:')
+
+        for queue in q.get_all_queues():
+            self.assertFalse(True)
+
+        qid1 = q.add_queue('test')
+        
+        for (queue, ident) in q.get_all_queues():
+            self.assertEqual(qid1, queue)
+            self.assertEqual('test', ident)
+
+        qid2 = q.add_queue('test2')
+
+        i = 0
+        for (queue, ident) in q.get_all_queues():
+            if i==0:
+                self.assertEqual(qid1, queue)
+                self.assertEqual('test', ident)
+                i += 1
+            else:
+                self.assertEqual(qid2, queue)
+                self.assertEqual('test2', ident)
+
+        self.assertEqual(qid1, q.add_queue('test'))
+
 
 if __name__ == '__main__':
     unittest.main()
