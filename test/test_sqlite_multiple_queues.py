@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # test_sqlite_multiple_queues.py 15-Mar-2011
 #

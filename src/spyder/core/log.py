@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # logging.py 04-Feb-2011
 #

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # test_mgmt.py 10-Jan-2011
 #
