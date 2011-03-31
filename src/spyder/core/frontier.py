@@ -409,3 +409,176 @@ class SingleHostFrontier(AbstractBaseFrontier):
                 curi.req_time, self._min_delay)
         self._logger.debug("singlehostfrontier::Next possible crawl: %s" %
                 (self._next_possible_crawl,))
+
+
+class MultipleHostFrontier(AbstractBaseFrontier):
+    """
+    A Frontier for crawling many hosts simultaneously.
+    """
+
+    def __init__(self, settings, log_handler):
+        """
+        Initialize the abstract base frontier.
+        """
+        prio_clazz = import_class(settings.PRIORITIZER_CLASS)
+        AbstractBaseFrontier.__init__(self, settings, log_handler,
+                SQLiteMultipleHostUriQueue(settings.FRONTIER_STATE_FILE),
+                prio_clazz(settings))
+
+        self._delay_factor = settings.FRONTIER_CRAWL_DELAY_FACTOR
+        self._min_delay = settings.FRONTIER_MIN_DELAY
+        self._num_active_queues = settings.FRONTIER_ACTIVE_QUEUES
+        self._max_queue_budget = settings.FRONTIER_QUEUE_BUDGET
+        self._budget_punishment = settings.FRONTIER_QUEUE_BUDGET_PUNISH
+
+        self._queue_ids = []
+        for (queue, _) in self._front_end_queues.get_all_queues():
+            self._queue_ids.append(queue)
+
+        qs_clazz = import_class(settings.QUEUE_SELECTOR_CLASS)
+        self._backend_selector = qs_clazz(len(self._queue_ids))
+
+        qa_clazz = import_class(settings.QUEUE_ASSIGNMENT_CLASS)
+        self._backend_assignment = qa_clazz(self._dns_cache)
+
+        self._current_queues = dict()
+        self._current_queues_in_heap = []
+        self._time_politeness = dict()
+        self._budget_politeness = dict()
+
+    def _uri_from_curi(self, curi):
+        """
+        Override the uri creation in order to assign the queue to it. Otherwise
+        the uri would not end up in the correct queue.
+        """
+        uri = AbstractBaseFrontier._uri_from_curi(self, curi)
+        (url, etag, mod_date, next_crawl_date, prio) = uri
+        ident =  self._backend_assignment.get_identifier(url)
+
+        queue = self.add_or_create_queue(ident)
+        return (url, queue, etag, mod_date, next_crawl_date, prio)
+
+    def _crawluri_from_uri(self, uri):
+        """
+        The base method does not accept uri tuples with a queue, so change
+        that.
+        """
+        (url, queue, etag, mod_date, next_crawl_date, prio) = uri
+        queue_free_uri = (url, etag, mod_date, next_crawl_date, prio)
+        return AbstractBaseFrontier._crawluri_from_uri(self, queue_free_uri)
+
+    def get_next(self):
+        """
+        Get the next URI that is ready to be crawled.
+        """
+        if self._heap.qsize() < self._heap_min_size:
+            self._update_heap()
+
+        return self._crawluri_from_uri(self._heap.get_nowait())
+
+    def _update_heap(self):
+        """
+        Update the heap from the currently used queues. Respect the time based
+        politeness and the queue's budget.
+
+        The algorithm is as follows:
+
+          1. Remove queues that are out of budget and add new ones
+
+          2. Add all URIs to the heap that are crawlable with respect to the
+              time based politeness
+        """
+        self._cleanup_budget_politeness()
+
+        now = datetime.now(self._timezone)
+        for q in self._time_politeness.keys():
+            if now > self._time_politeness[q] and \
+                q not in self._current_queues_in_heap:
+
+                # we may crawl from this queue!
+                queue = self._current_queues[q]
+                (localized_next_date, next_uri) = queue.get_nowait()
+
+                if now < localized_next_date:
+                    # reschedule the uri for crawling
+                    queue.put_nowait((localized_next_date, next_uri))
+                else:
+                    # add this uri to the heap, i.e. it can be crawled
+                    self._add_to_heap(next_uri, localized_next_date)
+                    self._current_queues_in_heap.append(q)
+
+    def _cleanup_budget_politeness(self):
+        """
+        Check if any queue has reached the `self._max_queue_budget` and replace
+        those with queues from the storage.
+        """
+        removeable = []
+        for q in self._budget_politeness.keys():
+            if self._budget_politeness[q] <= 0:
+                removeable.append(q)
+
+        for rm_queue in removeable:
+            next_queue = self._get_next_queue()
+            while next_queue in self._budget_politeness.keys():
+                next_queue = self._get_next_queue()
+
+            self._remove_queue_from_memory(rm_queue)
+            self._add_queue_from_storage(next_queue)
+
+    def _get_next_queue(self):
+        """
+        Get the next queue candidate.
+
+        @return: The next queue id from the storage.
+        """
+        next_id = self._backend_selector.get_queue()
+        return self._queue_ids[next_id]
+
+    def _remove_queue_from_memory(self, queue):
+        """
+        Remove a queue from the internal memory buffers.
+        """
+        del self._time_politeness[queue]
+        del self._budget_politeness[queue]
+        del self._current_queues[queue]
+
+    def _add_queue_from_storage(self, next_queue):
+        """
+        Called when a queue should be crawled from now on.
+        """
+        self._budget_politeness[next_queue] = self._max_queue_budget
+        self._time_politeness[next_queue] = datetime.now(self._timezone)
+        self._current_queues[next_queue] = \
+            PriorityQueue(maxsize=self._max_queue_budget)
+
+        queue = self._current_queues[next_queue]
+
+        for uri in self._front_end_queues.queue_head(next_queue,
+                n=self._max_queue_budget):
+
+            (_url, _queue, _etag, _mod_date, next_date, _prio) = uri
+            localized_next_date = self._timezone.fromutc(
+                    datetime.utcfromtimestamp(next_date))
+            queue.put_nowait((localized_next_date, uri))
+
+    def process_successful_crawl(self, curi):
+        """
+        Crawling was successful, now update the politeness rules.
+        """
+        AbstractBaseFrontier.process_successful_crawl(self, curi)
+
+        uri = self._uri_from_curi(curi)
+        (url, queue, etag, mod_date, next_crawl_date, prio) = uri
+
+        self._budget_politeness[queue] -= 1
+
+        now = datetime.now(self._timezone)
+        self._time_politeness[queue] = now + max(self._delay_factor *
+                curi.req_time, self._min_delay)
+
+    def process_server_error(self, curi):
+        """
+        Punish any server errors in the budget for this queue.
+        """
+        AbstractBaseFrontier.process_server_error(self, curi)
+        self._budget_politeness[queue] -= self._budget_punishment
