@@ -44,6 +44,7 @@ class ManagementIntegrationTest(unittest.TestCase):
 
         sock = self._ctx.socket(zmq.PUB)
         sock.bind('inproc://master/worker/coordination')
+        self._master_pub_sock = sock
         self._master_pub = ZMQStream(sock, self._io_loop)
 
         self._worker_sub = self._ctx.socket(zmq.SUB)
@@ -56,15 +57,18 @@ class ManagementIntegrationTest(unittest.TestCase):
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
         sock.connect( 'inproc://worker/master/coordination' )
+        self._master_sub_sock = sock
         self._master_sub = ZMQStream(sock, self._io_loop)
 
         self._topic = ZMQ_SPYDER_MGMT_WORKER + 'testtopic'
 
     def tearDown(self):
         self._master_pub.close()
+        self._master_pub_sock.close()
         self._worker_sub.close()
         self._worker_pub.close()
         self._master_sub.close()
+        self._master_sub_sock.close()
         self._ctx.term()
 
     def call_me(self, msg):
