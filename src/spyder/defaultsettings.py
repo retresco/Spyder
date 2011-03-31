@@ -82,7 +82,16 @@ FRONTIER_CRAWL_DELAY_FACTOR = 4
 # Minimum delay to wait before connecting the host again (s)
 FRONTIER_MIN_DELAY = 5
 
+# Number of simultaneously active queues
+FRONTIER_ACTIVE_QUEUES = 100
+# Number of URLs to be processed in one queue before it is put on hold
+FRONTIER_QUEUE_BUDGET = 50
+# Punishment of server errors with the queue
+FRONTIER_QUEUE_BUDGET_PUNISH = 5
 
+
+# Name of the prioritizer class to use
+PRIORITIZER_CLASS = 'spyder.core.prioritizer.SimpleTimestampPrioritizer'
 # The number of priority levels where URIs are being assigned to (lowest means
 # highest priority)
 PRIORITIZER_NUM_PRIORITIES = 10
@@ -92,11 +101,20 @@ PRIORITIZER_DEFAULT_PRIORITY = 1
 PRIORITIZER_CRAWL_DELTA = timedelta(days=1)
 
 
+# Name of the queue selector to use
+QUEUE_SELECTOR_CLASS = 'spyder.core.queueselector.BiasedQueueSelector'
+
+
+# Name of the queue assignment class to use
+QUEUE_ASSIGNMENT_CLASS = 'spyder.core.queueassignment.HostBasedQueueAssignment'
+
+
 # The pipeline of link extractors
 SPYDER_EXTRACTOR_PIPELINE = [
     'spyder.processor.limiter',
     'spyder.processor.htmllinkextractor',
 ]
+
 
 # Default HTML Extractor settings
 # maximum number of chars an element name may have
