@@ -1,7 +1,7 @@
 #
-# Copyright (c) 2008 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
 #
-# __init__.py 10-Jan-2011
+# test_multiple_frontier.py 31-Mar-2011
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-Modules for working with the thrift generated code.
-"""
+
+
