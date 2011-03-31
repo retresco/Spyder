@@ -20,5 +20,55 @@
 # described below.
 #
 #
+"""
+A collection of queue assignment classes.
+"""
+from urlparse import urlparse
+
+from spyder.core.frontier import PROTOCOLS_DEFAULT_PORT
 
 
+class HostBasedQueueAssignment(object):
+    """
+    This class will assign URLs to queues based on the hostnames.
+    """
+
+    def __init__(self, dnscache):
+        """
+        Initialize the assignment class.
+        """
+        self._dns_cache = dnscache
+
+    def get_identifier(self, url):
+        """
+        Get the identifier for this url.
+        """
+        parsed_url = urlparse(url)
+        return parsed_url.hostname
+
+
+class IpBasedQueueAssignment(HostBasedQueueAssignment):
+    """
+    This class will assign urls to queues based on the server's IP address.
+    """
+
+    def __init__(self, dnscache):
+        """
+        Call the parent only.
+        """
+        HostBasedQueueAssignment.__init__(self, dnscache)
+
+    def get_identifier(self, url):
+        """
+        Get the identifier for this url.
+        """
+        parsed_url = urlparse(url)
+
+        # dns resolution and caching
+        port = parsed_url.port
+        if not port:
+            port = PROTOCOLS_DEFAULT_PORT[parsed_url.scheme]
+
+        (ip, port) = self._dns_cache["%s:%s" % (parsed_url.hostname, port)]
+
+        return "%s" % (ip,)
