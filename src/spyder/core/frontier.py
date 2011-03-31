@@ -48,6 +48,7 @@ from spyder.core.prioritizer import SimpleTimestampPrioritizer
 from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
 from spyder.core.uri_uniq import UniqueUriFilter
 from spyder.thrift.gen.ttypes import CrawlUri
+from spyder.import_util import import_class
 
 
 # some default port numbers as of /etc/services
@@ -343,9 +344,10 @@ class SingleHostFrontier(AbstractBaseFrontier):
         """
         Initialize the base frontier.
         """
+        prio_clazz = import_class(settings.PRIORITIZER_CLASS)
         AbstractBaseFrontier.__init__(self, settings, log_handler,
                 SQLiteSingleHostUriQueue(settings.FRONTIER_STATE_FILE),
-                SimpleTimestampPrioritizer(settings))
+                prio_clazz(settings))
 
         self._crawl_delay = settings.FRONTIER_CRAWL_DELAY_FACTOR
         self._min_delay = settings.FRONTIER_MIN_DELAY
