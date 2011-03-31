@@ -242,13 +242,13 @@ class SqliteQueuesTest(unittest.TestCase):
         for queue in q.get_all_queues():
             self.assertFalse(True)
 
-        qid1 = q.add_queue('test')
+        qid1 = q.add_or_create_queue('test')
         
         for (queue, ident) in q.get_all_queues():
             self.assertEqual(qid1, queue)
             self.assertEqual('test', ident)
 
-        qid2 = q.add_queue('test2')
+        qid2 = q.add_or_create_queue('test2')
 
         i = 0
         for (queue, ident) in q.get_all_queues():
@@ -260,7 +260,7 @@ class SqliteQueuesTest(unittest.TestCase):
                 self.assertEqual(qid2, queue)
                 self.assertEqual('test2', ident)
 
-        self.assertEqual(qid1, q.add_queue('test'))
+        self.assertEqual(qid1, q.add_or_create_queue('test'))
 
 
 if __name__ == '__main__':

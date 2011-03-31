@@ -415,7 +415,7 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
             return row['queue']
         raise QueueNotFound(identifier)
 
-    def add_queue(self, identifier):
+    def add_or_create_queue(self, identifier):
         """
         Add a new queue with the ``identifier``. If the queue already exists,
         it's id is returned.
