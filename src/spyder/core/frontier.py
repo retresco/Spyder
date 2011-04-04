@@ -516,7 +516,6 @@ class MultipleHostFrontier(AbstractBaseFrontier):
                     # add this uri to the heap, i.e. it can be crawled
                     self._add_to_heap(next_uri, localized_next_date)
                     self._current_queues_in_heap.append(q)
-                    self._time_politeness[q] = now + timedelta(days=10)
 
     def _maybe_add_queues(self):
         """
