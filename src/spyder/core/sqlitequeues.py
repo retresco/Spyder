@@ -392,6 +392,19 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
         for row in self._cursor:
             yield (row['queue'], row['identifier'])
 
+    def get_queue_count(self):
+        """
+        Compute the number of available queues.
+
+        @return: the number of available queues.
+        """
+        self._cursor.execute("SELECT count(queue) as queues FROM queue_identifiers")
+        row = self._cursor.fetchone()
+
+        if row['queues']:
+            return row['queues']
+        return 0
+
     def get_queue_for_ident(self, identifier):
         """
         Get the ``queue`` for the given identifier if there is one.
