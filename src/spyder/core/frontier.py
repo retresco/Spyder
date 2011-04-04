@@ -29,6 +29,7 @@ are represented as :class:`spyder.thrift.gen.ttypes.CrawlUri`.
 
 import time
 from datetime import datetime
+from datetime import timedelta
 
 from Queue import PriorityQueue, Empty, Full
 from urlparse import urlparse
@@ -40,6 +41,7 @@ from spyder.time import serialize_date_time, deserialize_date_time
 from spyder.core.log import LoggingMixin
 from spyder.core.prioritizer import SimpleTimestampPrioritizer
 from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
+from spyder.core.sqlitequeues import SQLiteMultipleHostUriQueue
 from spyder.core.uri_uniq import UniqueUriFilter
 from spyder.thrift.gen.ttypes import CrawlUri
 from spyder.import_util import import_class
@@ -412,7 +414,8 @@ class MultipleHostFrontier(AbstractBaseFrontier):
 
     def __init__(self, settings, log_handler):
         """
-        Initialize the abstract base frontier.
+        Initialize the abstract base frontier and this implementation with the
+        different configuration parameters.
         """
         prio_clazz = import_class(settings.PRIORITIZER_CLASS)
         AbstractBaseFrontier.__init__(self, settings, log_handler,
@@ -449,7 +452,10 @@ class MultipleHostFrontier(AbstractBaseFrontier):
         (url, etag, mod_date, next_crawl_date, prio) = uri
         ident =  self._backend_assignment.get_identifier(url)
 
-        queue = self.add_or_create_queue(ident)
+        queue = self._front_end_queues.add_or_create_queue(ident)
+        if queue not in self._queue_ids:
+            self._queue_ids.append(queue)
+            self._backend_selector.reset_queues(len(self._queue_ids))
         return (url, queue, etag, mod_date, next_crawl_date, prio)
 
     def _crawluri_from_uri(self, uri):
@@ -460,6 +466,15 @@ class MultipleHostFrontier(AbstractBaseFrontier):
         (url, queue, etag, mod_date, next_crawl_date, prio) = uri
         queue_free_uri = (url, etag, mod_date, next_crawl_date, prio)
         return AbstractBaseFrontier._crawluri_from_uri(self, queue_free_uri)
+
+    def _add_to_heap(self, uri, next_date):
+        """
+        Override the base method since it only accepts the smaller tuples.
+        """
+        (url, queue, etag, mod_date, next_crawl_date, prio) = uri
+        queue_free_uri = (url, etag, mod_date, next_crawl_date, prio)
+        return AbstractBaseFrontier._add_to_heap(self, queue_free_uri,
+                next_date)
 
     def get_next(self):
         """
@@ -482,11 +497,12 @@ class MultipleHostFrontier(AbstractBaseFrontier):
           2. Add all URIs to the heap that are crawlable with respect to the
               time based politeness
         """
+        self._maybe_add_queues()
         self._cleanup_budget_politeness()
 
         now = datetime.now(self._timezone)
         for q in self._time_politeness.keys():
-            if now > self._time_politeness[q] and \
+            if now >= self._time_politeness[q] and \
                 q not in self._current_queues_in_heap:
 
                 # we may crawl from this queue!
@@ -500,6 +516,25 @@ class MultipleHostFrontier(AbstractBaseFrontier):
                     # add this uri to the heap, i.e. it can be crawled
                     self._add_to_heap(next_uri, localized_next_date)
                     self._current_queues_in_heap.append(q)
+                    self._time_politeness[q] = now + timedelta(days=10)
+
+    def _maybe_add_queues(self):
+        """
+        If there are free queue slots available, add inactive queues from the
+        backend.
+        """
+        qcount = self._front_end_queues.get_queue_count()
+        acount = len(self._current_queues)
+
+        while self._num_active_queues > acount and acount < qcount:
+            next_queue = self._get_next_queue()
+            if next_queue:
+                self._add_queue_from_storage(next_queue)
+                self._logger.debug("multifrontier::Adding queue with id=%s" %
+                        (next_queue,))
+                acount = len(self._current_queues)
+            else:
+                break
 
     def _cleanup_budget_politeness(self):
         """
@@ -513,11 +548,10 @@ class MultipleHostFrontier(AbstractBaseFrontier):
 
         for rm_queue in removeable:
             next_queue = self._get_next_queue()
-            while next_queue in self._budget_politeness.keys():
-                next_queue = self._get_next_queue()
+            if next_queue:
+                self._add_queue_from_storage(next_queue)
 
             self._remove_queue_from_memory(rm_queue)
-            self._add_queue_from_storage(next_queue)
 
     def _get_next_queue(self):
         """
@@ -525,8 +559,21 @@ class MultipleHostFrontier(AbstractBaseFrontier):
 
         @return: The next queue id from the storage.
         """
-        next_id = self._backend_selector.get_queue()
-        return self._queue_ids[next_id]
+        for i in range(0, 10):
+            next_id = self._backend_selector.get_queue()
+            q = self._queue_ids[next_id]
+            if q not in self._budget_politeness.keys():
+                return q
+
+        return None
+
+    def _get_queue_for_url(self, url):
+        """
+        @param url: The url
+        @return: The queue id for the url.
+        """
+        ident =  self._backend_assignment.get_identifier(url)
+        return self._front_end_queues.get_queue_for_ident(ident)
 
     def _remove_queue_from_memory(self, queue):
         """
@@ -567,12 +614,14 @@ class MultipleHostFrontier(AbstractBaseFrontier):
         self._budget_politeness[queue] -= 1
 
         now = datetime.now(self._timezone)
-        self._time_politeness[queue] = now + max(self._delay_factor *
-                curi.req_time, self._min_delay)
+        delta_seconds = max(self._delay_factor * curi.req_time,
+                self._min_delay)
+        self._time_politeness[queue] = now + timedelta(seconds=delta_seconds)
 
     def process_server_error(self, curi):
         """
         Punish any server errors in the budget for this queue.
         """
         AbstractBaseFrontier.process_server_error(self, curi)
+        queue = self._get_queue_for_url(curi.url)
         self._budget_politeness[queue] -= self._budget_punishment
