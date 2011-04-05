@@ -458,15 +458,6 @@ class MultipleHostFrontier(AbstractBaseFrontier):
             self._backend_selector.reset_queues(len(self._queue_ids))
         return (url, queue, etag, mod_date, next_crawl_date, prio)
 
-    def _crawluri_from_uri(self, uri):
-        """
-        The base method does not accept uri tuples with a queue, so change
-        that.
-        """
-        (url, queue, etag, mod_date, next_crawl_date, prio) = uri
-        queue_free_uri = (url, etag, mod_date, next_crawl_date, prio)
-        return AbstractBaseFrontier._crawluri_from_uri(self, queue_free_uri)
-
     def _add_to_heap(self, uri, next_date):
         """
         Override the base method since it only accepts the smaller tuples.
@@ -483,7 +474,8 @@ class MultipleHostFrontier(AbstractBaseFrontier):
         if self._heap.qsize() < self._heap_min_size:
             self._update_heap()
 
-        return self._crawluri_from_uri(self._heap.get_nowait())
+        (_date, uri) = self._heap.get_nowait()
+        return self._crawluri_from_uri(uri)
 
     def _update_heap(self):
         """

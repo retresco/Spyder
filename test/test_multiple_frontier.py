@@ -135,6 +135,38 @@ class MultipleHostFrontierTest(unittest.TestCase):
 
         frontier._cleanup_budget_politeness()
 
+    def test_with_multiple_active_queues(self):
+
+        s = Settings()
+        s.FRONTIER_STATE_FILE = ":memory:"
+        s.FRONTIER_ACTIVE_QUEUES = 2
+        s.FRONTIER_QUEUE_BUDGET = 4
+        s.FRONTIER_QUEUE_BUDGET_PUNISH = 5
+
+        frontier = MultipleHostFrontier(s, StreamHandler(sys.stdout))
+
+        now = datetime(*datetime.fromtimestamp(time.time()).timetuple()[0:6])
+        curi1 = CrawlUri("http://localhost")
+        curi1.current_priority = 2
+        curi1.req_time = 0.4
+
+        frontier.add_uri(curi1)
+
+        cur = frontier._front_end_queues._cursor
+
+        curi2 = CrawlUri("http://www.google.de")
+        curi2.current_priority = 1
+        curi2.req_time = 1.4
+
+        frontier.add_uri(curi2)
+
+        self.assertEqual(0, len(frontier._current_queues))
+        frontier._maybe_add_queues()
+
+        self.assertEqual(2, len(frontier._current_queues))
+
+        next_url = frontier.get_next()
+
 
 if __name__ == '__main__':
     unittest.main()
