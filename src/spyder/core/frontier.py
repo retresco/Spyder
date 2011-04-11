@@ -277,7 +277,7 @@ class AbstractBaseFrontier(object, LoggingMixin):
 
         if curi.optional_vars and CURI_EXTRACTED_URLS in curi.optional_vars:
             for url in curi.optional_vars[CURI_EXTRACTED_URLS].split("\n"):
-                if not self._unique_uri.is_known(url):
+                if len(url) > 5 and not self._unique_uri.is_known(url):
                     self.add_uri(CrawlUri(url))
 
         del self._current_uris[curi.url]
