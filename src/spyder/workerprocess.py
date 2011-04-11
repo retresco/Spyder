@@ -225,6 +225,8 @@ def main(settings):
         """
         msg = MgmtMessage(data=ZMQ_SPYDER_MGMT_WORKER_QUIT)
         quit_worker(msg.serialize())
+        # zmq 2.1 stops blocking calls, restart the ioloop
+        io_loop.start()
 
     # handle kill signals
     signal.signal(signal.SIGINT, handle_shutdown_signal)

@@ -98,6 +98,8 @@ def main(settings):
         Called from the os when a shutdown signal is fired.
         """
         master.shutdown()
+        # zmq 2.1 stops blocking calls, restart the ioloop
+        io_loop.start()
 
     # handle kill signals
     signal.signal(signal.SIGINT, handle_shutdown_signal)
