@@ -83,9 +83,9 @@ class ZmqMaster(object, LoggingMixin):
         Stop the master gracefully, i.e. stop sending more URIs that should get
         processed.
         """
+        self._logger.debug("zmqmaster::stopping...")
         self._running = False
         self._periodic_update.stop()
-        self._logger.debug("zmqmaster::stopping...")
 
     def shutdown(self):
         """
@@ -194,6 +194,6 @@ class ZmqMaster(object, LoggingMixin):
         except:
             self._logger.critical("zmqmaster::Uncaught exception in the sink")
             self._logger.critical("zmqmaster::%s" % (traceback.format_exc(),))
-            self.shutdown()
+            self.stop()
 
         self._send_next_uri()
