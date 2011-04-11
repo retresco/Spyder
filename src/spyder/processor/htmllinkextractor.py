@@ -179,7 +179,7 @@ class DefaultHtmlLinkExtractor(object):
                 # we simply want to ignore this link!
                 pass
 
-        linkstring = "\n".join(links)
+        linkstring = "\n".join(links).encode('ascii', 'replace')
         if not CURI_EXTRACTED_URLS in curi.optional_vars:
             curi.optional_vars[CURI_EXTRACTED_URLS] = linkstring
         else:
