@@ -593,26 +593,50 @@ class MultipleHostFrontier(AbstractBaseFrontier):
                     datetime.utcfromtimestamp(next_date))
             queue.put_nowait((localized_next_date, uri))
 
-    def process_successful_crawl(self, curi):
+    def _update_politeness(self, curi):
         """
-        Crawling was successful, now update the politeness rules.
-        """
-        AbstractBaseFrontier.process_successful_crawl(self, curi)
+        Update all politeness rules.
 
+        @param curi: :class:`CrawlUri`
+        """
         uri = self._uri_from_curi(curi)
         (url, queue, etag, mod_date, next_crawl_date, prio) = uri
 
-        self._budget_politeness[queue] -= 1
+        if 200 <= curi.status_code < 500:
+            self._budget_politeness[queue] = self._budget_politeness - 1
+        if 500 <= curi.status_code < 600:
+            self._budget_politeness[queue] = self._budget_politeness - \
+                self._budget_punishment
 
         now = datetime.now(self._timezone)
         delta_seconds = max(self._delay_factor * curi.req_time,
                 self._min_delay)
         self._time_politeness[queue] = now + timedelta(seconds=delta_seconds)
 
+    def process_successful_crawl(self, curi):
+        """
+        Crawling was successful, now update the politeness rules.
+        """
+        self._update_politeness(curi)
+        AbstractBaseFrontier.process_successful_crawl(self, curi)
+
+    def process_not_found(self, curi):
+        """
+        The page does not exist anymore!
+        """
+        self._update_politeness(curi)
+        AbstractBaseFrontier.process_not_found(self, curi)
+
+    def process_redirect(self, curi):
+        """
+        There was a redirect.
+        """
+        self._update_politeness(curi)
+        AbstractBaseFrontier.process_server_error(self, curi)
+
     def process_server_error(self, curi):
         """
         Punish any server errors in the budget for this queue.
         """
+        self._update_politeness(curi)
         AbstractBaseFrontier.process_server_error(self, curi)
-        queue = self._get_queue_for_url(curi.url)
-        self._budget_politeness[queue] -= self._budget_punishment
