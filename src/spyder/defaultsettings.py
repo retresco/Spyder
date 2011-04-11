@@ -65,8 +65,6 @@ FRONTIER_CLASS = 'spyder.core.frontier.SingleHostFrontier'
 FRONTIER_STATE_FILE = "./state.db"
 # checkpointing interval (uris added/changed)
 FRONTIER_CHECKPOINTING = 1000
-# The number of simultaneous hosts to crawl
-FRONTIER_SIMULTANEOUS_HOSTS = 100
 # The number of URIs to keep inside the HEAP
 FRONTIER_HEAP_SIZE = 500
 # Minimum number of URIs in the HEAP

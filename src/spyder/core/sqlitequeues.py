@@ -184,7 +184,7 @@ class SQLiteSingleHostUriQueue(SQLiteStore):
         """
         Remove all uris.
         """
-        del_uris = [(url,) for (url, _etag, _mod_date, _queue, _next_date)
+        del_uris = [(url,) for (url, _etag, _mod_date, _next_date, _priority)
             in uris]
         self._cursor.executemany("DELETE FROM queue WHERE url=?",
                 del_uris)
