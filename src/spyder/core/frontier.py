@@ -499,7 +499,12 @@ class MultipleHostFrontier(AbstractBaseFrontier):
 
                 # we may crawl from this queue!
                 queue = self._current_queues[q]
-                (localized_next_date, next_uri) = queue.get_nowait()
+                try:
+                    (localized_next_date, next_uri) = queue.get_nowait()
+                except Empty:
+                    # this queue is empty! Remove it and check the next queue
+                    self._remove_queue_from_memory(q)
+                    continue
 
                 if now < localized_next_date:
                     # reschedule the uri for crawling
@@ -543,6 +548,8 @@ class MultipleHostFrontier(AbstractBaseFrontier):
                 self._add_queue_from_storage(next_queue)
 
             self._remove_queue_from_memory(rm_queue)
+            self._logger.debug("multifrontier::Removing queue with id=%s" %
+                    rm_queue)
 
     def _get_next_queue(self):
         """
@@ -603,15 +610,16 @@ class MultipleHostFrontier(AbstractBaseFrontier):
         (url, queue, etag, mod_date, next_crawl_date, prio) = uri
 
         if 200 <= curi.status_code < 500:
-            self._budget_politeness[queue] = self._budget_politeness - 1
+            self._budget_politeness[queue] -= 1
         if 500 <= curi.status_code < 600:
-            self._budget_politeness[queue] = self._budget_politeness - \
-                self._budget_punishment
+            self._budget_politeness[queue] -= self._budget_punishment
 
         now = datetime.now(self._timezone)
         delta_seconds = max(self._delay_factor * curi.req_time,
                 self._min_delay)
         self._time_politeness[queue] = now + timedelta(seconds=delta_seconds)
+
+        self._current_queues_in_heap.remove(queue)
 
     def process_successful_crawl(self, curi):
         """
