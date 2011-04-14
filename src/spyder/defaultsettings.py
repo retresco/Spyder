@@ -118,6 +118,7 @@ REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH = 64
 SPYDER_SCOPER_PIPELINE = [
     'spyder.processor.limiter',
     'spyder.processor.scoper',
+    'spyder.processing.stripsessions',
 ]
 
 # List of positive regular expressions for the crawl scope
