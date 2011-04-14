@@ -175,11 +175,7 @@ class DefaultHtmlLinkExtractor(object):
         """
         links = []
         (start, end) = element_tuple
-        element = content[start:end]
-
-        if element.find("&#") > -1:
-            # html escaped link, unescape first!
-            element = self._unescape_html(element)
+        element = self._unescape_html(content[start:end])
 
         for link_candidate in self._link_extractor.finditer(element):
             link = link_candidate.group(3)[1:-1]
@@ -246,14 +242,7 @@ class DefaultHtmlLinkExtractor(object):
             else:
                 # named entity
                 try:
-                    if text[1:-1] == "amp":
-                        text = "&amp;amp;"
-                    elif text[1:-1] == "gt":
-                        text = "&amp;gt;"
-                    elif text[1:-1] == "lt":
-                        text = "&amp;lt;"
-                    else:
-                        text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
+                    text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
                 except KeyError:
                     pass
             return text
