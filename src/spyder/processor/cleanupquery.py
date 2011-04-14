@@ -65,6 +65,9 @@ class CleanupQueryString(object):
             if begin > -1:
                 url = url[:begin]
 
+        if len(url) == 0:
+            return url
+
         if url[-1] == '?' or url[-1] == '&':
             url = url[:-1]
 
