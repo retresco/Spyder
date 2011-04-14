@@ -107,8 +107,10 @@ class MultipleHostFrontierTest(unittest.TestCase):
         self.assertEqual(1, len(frontier._current_queues))
 
         if q1 == 1:
+            curi1.status_code = 500
             frontier.process_server_error(curi1)
         else:
+            curi1.status_code = 500
             frontier.process_server_error(curi2)
 
         self.assertEquals(-1, frontier._budget_politeness[q1])
@@ -127,8 +129,10 @@ class MultipleHostFrontierTest(unittest.TestCase):
         self.assertEqual(1, len(frontier._current_queues))
 
         if q2 == 1:
+            curi1.status_code = 200
             frontier.process_successful_crawl(curi1)
         else:
+            curi2.status_code = 200
             frontier.process_successful_crawl(curi2)
 
         self.assertEquals(3, frontier._budget_politeness[q2])
