@@ -67,7 +67,7 @@ class CleanupQueryString(object):
         if len(url) == 0:
             return raw_url
 
-        if url[-1] == '?' or url[-1] == '&':
+        while url[-1] == '?' or url[-1] == '&':
             return url[:-1]
 
         return url
