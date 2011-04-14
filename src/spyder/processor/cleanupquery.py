@@ -48,6 +48,7 @@ class CleanupQueryString(object):
         if CURI_EXTRACTED_URLS not in curi.optional_vars:
             return curi
 
+        urls = []
         for raw_url in curi.optional_vars[CURI_EXTRACTED_URLS].split('\n'):
             urls.append(self._cleanup_query_string(raw_url))
 
