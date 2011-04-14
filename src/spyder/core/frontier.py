@@ -310,6 +310,11 @@ class AbstractBaseFrontier(object, LoggingMixin):
         """
         del self._current_uris[curi.url]
 
+        if curi.status_code in [301, 302]:
+            # simply ignore the URL. The URL that is being redirected to is
+            # extracted and added in the processing
+            self._ignore_uri(curi)
+
         if curi.status_code == 304:
             # the page has not been modified since the last visit! Update it
             # NOTE: prio increasing happens in the prioritizer

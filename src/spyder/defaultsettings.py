@@ -38,7 +38,7 @@ USER_AGENT = "Mozilla/5.0 (compatible; spyder/0.1; " + \
     "+http://github.com/retresco/spyder)"
 MAX_CLIENTS = 10
 MAX_SIMULTANEOUS_CONNECTIONS = 1
-FOLLOW_REDIRECTS = True
+FOLLOW_REDIRECTS = False
 MAX_REDIRECTS = 3
 USE_GZIP = True
 
@@ -105,6 +105,7 @@ QUEUE_ASSIGNMENT_CLASS = 'spyder.core.queueassignment.HostBasedQueueAssignment'
 SPYDER_EXTRACTOR_PIPELINE = [
     'spyder.processor.limiter',
     'spyder.processor.htmllinkextractor',
+    'spyder.processor.httpextractor',
 ]
 
 
