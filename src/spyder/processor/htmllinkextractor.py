@@ -84,12 +84,14 @@ class DefaultHtmlLinkExtractor(object):
                     str(max_size)), re.I | re.S)
 
         self._link_extractor = re.compile(LINK_EXTRACTOR, re.I | re.S)
+        self._base_url = ""
 
     def __call__(self, curi):
         """
-        Actually extract links from the html content.
+        Actually extract links from the html content if the content type
+        matches.
 
-        But: only if the content type allows us to do so.
+        @param curi: the :class:`CrawlUri`
         """
         if not self._restrict_content_type(curi):
             return curi
@@ -106,6 +108,7 @@ class DefaultHtmlLinkExtractor(object):
             content = curi.content_body
 
         parsed_url = urlparse.urlparse(curi.url)
+        self._base_url = curi.url
 
         # iterate over all tags
         for tag in self._tag_extractor.finditer(content):
@@ -144,41 +147,49 @@ class DefaultHtmlLinkExtractor(object):
 
         This can be anything but `meta`, `script` or `style` tags.
 
-        `content` is the decoded content body.
-        `element_name` is a tuple containing (start,end) integers of the
-            current tag name.
-        `element` is a tuple containing (start,end) integers of the current
-            element
+        @param content: is the decoded content body.
+        @param element_name_tuple: is a tuple containing (start,end) integers of
+            the current tag name.
+        @param element_tuple: is a tuple containing (start,end) integers of the
+            current element
         """
         (start, end) = element_name_tuple
         el_name = content[start:end]
         if "a" == el_name.lower():
             curi = self._extract_links(curi, parsed_url, content,
                     element_tuple)
+        elif "base" == el_name.lower():
+            self._base_url = self._get_links(content, element_tuple)[0]
 
         return curi
 
-    def _extract_links(self, curi, parsed_url, content, element_tuple):
+    def _get_links(self, content, element_tuple):
         """
-        Extract links from an element, e.g. href="" attributes.
+        Do the actual link extraction and return the list of links.
+
+        @param content: is the decoded content body.
+        @param element_tuple: is a tuple containing (start,end) integers of the
+            current element
+        @return: a list of links
         """
         links = []
         (start, end) = element_tuple
         element = content[start:end]
         for link_candidate in self._link_extractor.finditer(element):
             link = link_candidate.group(3)[1:-1]
-            if link.find("mailto:"):
+            if link.find("mailto:") > -1 or link.find("javascript:") > -1:
                 continue
-            try:
-                if link.find("://") == -1:
-                    link = urlparse.urljoin(curi.url, link)
-                links.append(link)
-            except ValueError:
-                # the value error might be raised within the
-                # adapt_relative_link method, if the link happens to have more
-                # ".." modifiers than path levels are available. At this point
-                # we simply want to ignore this link!
-                pass
+            if link.find("://") == -1:
+                link = urlparse.urljoin(self._base_url, link)
+            links.append(link)
+
+        return links
+
+    def _extract_links(self, curi, parsed_url, content, element_tuple):
+        """
+        Extract links from an element, e.g. href="" attributes.
+        """
+        links = self._get_links(content, element_tuple)
 
         linkstring = "\n".join(links).encode('ascii', 'replace')
         if not CURI_EXTRACTED_URLS in curi.optional_vars:
