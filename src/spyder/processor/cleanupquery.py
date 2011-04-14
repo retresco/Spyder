@@ -58,18 +58,16 @@ class CleanupQueryString(object):
     def _cleanup_query_string(self, raw_url):
         """
         """
-
+        url = raw_url.lower()
         if self._remove_anchors:
-            url = raw_url.lower()
             begin = url.find("#")
             if begin > -1:
-                raw_url = raw_url[:begin]
+                url = raw_url[:begin]
 
-        url = raw_url.lower()
         if len(url) == 0:
             return raw_url
 
         if url[-1] == '?' or url[-1] == '&':
-            url = raw_url[:-1]
+            return url[:-1]
 
         return url

@@ -28,8 +28,8 @@ class CleanupQueryStringTest(unittest.TestCase):
         s = Settings()
         c = CleanupQueryString(s)
 
-        self.assertEqual("http://test.com/t.html?p=a",
-                c._cleanup_query_string("http://test.com/t.html?p=a#top"))
+        self.assertEqual("http://tesT.com/t.html?p=a",
+                c._cleanup_query_string("http://tesT.com/t.html?p=a#top"))
 
         self.assertEqual("http://test.com/t.html",
                 c._cleanup_query_string("http://test.com/t.html?#top"))

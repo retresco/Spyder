@@ -83,4 +83,4 @@ class StripSessionIds(object):
                 url = raw_url.lower()
                 begin = url.find(session)
 
-        return url
+        return raw_url

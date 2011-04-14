@@ -30,9 +30,9 @@ class StripSessionIdsTest(unittest.TestCase):
 
         s = StripSessionIds(Settings())
 
-        url = "http://preis.de/traeger/index.php?sid=8429fb3ae210a2a0e28800b7f48d90f2"
+        url = "http://pREis.de/traeger/index.php?sid=8429fb3ae210a2a0e28800b7f48d90f2"
 
-        self.assertEqual("http://preis.de/traeger/index.php?",
+        self.assertEqual("http://pREis.de/traeger/index.php?",
                 s._remove_session_ids(url))
 
         url = "http://preis.de/traeger/index.php?jsessionid=8429fb3ae210a2a0e28800b7f48d90f2"
