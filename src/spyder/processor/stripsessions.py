@@ -71,15 +71,16 @@ class StripSessionIds(object):
         @param raw_url: The potentially dirty URL
         @return: The clean URL
         """
-        url = raw_url.lower()
         for session in self._session_params:
+            url = raw_url.lower()
             begin = url.find(session)
             while begin > -1:
                 end = url.find('&', begin)
                 if end == -1:
-                    url = url[:begin]
+                    raw_url = raw_url[:begin]
                 else:
-                    url = "%s%s" % (url[:begin], url[end:])
+                    raw_url = "%s%s" % (raw_url[:begin], raw_url[end:])
+                url = raw_url.lower()
                 begin = url.find(session)
 
         return url
