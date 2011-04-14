@@ -40,7 +40,8 @@ class HtmlLinkExtractorTest(unittest.TestCase):
 
         src = "<a href='http://www.google.de' title='ups'> viel text</a>" + \
             "<a title='ups i did it again' href ='/relative.html'>und " + \
-            "noch mehr!</a><a href='evenmorerelative.html'>"
+            "noch mehr!</a><a href='evenmorerelative.html'/>" + \
+            "<a href='&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#117;&#115;&#116;&#101;&#114;&#64;&#98;&#102;&#97;&#114;&#109;&#46;&#100;&#101;'/>"
 
         curi = CrawlUri()
         curi.rep_header = dict()

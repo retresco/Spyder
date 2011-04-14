@@ -23,6 +23,7 @@ Heritrix 3:
     modules/src/main/java/org/archive/modules/extractor/ExtractorHTML.java
 """
 import re
+import htmlentitydefs
 
 import urlparse
 
@@ -175,6 +176,11 @@ class DefaultHtmlLinkExtractor(object):
         links = []
         (start, end) = element_tuple
         element = content[start:end]
+
+        if element.find("&#") > -1:
+            # html escaped link, unescape first!
+            element = self._unescape_html(element)
+
         for link_candidate in self._link_extractor.finditer(element):
             link = link_candidate.group(3)[1:-1]
             if link.find("mailto:") > -1 or link.find("javascript:") > -1:
@@ -214,6 +220,44 @@ class DefaultHtmlLinkExtractor(object):
             "application/vnd.wap.wml", "application/vnd.wap.xhtm"]
         (ctype, _enc) = get_content_type_encoding(curi)
         return ctype in allowed
+
+    def _unescape_html(self, link):
+        """
+        Unescape the link.
+
+        keep &amp;, &gt;, &lt; in the source code.
+
+        http://effbot.org/zone/re-sub.htm#unescape-html
+
+        @param link: The HTML escaped link
+        @return: the unescaped link
+        """
+        def fixup(m):
+            text = m.group(0)
+            if text[:2] == "&#":
+                # character reference
+                try:
+                    if text[:3] == "&#x":
+                        return unichr(int(text[3:-1], 16))
+                    else:
+                        return unichr(int(text[2:-1]))
+                except ValueError:
+                    pass
+            else:
+                # named entity
+                try:
+                    if text[1:-1] == "amp":
+                        text = "&amp;amp;"
+                    elif text[1:-1] == "gt":
+                        text = "&amp;gt;"
+                    elif text[1:-1] == "lt":
+                        text = "&amp;lt;"
+                    else:
+                        text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
+                except KeyError:
+                    pass
+            return text
+        return re.sub("&#?\w+;", fixup, link)
 
 
 def create_processor(settings):
