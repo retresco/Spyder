@@ -118,17 +118,20 @@ REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH = 64
 SPYDER_SCOPER_PIPELINE = [
     'spyder.processor.limiter',
     'spyder.processor.scoper',
-    'spyder.processing.stripsessions',
+    'spyder.processor.stripsessions',
 ]
 
 # List of positive regular expressions for the crawl scope
 REGEX_SCOPE_POSITIVE = [
-    "http://[^/]+/.*\.html",
 ]
 
 # List of negative regular expressions for the crawl scope
 REGEX_SCOPE_NEGATIVE = [
-    "ftp://[^/]+/.*\.avi",
+]
+
+
+# List of 404 redirects
+HTTP_EXTRACTOR_404_REDIRECT = [
 ]
 
 

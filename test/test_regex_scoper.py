@@ -36,10 +36,13 @@ class RegexScoperTest(unittest.TestCase):
         ])
 
         settings = Settings()
+        settings.REGEX_SCOPE_POSITIVE = ["http://[^/]+/.*\.html"]
+        settings.REGEX_SCOPE_NEGATIVE = ["ftp://[^/]+/.*\.avi"]
         scoper = create_processor(settings)
 
         curi = scoper(curi)
 
+        print curi.optional_vars[CURI_EXTRACTED_URLS]
         self.assertTrue("http://www.google.de/index.html" in
                 curi.optional_vars[CURI_EXTRACTED_URLS])
         self.assertFalse("ftp://www.google.de/pillepalle.avi" in

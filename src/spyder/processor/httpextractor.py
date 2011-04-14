@@ -46,7 +46,7 @@ class HttpExtractor(object):
         """
         Initialize the extractor.
         """
-        pass
+        self._not_found_redirects = settings.HTTP_EXTRACTOR_404_REDIRECT
 
     def __call__(self, curi):
         """
@@ -66,12 +66,13 @@ class HttpExtractor(object):
                 # a relative link. this is bad behaviour, but yeah, you know...
                 link = urlparse.urljoin(curi.url, link)
 
-            if not hasattr(curi, "optional_vars"):
-                curi.optional_vars = dict()
+            if link not in self._not_found_redirects:
+                if not hasattr(curi, "optional_vars"):
+                    curi.optional_vars = dict()
 
-            if not CURI_EXTRACTED_URLS in curi.optional_vars:
-                curi.optional_vars[CURI_EXTRACTED_URLS] = link
-            else:
-                curi.optional_vars[CURI_EXTRACTED_URLS] += "\n" + link
+                if not CURI_EXTRACTED_URLS in curi.optional_vars:
+                    curi.optional_vars[CURI_EXTRACTED_URLS] = link
+                else:
+                    curi.optional_vars[CURI_EXTRACTED_URLS] += "\n" + link
 
         return curi
