@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
-# test_dns_cache.py 25-Jan-2011
+# test_queue_assignment.py 31-Mar-2011
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,31 +15,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import unittest
 
-from spyder.core.dnscache import DnsCache
 from spyder.core.settings import Settings
+from spyder.core.dnscache import DnsCache
+from spyder.core.queueassignment import HostBasedQueueAssignment
+from spyder.core.queueassignment import IpBasedQueueAssignment
 
+class HostBasedQueueAssignmentTest(unittest.TestCase):
 
-class DnsCacheTest(unittest.TestCase):
+    def test_host_based_assignment(self):
 
-    def test_dns_cache(self):
         s = Settings()
-        s.SIZE_DNS_CACHE = 1
         dns = DnsCache(s)
-        self.assertEqual(('127.0.0.1', 80), dns["localhost:80"])
-        self.assertEqual(('127.0.0.1', 81), dns["localhost:81"])
-        self.assertTrue(1, len(dns._cache))
+        assign = HostBasedQueueAssignment(dns)
 
-    def test_static_dns_mapping(self):
+        url = "http://www.google.com/pille/palle"
+        self.assertEqual("www.google.com", assign.get_identifier(url))
+
+
+
+class IpBasedQueueAssignmentTest(unittest.TestCase):
+
+    def test_ip_based_assignment(self):
+
         s = Settings()
-        s.STATIC_DNS_MAPPINGS = {"localhost:123": ("-1.-1.-1.-1", 123)}
         dns = DnsCache(s)
-        self.assertEqual(("-1.-1.-1.-1", 123), dns["localhost:123"])
-        self.assertEqual(('127.0.0.1', 80), dns["localhost:80"])
-        self.assertTrue(1, len(dns._cache))
+        assign = IpBasedQueueAssignment(dns)
 
+        url = "http://localhost:12345/this"
+        self.assertEqual("127.0.0.1", assign.get_identifier(url))
 
 if __name__ == '__main__':
     unittest.main()

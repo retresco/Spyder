@@ -1,25 +1,19 @@
 #
-# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # htmlextractor.py 21-Jan-2011
 #
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 #   http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 """
 Module for the default HTML Link extractor.
@@ -28,7 +22,6 @@ Most of the regular expressions have been adopted from Heritrix. See:
 Heritrix 3:
     modules/src/main/java/org/archive/modules/extractor/ExtractorHTML.java
 """
-
 import re
 
 from urlparse import urlparse
@@ -188,7 +181,7 @@ class DefaultHtmlLinkExtractor(object):
                 # we simply want to ignore this link!
                 pass
 
-        linkstring = "\n".join(links)
+        linkstring = "\n".join(links).encode('ascii', 'replace')
         if not CURI_EXTRACTED_URLS in curi.optional_vars:
             curi.optional_vars[CURI_EXTRACTED_URLS] = linkstring
         else:

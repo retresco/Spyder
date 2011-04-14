@@ -1,25 +1,19 @@
 #
-# Copyright (c) 2008 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # settings.py 10-Jan-2011
 #
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 #   http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 """
 Module for the default spyder settings.
@@ -71,8 +65,6 @@ FRONTIER_CLASS = 'spyder.core.frontier.SingleHostFrontier'
 FRONTIER_STATE_FILE = "./state.db"
 # checkpointing interval (uris added/changed)
 FRONTIER_CHECKPOINTING = 1000
-# The number of simultaneous hosts to crawl
-FRONTIER_SIMULTANEOUS_HOSTS = 100
 # The number of URIs to keep inside the HEAP
 FRONTIER_HEAP_SIZE = 500
 # Minimum number of URIs in the HEAP
@@ -82,7 +74,16 @@ FRONTIER_CRAWL_DELAY_FACTOR = 4
 # Minimum delay to wait before connecting the host again (s)
 FRONTIER_MIN_DELAY = 5
 
+# Number of simultaneously active queues
+FRONTIER_ACTIVE_QUEUES = 100
+# Number of URLs to be processed in one queue before it is put on hold
+FRONTIER_QUEUE_BUDGET = 50
+# Punishment of server errors with the queue
+FRONTIER_QUEUE_BUDGET_PUNISH = 5
 
+
+# Name of the prioritizer class to use
+PRIORITIZER_CLASS = 'spyder.core.prioritizer.SimpleTimestampPrioritizer'
 # The number of priority levels where URIs are being assigned to (lowest means
 # highest priority)
 PRIORITIZER_NUM_PRIORITIES = 10
@@ -92,11 +93,20 @@ PRIORITIZER_DEFAULT_PRIORITY = 1
 PRIORITIZER_CRAWL_DELTA = timedelta(days=1)
 
 
+# Name of the queue selector to use
+QUEUE_SELECTOR_CLASS = 'spyder.core.queueselector.BiasedQueueSelector'
+
+
+# Name of the queue assignment class to use
+QUEUE_ASSIGNMENT_CLASS = 'spyder.core.queueassignment.HostBasedQueueAssignment'
+
+
 # The pipeline of link extractors
 SPYDER_EXTRACTOR_PIPELINE = [
     'spyder.processor.limiter',
     'spyder.processor.htmllinkextractor',
 ]
+
 
 # Default HTML Extractor settings
 # maximum number of chars an element name may have
