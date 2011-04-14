@@ -119,6 +119,7 @@ SPYDER_SCOPER_PIPELINE = [
     'spyder.processor.limiter',
     'spyder.processor.scoper',
     'spyder.processor.stripsessions',
+    'spyder.processor.cleanupquery',
 ]
 
 # List of positive regular expressions for the crawl scope

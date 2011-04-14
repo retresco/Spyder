@@ -20,6 +20,7 @@
 Processor to clean up the query string. At this point we want to strip any
 trailing '?' or '&' and optionally remove any anchors from it.
 """
+from spyder.core.constants import CURI_EXTRACTED_URLS
 
 
 def create_processor(settings):
