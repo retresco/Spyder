@@ -135,6 +135,10 @@ HTTP_EXTRACTOR_404_REDIRECT = [
 ]
 
 
+# Whether to remove anchors from extracted urls.
+REMOVE_ANCHORS_FROM_LINKS = True
+
+
 # define a parent directory for unix sockets that will be created
 PARENT_SOCKET_DIRECTORY = "/tmp"
 
