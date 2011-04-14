@@ -24,7 +24,7 @@ Heritrix 3:
 """
 import re
 
-from urlparse import urlparse
+import urlparse
 
 from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.constants import CURI_OPTIONAL_TRUE, CURI_EXTRACTION_FINISHED
@@ -105,7 +105,7 @@ class DefaultHtmlLinkExtractor(object):
         except Exception:
             content = curi.content_body
 
-        parsed_url = urlparse(curi.url)
+        parsed_url = urlparse.urlparse(curi.url)
 
         # iterate over all tags
         for tag in self._tag_extractor.finditer(content):
@@ -171,8 +171,7 @@ class DefaultHtmlLinkExtractor(object):
                 continue
             try:
                 if link.find("://") == -1:
-                    link = "%s://%s%s" % (parsed_url.scheme, parsed_url.netloc,
-                        adapt_relative_link(link, parsed_url.path))
+                    link = urlparse.urljoin(curi.url, link)
                 links.append(link)
             except ValueError:
                 # the value error might be raised within the
@@ -204,40 +203,6 @@ class DefaultHtmlLinkExtractor(object):
             "application/vnd.wap.wml", "application/vnd.wap.xhtm"]
         (ctype, _enc) = get_content_type_encoding(curi)
         return ctype in allowed
-
-
-def adapt_relative_link(link, curpath):
-    """
-    Adapt a relative link and make it absolute. Take into consideration any of
-    the following cases:
-
-    * test/
-    * /test/
-    * /../test/
-    * /../test/../mehrtest/
-    * ../test/
-    * ./../test/
-    """
-    if len(link) == 0:
-        return curpath
-    elif link[0] == '/':
-        # remove everything from the curpath
-        return adapt_relative_link(link[1:], "/")
-    elif link[:2] == '..':
-        # go up one level
-        return adapt_relative_link(link[3:], curpath[:curpath.rfind('/')])
-    elif link[0] == '.':
-        # stay on the path
-        return adapt_relative_link(link[2:], curpath)
-    elif link.find('/') != -1:
-        # copy the next path element from link to curpath
-        seperator = link.find('/')
-        path_element = link[:seperator]
-        return adapt_relative_link(link[seperator+1:],
-                curpath + '/' + path_element)
-    else:
-        l = curpath + '/' + link
-        return l.replace('//', '/')
 
 
 def create_processor(settings):

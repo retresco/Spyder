@@ -28,10 +28,9 @@ The main use case for this are HTTP redirects, e.g. In the case of a redirect
 the HTTP status code ``30X`` is present and the ``Location`` header indicates
 the new location.
 """
-from urlparse import urlparse
+import urlparse
 
 from spyder.core.constants import CURI_EXTRACTED_URLS
-from spyder.processor.htmllinkextractor import adapt_relative_link
 
 
 def create_processor(settings):
@@ -65,9 +64,7 @@ class HttpExtractor(object):
 
             if link.find("://") == -1:
                 # a relative link. this is bad behaviour, but yeah, you know...
-                parsed_url = urlparse(curi.url)
-                link = "%s://%s%s" % (parsed_url.scheme, parsed_url.netloc,
-                    adapt_relative_link(link, parsed_url.path))
+                link = urlparse.urljoin(curi.url, link)
 
             if not hasattr(curi, "optional_vars"):
                 curi.optional_vars = dict()

@@ -21,46 +21,10 @@ import unittest
 from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.settings import Settings
 from spyder.processor.htmllinkextractor import DefaultHtmlLinkExtractor
-from spyder.processor.htmllinkextractor import adapt_relative_link
 from spyder.thrift.gen.ttypes import CrawlUri
 
 
 class HtmlLinkExtractorTest(unittest.TestCase):
-
-    def test_that_extracting_relative_links_works(self):
-
-        path = '/currently/we/are/here'
-
-        link1 = "/now/there"
-        self.assertEqual("/now/there", adapt_relative_link(link1, path))
-
-        link2 = "./now/there"
-        self.assertEqual("/currently/we/are/here/now/there",
-                adapt_relative_link(link2, path))
-
-        link3 = "now/there"
-        self.assertEqual("/currently/we/are/here/now/there",
-                adapt_relative_link(link3, path))
-
-        link4 = "../../were/there"
-        self.assertEqual("/currently/we/were/there",
-                adapt_relative_link(link4, path))
-
-        link5 = ".././../were/there"
-        self.assertEqual("/currently/we/were/there",
-                adapt_relative_link(link5, path))
-
-        path = "/test"
-        link6 = "../../test2"
-        self.assertEqual("/test2",
-                adapt_relative_link(link6, path))
-
-        link7 = "../test2/mehr/test/../achnee/dochnicht"
-        self.assertEqual("/test2/mehr/achnee/dochnicht",
-                adapt_relative_link(link7, path))
-
-        link8 = "/"
-        self.assertEqual("/", adapt_relative_link(link8, path))
 
     def test_that_content_type_restriction_works(self):
         xtor = DefaultHtmlLinkExtractor(Settings())
@@ -81,7 +45,7 @@ class HtmlLinkExtractorTest(unittest.TestCase):
         curi = CrawlUri()
         curi.rep_header = dict()
         curi.rep_header["Content-Type"] = "text/html; charset=utf-8"
-        curi.url = "http://www.bmg.bund.de/test"
+        curi.url = "http://www.bmg.bund.de/test/"
         curi.content_body = src
         curi.optional_vars = dict()
 
@@ -102,7 +66,7 @@ class HtmlLinkExtractorTest(unittest.TestCase):
         curi = CrawlUri()
         curi.rep_header = dict()
         curi.rep_header["Content-Type"] = "text/html"
-        curi.url = "http://www.bmg.bund.de/test"
+        curi.url = "http://www.bmg.bund.de/test/"
         curi.content_body = src
         curi.optional_vars = dict()
 
