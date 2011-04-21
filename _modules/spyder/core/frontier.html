@@ -607,8 +607,6 @@
     <span class="k">def</span> <span class="nf">_get_next_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the next queue candidate.</span>
-
-<span class="sd">        @return: The next queue id from the storage.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">):</span>
             <span class="n">next_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backend_selector</span><span class="o">.</span><span class="n">get_queue</span><span class="p">()</span>
@@ -620,8 +618,7 @@
 
     <span class="k">def</span> <span class="nf">_get_queue_for_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        @param url: The url</span>
-<span class="sd">        @return: The queue id for the url.</span>
+<span class="sd">        Determine the queue for a given `url`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ident</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">_backend_assignment</span><span class="o">.</span><span class="n">get_identifier</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">get_queue_for_ident</span><span class="p">(</span><span class="n">ident</span><span class="p">)</span>
@@ -656,8 +653,6 @@
     <span class="k">def</span> <span class="nf">_update_politeness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Update all politeness rules.</span>
-
-<span class="sd">        @param curi: :class:`CrawlUri`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">uri</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_uri_from_curi</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
         <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_crawl_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>

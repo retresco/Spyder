@@ -69,10 +69,11 @@
 
 <span class="sd">Communication between master -&gt; worker and inside the worker is as follows:</span>
 
-<span class="sd">    Master              -&gt; PUSH -&gt;              Worker Fetcher</span>
-<span class="sd">    Worker Fetcher      -&gt; PUSH -&gt;              Worker Extractor</span>
-<span class="sd">    Worker Extractor    -&gt; PUSH -&gt;              Worker Scoper</span>
-<span class="sd">    Worker Scoper       -&gt; PUB  -&gt;              Master</span>
+<span class="sd">Master              -&gt; PUSH -&gt;              Worker Fetcher</span>
+
+<span class="sd">Worker Fetcher      -&gt; PUSH -&gt;              Worker Extractor</span>
+
+<span class="sd">Worker Extractor    -&gt; PUB  -&gt;              Master</span>
 
 <span class="sd">Each Worker is a ZmqWorker (or ZmqAsyncWorker). The Master pushes new CrawlUris</span>
 <span class="sd">to the `Worker Fetcher`. This will download the content from the web and `PUSH`</span>
@@ -91,7 +92,7 @@
 <span class="kn">from</span> <span class="nn">zmq.eventloop.ioloop</span> <span class="kn">import</span> <span class="n">IOLoop</span><span class="p">,</span> <span class="n">DelayedCallback</span>
 <span class="kn">from</span> <span class="nn">zmq.log.handlers</span> <span class="kn">import</span> <span class="n">PUBHandler</span>
 
-<span class="kn">from</span> <span class="nn">spyder.import_util</span> <span class="kn">import</span> <span class="n">custom_import</span>
+<span class="kn">from</span> <span class="nn">spyder.import_util</span> <span class="kn">import</span> <span class="n">import_class</span>
 <span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER</span>
 <span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER_AVAIL</span>
 <span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER_QUIT</span>
@@ -141,11 +142,8 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">processors</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">processor</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="p">:</span>
-        <span class="n">processor_module</span> <span class="o">=</span> <span class="n">custom_import</span><span class="p">(</span><span class="n">processor</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s">&quot;create_processor&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">processor_module</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Processor module (</span><span class="si">%s</span><span class="s">) does not have a </span><span class="se">\</span>
-<span class="s">                    &#39;create_processor&#39; method!&quot;</span> <span class="o">%</span> <span class="n">processor</span><span class="p">)</span>
-        <span class="n">processors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">processor_module</span><span class="o">.</span><span class="n">create_processor</span><span class="p">(</span><span class="n">settings</span><span class="p">))</span>
+        <span class="n">processor_class</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">processor</span><span class="p">)</span>
+        <span class="n">processors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">processor_class</span><span class="p">(</span><span class="n">settings</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">processing</span><span class="p">(</span><span class="n">data_message</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -167,8 +165,10 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c"># the processing function used to process the incoming `DataMessage` by</span>
     <span class="c"># iterating over all available processors</span>
-    <span class="n">processing</span> <span class="o">=</span> <span class="n">create_processing_function</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span>
-        <span class="n">settings</span><span class="o">.</span><span class="n">SPYDER_EXTRACTOR_PIPELINE</span><span class="p">)</span>
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">SPYDER_EXTRACTOR_PIPELINE</span>
+    <span class="n">pipeline</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">SPYDER_SCOPER_PIPELINE</span><span class="p">)</span>
+
+    <span class="n">processing</span> <span class="o">=</span> <span class="n">create_processing_function</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">)</span>
 
     <span class="n">pulling_socket</span> <span class="o">=</span> <span class="n">zmq_context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PULL</span><span class="p">)</span>
     <span class="n">pulling_socket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_WORKER_PROC_EXTRACTOR_PULL</span><span class="p">)</span>
@@ -177,24 +177,6 @@
     <span class="n">pushing_socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">HWM</span><span class="p">,</span>
             <span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH_HWM</span><span class="p">)</span>
     <span class="n">pushing_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">ZmqWorker</span><span class="p">(</span><span class="n">pulling_socket</span><span class="p">,</span> <span class="n">pushing_socket</span><span class="p">,</span> <span class="n">mgmt</span><span class="p">,</span> <span class="n">processing</span><span class="p">,</span>
-        <span class="n">log_handler</span><span class="p">,</span> <span class="n">settings</span><span class="o">.</span><span class="n">LOG_LEVEL_WORKER</span><span class="p">,</span> <span class="n">io_loop</span><span class="o">=</span><span class="n">io_loop</span><span class="p">)</span>
-
-</div>
-<div class="viewcode-block" id="create_worker_scoper"><a class="viewcode-back" href="../../api/workerprocess.html#spyder.workerprocess.create_worker_scoper">[docs]</a><span class="k">def</span> <span class="nf">create_worker_scoper</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">mgmt</span><span class="p">,</span> <span class="n">zmq_context</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">,</span> <span class="n">io_loop</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create and return a new `Worker Scoper` that will check if the newly</span>
-<span class="sd">    extracted URLs are within this crawls scope.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">processing</span> <span class="o">=</span> <span class="n">create_processing_function</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span>
-        <span class="n">settings</span><span class="o">.</span><span class="n">SPYDER_SCOPER_PIPELINE</span><span class="p">)</span>
-
-    <span class="n">pulling_socket</span> <span class="o">=</span> <span class="n">zmq_context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PULL</span><span class="p">)</span>
-    <span class="n">pulling_socket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_WORKER_PROC_SCOPER_PULL</span><span class="p">)</span>
-
-    <span class="n">pushing_socket</span> <span class="o">=</span> <span class="n">zmq_context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PUB</span><span class="p">)</span>
-    <span class="n">pushing_socket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_WORKER_PROC_SCOPER_PUB</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">ZmqWorker</span><span class="p">(</span><span class="n">pulling_socket</span><span class="p">,</span> <span class="n">pushing_socket</span><span class="p">,</span> <span class="n">mgmt</span><span class="p">,</span> <span class="n">processing</span><span class="p">,</span>
         <span class="n">log_handler</span><span class="p">,</span> <span class="n">settings</span><span class="o">.</span><span class="n">LOG_LEVEL_WORKER</span><span class="p">,</span> <span class="n">io_loop</span><span class="o">=</span><span class="n">io_loop</span><span class="p">)</span>
@@ -211,8 +193,6 @@
 <span class="sd">     - create a :class:`Fetcher` instance</span>
 
 <span class="sd">     - initialize and instantiate the extractor chain</span>
-
-<span class="sd">     - initialize and instantiate the scoper chain</span>
 
 <span class="sd">    The `settings` have to be loaded already.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -243,9 +223,6 @@
     <span class="n">extractor</span> <span class="o">=</span> <span class="n">create_worker_extractor</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">mgmt</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span>
         <span class="n">zmq_logging_handler</span><span class="p">,</span> <span class="n">io_loop</span><span class="p">)</span>
     <span class="n">extractor</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-    <span class="n">scoper</span> <span class="o">=</span> <span class="n">create_worker_scoper</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">mgmt</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">zmq_logging_handler</span><span class="p">,</span>
-        <span class="n">io_loop</span><span class="p">)</span>
-    <span class="n">scoper</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">quit_worker</span><span class="p">(</span><span class="n">raw_msg</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>

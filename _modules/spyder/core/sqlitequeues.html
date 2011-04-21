@@ -386,9 +386,8 @@
 </div>
 <div class="viewcode-block" id="SQLiteMultipleHostUriQueue.qsize"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.qsize">[docs]</a>    <span class="k">def</span> <span class="nf">qsize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Calculate the number of known uris.</span>
-
-<span class="sd">        @param queue: if this is `None`, the size of all queues is returned.</span>
+<span class="sd">        Calculate the number of known uris. If `queue` is given, only return</span>
+<span class="sd">        the size of this queue, otherwise the size of all queues is returned.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">queue</span><span class="p">:</span>
             <span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT count(url) FROM queues</span>
@@ -403,10 +402,6 @@
 
 <span class="sd">        Note: does not return the full uri object, only the url. This will be</span>
 <span class="sd">        used to refill the unique uri filter upon restart.</span>
-
-<span class="sd">        @param queue: int of the queue to use. If `None`, all URLs will be</span>
-<span class="sd">            returned.</span>
-<span class="sd">        @return: URL as str</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">queue</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT url FROM queues WHERE queue=?&quot;&quot;&quot;</span><span class="p">,</span>
@@ -419,8 +414,6 @@
 <div class="viewcode-block" id="SQLiteMultipleHostUriQueue.get_uri"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_uri">[docs]</a>    <span class="k">def</span> <span class="nf">get_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return the *URI* tuple for the given ``URL``.</span>
-
-<span class="sd">        @return: (url, queue, etag, mod_date, next_date, priority)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;SELECT * FROM queues WHERE url=?&quot;</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">url</span><span class="p">,))</span>
@@ -434,7 +427,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        A generator for iterating over all available queues.</span>
 
-<span class="sd">        @return: (queue, identifier) as (int, str)</span>
+<span class="sd">        This will return `(queue, identifier)` as `(int, str)`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;SELECT * FROM queue_identifiers&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="p">:</span>
@@ -442,9 +435,7 @@
 </div>
 <div class="viewcode-block" id="SQLiteMultipleHostUriQueue.get_queue_count"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_queue_count">[docs]</a>    <span class="k">def</span> <span class="nf">get_queue_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute the number of available queues.</span>
-
-<span class="sd">        @return: the number of available queues.</span>
+<span class="sd">        Return the number of available queues.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;SELECT count(queue) as queues FROM queue_identifiers&quot;</span><span class="p">)</span>
         <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
@@ -455,12 +446,9 @@
 </div>
 <div class="viewcode-block" id="SQLiteMultipleHostUriQueue.get_queue_for_ident"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_queue_for_ident">[docs]</a>    <span class="k">def</span> <span class="nf">get_queue_for_ident</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get the ``queue`` for the given identifier if there is one.</span>
+<span class="sd">        Get the ``queue`` for the given `identifier` if there is one.</span>
 <span class="sd">        Raises a `QueueNotFound` error if there is no queue with the</span>
 <span class="sd">        identifier.</span>
-
-<span class="sd">        @param identifier: str of the identifier</span>
-<span class="sd">        @return: the queue&#39;s id as int</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT queue FROM queue_identifiers WHERE</span>
 <span class="s">                identifier=?&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">identifier</span><span class="p">,))</span>
@@ -473,9 +461,7 @@
 <div class="viewcode-block" id="SQLiteMultipleHostUriQueue.add_or_create_queue"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_or_create_queue">[docs]</a>    <span class="k">def</span> <span class="nf">add_or_create_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Add a new queue with the ``identifier``. If the queue already exists,</span>
-<span class="sd">        it&#39;s id is returned.</span>
-
-<span class="sd">        @return: The new queue&#39;s id</span>
+<span class="sd">        it&#39;s `id` is returned, otherwise the `id` of the newly created queue.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_queue_for_ident</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
