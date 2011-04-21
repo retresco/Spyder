@@ -36,7 +36,9 @@ class RegexScoperTest(unittest.TestCase):
         ])
 
         settings = Settings()
-        scoper = RegexScoper()
+        settings.REGEX_SCOPE_POSITIVE = ['^.*\.html']
+        settings.REGEX_SCOPE_NEGATIVE = ['^.*\.avi']
+        scoper = RegexScoper(settings)
 
         curi = scoper(curi)
 
