@@ -30,10 +30,6 @@ from spyder.core.settings import Settings
 __version__ = '0.2.0-dev'
 
 
-__all__ = ["core", "processor", "defaultsettings", "spyder_template", "thrift",
-        "workerprocess"]
-
-
 def copy_skeleton_dir(destination):
     """
     Copy the skeleton directory (spyder_template) to a new directory.

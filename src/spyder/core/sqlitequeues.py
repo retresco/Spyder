@@ -338,9 +338,8 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
 
     def qsize(self, queue=None):
         """
-        Calculate the number of known uris.
-
-        @param queue: if this is `None`, the size of all queues is returned.
+        Calculate the number of known uris. If `queue` is given, only return
+        the size of this queue, otherwise the size of all queues is returned.
         """
         if queue:
             cursor = self._cursor.execute("""SELECT count(url) FROM queues
@@ -355,10 +354,6 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
 
         Note: does not return the full uri object, only the url. This will be
         used to refill the unique uri filter upon restart.
-
-        @param queue: int of the queue to use. If `None`, all URLs will be
-            returned.
-        @return: URL as str
         """
         if queue:
             self._cursor.execute("""SELECT url FROM queues WHERE queue=?""",
@@ -371,8 +366,6 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
     def get_uri(self, url):
         """
         Return the *URI* tuple for the given ``URL``.
-
-        @return: (url, queue, etag, mod_date, next_date, priority)
         """
         self._cursor.execute("SELECT * FROM queues WHERE url=?",
                 (url,))
@@ -386,7 +379,7 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
         """
         A generator for iterating over all available queues.
 
-        @return: (queue, identifier) as (int, str)
+        This will return `(queue, identifier)` as `(int, str)`
         """
         self._cursor.execute("SELECT * FROM queue_identifiers")
         for row in self._cursor:
@@ -394,9 +387,7 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
 
     def get_queue_count(self):
         """
-        Compute the number of available queues.
-
-        @return: the number of available queues.
+        Return the number of available queues.
         """
         self._cursor.execute("SELECT count(queue) as queues FROM queue_identifiers")
         row = self._cursor.fetchone()
@@ -407,12 +398,9 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
 
     def get_queue_for_ident(self, identifier):
         """
-        Get the ``queue`` for the given identifier if there is one.
+        Get the ``queue`` for the given `identifier` if there is one.
         Raises a `QueueNotFound` error if there is no queue with the
         identifier.
-
-        @param identifier: str of the identifier
-        @return: the queue's id as int
         """
         self._cursor.execute("""SELECT queue FROM queue_identifiers WHERE
                 identifier=?""", (identifier,))
@@ -425,9 +413,7 @@ class SQLiteMultipleHostUriQueue(SQLiteStore):
     def add_or_create_queue(self, identifier):
         """
         Add a new queue with the ``identifier``. If the queue already exists,
-        it's id is returned.
-
-        @return: The new queue's id
+        it's `id` is returned, otherwise the `id` of the newly created queue.
         """
         try:
             return self.get_queue_for_ident(identifier)

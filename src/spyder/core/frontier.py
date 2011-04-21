@@ -559,8 +559,6 @@ class MultipleHostFrontier(AbstractBaseFrontier):
     def _get_next_queue(self):
         """
         Get the next queue candidate.
-
-        @return: The next queue id from the storage.
         """
         for i in range(0, 10):
             next_id = self._backend_selector.get_queue()
@@ -572,8 +570,7 @@ class MultipleHostFrontier(AbstractBaseFrontier):
 
     def _get_queue_for_url(self, url):
         """
-        @param url: The url
-        @return: The queue id for the url.
+        Determine the queue for a given `url`.
         """
         ident =  self._backend_assignment.get_identifier(url)
         return self._front_end_queues.get_queue_for_ident(ident)
@@ -608,8 +605,6 @@ class MultipleHostFrontier(AbstractBaseFrontier):
     def _update_politeness(self, curi):
         """
         Update all politeness rules.
-
-        @param curi: :class:`CrawlUri`
         """
         uri = self._uri_from_curi(curi)
         (url, queue, etag, mod_date, next_crawl_date, prio) = uri

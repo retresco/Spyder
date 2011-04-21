@@ -21,10 +21,11 @@ start a new worker process you should simply call this modules `main` method.
 
 Communication between master -> worker and inside the worker is as follows:
 
-    Master              -> PUSH ->              Worker Fetcher
-    Worker Fetcher      -> PUSH ->              Worker Extractor
-    Worker Extractor    -> PUSH ->              Worker Scoper
-    Worker Scoper       -> PUB  ->              Master
+Master              -> PUSH ->              Worker Fetcher
+
+Worker Fetcher      -> PUSH ->              Worker Extractor
+
+Worker Extractor    -> PUB  ->              Master
 
 Each Worker is a ZmqWorker (or ZmqAsyncWorker). The Master pushes new CrawlUris
 to the `Worker Fetcher`. This will download the content from the web and `PUSH`

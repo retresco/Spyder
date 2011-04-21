@@ -17,6 +17,18 @@
 #
 """
 This module contains the default architecture for master process.
+
+The main task for masterprocesses is to create and run the **Frontier**.
+Starting a master involves the following steps:
+
+1. Bind to the configured |zmq| sockets
+2. Start the management interface
+3. Create the frontier
+4. Start the master
+
+Once the master is up and you have configured a ``settings.MASTER_CALLBACK``,
+this method will be called before the master is really started, i.e. before the
+``IOLoop.start()`` is called. This will allow you to insert *Seed* |urls|, e.g.
 """
 
 import logging

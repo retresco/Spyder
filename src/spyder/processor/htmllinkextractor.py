@@ -16,11 +16,28 @@
 # limitations under the License.
 #
 """
-Module for the default HTML Link extractor.
+The :class:`DefaultHtmlLinkExtractor` will try to extract new links from the
+``curi.content_body``. In order to find them two regular expressions are used.
 
-Most of the regular expressions have been adopted from Heritrix. See:
-Heritrix 3:
-    modules/src/main/java/org/archive/modules/extractor/ExtractorHTML.java
+1. The ``RELEVANT_TAG_EXTRACTOR`` extracts the following tags:
+    - ``<script>..</script>``
+    - ``<style>..</style>``
+    - ``<meta>``
+    - or any other open tag with at least one attribute (e.g. not ``<br>``).
+
+2. The ``LINK_EXTRACTOR`` extracts links from tags using `href` or `src`
+attributes.
+
+If the link is relative, the appropriate prefix is automatically added here.
+
+The regular expressions have been adopted from Heritrix. See the Heritrix 3
+source code:
+
+``modules/src/main/java/org/archive/modules/extractor/ExtractorHTML.java``
+
+.. note:: Heritrix has a newer way of extracting links, i.e. with different
+    regular expressions. Since these are working for me at the moment, I am
+    fine with it.
 """
 import re
 import htmlentitydefs
@@ -73,6 +90,10 @@ LINK_EXTRACTOR = "(\w+)[^>]*?(?:(href|src))\s*=\s*" + \
 class DefaultHtmlLinkExtractor(object):
     """
     The default extractor for Links from HTML pages.
+
+    The internal regular expressions currently are not modifiable. Only the
+    maximum length of an opening tag can be configured using the
+    ``settings.REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH``.
     """
 
     def __init__(self, settings):
@@ -91,8 +112,6 @@ class DefaultHtmlLinkExtractor(object):
         """
         Actually extract links from the html content if the content type
         matches.
-
-        @param curi: the :class:`CrawlUri`
         """
         if not self._restrict_content_type(curi):
             return curi
@@ -148,10 +167,10 @@ class DefaultHtmlLinkExtractor(object):
 
         This can be anything but `meta`, `script` or `style` tags.
 
-        @param content: is the decoded content body.
-        @param element_name_tuple: is a tuple containing (start,end) integers of
+        `content` is the decoded content body.
+        `element_name_tuple` is a tuple containing (start,end) integers of
             the current tag name.
-        @param element_tuple: is a tuple containing (start,end) integers of the
+        `element_tuple` is a tuple containing (start,end) integers of the
             current element
         """
         (start, end) = element_name_tuple
@@ -168,10 +187,9 @@ class DefaultHtmlLinkExtractor(object):
         """
         Do the actual link extraction and return the list of links.
 
-        @param content: is the decoded content body.
-        @param element_tuple: is a tuple containing (start,end) integers of the
+        `content` is the decoded content body.
+        `element_tuple` is a tuple containing (start,end) integers of the
             current element
-        @return: a list of links
         """
         links = []
         (start, end) = element_tuple
@@ -224,9 +242,6 @@ class DefaultHtmlLinkExtractor(object):
         keep &amp;, &gt;, &lt; in the source code.
 
         http://effbot.org/zone/re-sub.htm#unescape-html
-
-        @param link: The HTML escaped link
-        @return: the unescaped link
         """
         def fixup(m):
             text = m.group(0)
