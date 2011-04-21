@@ -18,8 +18,11 @@ Some Science
 ------------
 
 Ok, really only a little bit. Basically there two papers describing effective
-crawler designs. The *Mercator* paper (**LINK NEEDED**) describes the
-architecture of the *Mercator* crawler. The crawler is split into several parts:
+crawler designs. The *Mercator* paper (`Mercator: A Scalable, Extensible Web
+Crawler (1999)
+<http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.30.5342>`_)
+describes the architecture of the *Mercator* crawler. The crawler is split into
+several parts:
 
 * *Frontier* for keeping track of |urls|
 * *Scheduler* for scheduling the |urls| to be crawled
@@ -28,9 +31,11 @@ architecture of the *Mercator* crawler. The crawler is split into several parts:
 * *Unique Filter* for filtering known |urls| from the extracted ones
 * *Host Splitter* for working with multiple *Frontiers*
 
-The second important paper on crawler design is the *Ubi Crawler* (**LINK
-NEEDED**). In this paper the authors use a *Consistent Hashing* algorithm for
-splitting the hosts among several *Frontiers*.
+The second important paper on crawler design is the *Ubi Crawler* (`UbiCrawler:
+a scalable fully distributed Web crawler (2003)
+<http://citeseer.ist.psu.edu/viewdoc/summary?doi=10.1.1.14.4239>`_). In
+this paper the authors use a *Consistent Hashing* algorithm for splitting the
+hosts among several *Frontiers*.
 
 The |spyder| is designed on the basis of these two papers.
 
@@ -40,6 +45,6 @@ References
 The |spyder| is not only inspired by these two papers but also on `Heritrix
 <http://crawler.archive.org>`_ the *Internet Archive's* open source crawler.
 *Heritrix* is designed just like *Mercator* except it lacks something like a
-*Host Splitter* that allows one to crawl using more than one node. Additionally
-*Heritrix* does not provide any kind of *monitoring* or *revisiting* strategy,
-although this might be possible in Version *H3*.
+*Host Splitter* that allows one to crawl using more than one *Frontier*.
+Additionally *Heritrix* does not provide any kind of *monitoring* or
+*revisiting* strategy, although this might be possible in Version *H3*.
