@@ -103,7 +103,6 @@ QUEUE_ASSIGNMENT_CLASS = 'spyder.core.queueassignment.HostBasedQueueAssignment'
 
 # The pipeline of link extractors
 SPYDER_EXTRACTOR_PIPELINE = [
-    'spyder.processor.limiter',
     'spyder.processor.limiter.DefaultLimiter',
     'spyder.processor.htmllinkextractor.DefaultHtmlLinkExtractor',
     'spyder.processor.httpextractor.HttpExtractor',
