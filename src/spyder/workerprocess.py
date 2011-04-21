@@ -25,7 +25,7 @@ Master              -> PUSH ->              Worker Fetcher
 
 Worker Fetcher      -> PUSH ->              Worker Extractor
 
-Worker Extractor    -> PUSH ->              Master
+Worker Extractor    -> PUB  ->              Master
 
 Each Worker is a ZmqWorker (or ZmqAsyncWorker). The Master pushes new CrawlUris
 to the `Worker Fetcher`. This will download the content from the web and `PUSH`

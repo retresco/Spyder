@@ -112,8 +112,6 @@ class DefaultHtmlLinkExtractor(object):
         """
         Actually extract links from the html content if the content type
         matches.
-
-        @param curi: the :class:`CrawlUri`
         """
         if not self._restrict_content_type(curi):
             return curi
@@ -169,10 +167,10 @@ class DefaultHtmlLinkExtractor(object):
 
         This can be anything but `meta`, `script` or `style` tags.
 
-        @param content: is the decoded content body.
-        @param element_name_tuple: is a tuple containing (start,end) integers of
+        `content` is the decoded content body.
+        `element_name_tuple` is a tuple containing (start,end) integers of
             the current tag name.
-        @param element_tuple: is a tuple containing (start,end) integers of the
+        `element_tuple` is a tuple containing (start,end) integers of the
             current element
         """
         (start, end) = element_name_tuple
@@ -189,10 +187,9 @@ class DefaultHtmlLinkExtractor(object):
         """
         Do the actual link extraction and return the list of links.
 
-        @param content: is the decoded content body.
-        @param element_tuple: is a tuple containing (start,end) integers of the
+        `content` is the decoded content body.
+        `element_tuple` is a tuple containing (start,end) integers of the
             current element
-        @return: a list of links
         """
         links = []
         (start, end) = element_tuple
@@ -245,9 +242,6 @@ class DefaultHtmlLinkExtractor(object):
         keep &amp;, &gt;, &lt; in the source code.
 
         http://effbot.org/zone/re-sub.htm#unescape-html
-
-        @param link: The HTML escaped link
-        @return: the unescaped link
         """
         def fixup(m):
             text = m.group(0)

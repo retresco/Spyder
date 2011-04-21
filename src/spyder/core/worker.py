@@ -128,8 +128,8 @@ class AsyncZmqWorker(ZmqWorker):
     """
     Asynchronous version of the `ZmqWorker`.
 
-    This worker differs in that the _processing method should ahve two
-    arguments: the message and the socket where the result should be sen to!
+    This worker differs in that the `self._processing` method should have two
+    arguments: the message and the socket where the result should be sent to!
     """
 
     def _receive(self, msg):

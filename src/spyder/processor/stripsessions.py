@@ -46,9 +46,6 @@ class StripSessionIds(object):
     def __call__(self, curi):
         """
         Main method stripping the session stuff from the query string.
-
-        @param curi: :class:`CrawlUri`
-        @return: the updated curi
         """
         if CURI_EXTRACTED_URLS not in curi.optional_vars:
             return curi
@@ -63,9 +60,6 @@ class StripSessionIds(object):
     def _remove_session_ids(self, raw_url):
         """
         Remove the session information.
-
-        @param raw_url: The potentially dirty URL
-        @return: The clean URL
         """
         for session in self._session_params:
             url = raw_url.lower()

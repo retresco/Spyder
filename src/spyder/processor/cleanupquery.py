@@ -37,9 +37,6 @@ class CleanupQueryString(object):
     def __call__(self, curi):
         """
         Remove any obsolete stuff from the query string.
-
-        @param curi: :class:`CrawlUri`
-        @return: the updated curi
         """
         if CURI_EXTRACTED_URLS not in curi.optional_vars:
             return curi
