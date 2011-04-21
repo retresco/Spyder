@@ -126,13 +126,12 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         self._worker_sockets['tmp3'] = sock
         self._worker_sockets['master_push'] = ZMQStream(sock, self._io_loop)
 
-    def _setup_data_client(self):
         # address for worker -> master communication
         data_worker_master = self._settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUB
 
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
-        sock.connect(data_worker_master)
+        sock.bind(data_worker_master)
         self._worker_sockets['tmp4'] = sock
         self._worker_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
@@ -149,8 +148,6 @@ class WorkerExtractorTestCase(ZmqTornadoIntegrationTest):
         extractor = workerprocess.create_worker_extractor(self._settings,
                 self._mgmt, self._ctx, StreamHandler(sys.stdout), self._io_loop)
         extractor.start()
-
-        self._setup_data_client()
 
         curi = CrawlUri(url="http://localhost:80/robots.txt",
                 effective_url="http://127.0.0.1:%s/robots.txt",
