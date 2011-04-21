@@ -83,6 +83,9 @@ shamelessly *adapted* from `Mongrel2 <http://www.mongrel.org>`_. In the case of
 a *Web Server* as well as for a crawler this is a perfect fit as it helps you to
 scale **very** easy.
 
+.. note:: There is another way to do this type message pattern using
+  *XPEQ/XREP*. Transition to this pattern is planned for the near future.
+
 For a crawler there are two parts that we possibly want to scale: the worker
 *and* the master. While scaling the worker across several processes is somewhat
 obvious, scaling the master first seems to be of no relevance. But if you want
