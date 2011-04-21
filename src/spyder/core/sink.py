@@ -52,15 +52,3 @@ class AbstractCrawlUriSink(object):
         to crawl this uri again a little bit later.
         """
         pass
-
-
-class CouchDbSink(object):
-    """
-    Simple sink that will store :class:`CrawlUri` inside a CouchDB instance.
-    """
-
-    def __init__(self, host_port="127.0.0.1:5984", database="spyder"):
-        """
-        Initialize the HTTP Client.
-        """
-        pass
