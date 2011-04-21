@@ -33,10 +33,6 @@ import urlparse
 from spyder.core.constants import CURI_EXTRACTED_URLS
 
 
-def create_processor(settings):
-    return HttpExtractor(settings)
-
-
 class HttpExtractor(object):
     """
     The processor for extracting links from ``HTTP`` headers.

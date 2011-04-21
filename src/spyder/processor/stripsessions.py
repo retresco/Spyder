@@ -31,10 +31,6 @@ It basically searches for
 from spyder.core.constants import CURI_EXTRACTED_URLS
 
 
-def create_processor(settings):
-    return StripSessionIds(settings)
-
-
 class StripSessionIds(object):
     """
     The processor for removing session information from the query string.
