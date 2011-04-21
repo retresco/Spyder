@@ -1,4 +1,5 @@
 include README.rst
 include LICENSE
-recursive-include docs-source
-recursive-include test
+include src/spyder/spyder_template/logging.conf
+include src/spyder/spyder_template/log/.keep
+recursive-include docs-source *.rst
