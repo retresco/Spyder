@@ -22,6 +22,8 @@ Getting Started
 *Spyder* is just a library for creating web crawlers. In order to really crawl
 content, you first have to create a *Spyder* skeleton:
 
+.. code-block:: bash
+
    $ mkdir my-crawler && cd my-crawler
    $ spyder start
    $ ls
@@ -41,13 +43,19 @@ crawler.
 So, when you wrote your sink and have everything configured right, it's time to
 start crawling. First, on one of your nodes you start the logsink:
 
+.. code-block:: bash
+
    $ spyder-ctrl.py logsink &
 
 Again on one node (the same as the logsink, e.g.) you start the **Master**:
 
+.. code-block:: bash
+
    $ spyder-ctrl.py master &
 
 Finally you can start as many **Workers** as you want:
+
+.. code-block:: bash
 
    $ spyder-ctrl.py worker &
    $ spyder-ctrl.py worker &
@@ -65,6 +73,8 @@ data. But there are times when you simply want to crawl using *many* nodes. This
 can be done by configuring the **ZeroMQ** transports to something like
 
    
+.. code-block:: python
+
     ZEROMQ_MASTER_PUSH = "tcp://NodeA:5005"
     ZEROMQ_MASTER_SUB = "tcp://NodeA:5007"
 
