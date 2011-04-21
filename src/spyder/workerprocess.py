@@ -116,8 +116,10 @@ def create_worker_extractor(settings, mgmt, zmq_context, log_handler, io_loop):
     """
     # the processing function used to process the incoming `DataMessage` by
     # iterating over all available processors
-    processing = create_processing_function(settings,
-        settings.SPYDER_EXTRACTOR_PIPELINE)
+    pipeline = settings.SPYDER_EXTRACTOR_PIPELINE
+    pipeline.extend(settings.SPYDER_SCOPER_PIPELINE)
+
+    processing = create_processing_function(settings, pipeline)
 
     pulling_socket = zmq_context.socket(zmq.PULL)
     pulling_socket.connect(settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PULL)
@@ -126,24 +128,6 @@ def create_worker_extractor(settings, mgmt, zmq_context, log_handler, io_loop):
     pushing_socket.setsockopt(zmq.HWM,
             settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH_HWM)
     pushing_socket.bind(settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH)
-
-    return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
-        log_handler, settings.LOG_LEVEL_WORKER, io_loop=io_loop)
-
-
-def create_worker_scoper(settings, mgmt, zmq_context, log_handler, io_loop):
-    """
-    Create and return a new `Worker Scoper` that will check if the newly
-    extracted URLs are within this crawls scope.
-    """
-    processing = create_processing_function(settings,
-        settings.SPYDER_SCOPER_PIPELINE)
-
-    pulling_socket = zmq_context.socket(zmq.PULL)
-    pulling_socket.connect(settings.ZEROMQ_WORKER_PROC_SCOPER_PULL)
-
-    pushing_socket = zmq_context.socket(zmq.PUB)
-    pushing_socket.connect(settings.ZEROMQ_WORKER_PROC_SCOPER_PUB)
 
     return ZmqWorker(pulling_socket, pushing_socket, mgmt, processing,
         log_handler, settings.LOG_LEVEL_WORKER, io_loop=io_loop)
@@ -160,8 +144,6 @@ def main(settings):
      - create a :class:`Fetcher` instance
 
      - initialize and instantiate the extractor chain
-
-     - initialize and instantiate the scoper chain
 
     The `settings` have to be loaded already.
     """
@@ -192,9 +174,6 @@ def main(settings):
     extractor = create_worker_extractor(settings, mgmt, ctx,
         zmq_logging_handler, io_loop)
     extractor.start()
-    scoper = create_worker_scoper(settings, mgmt, ctx, zmq_logging_handler,
-        io_loop)
-    scoper.start()
 
     def quit_worker(raw_msg):
         """
