@@ -53,7 +53,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         self._settings.ZEROMQ_WORKER_PROC_FETCHER_PULL = \
             self._settings.ZEROMQ_MASTER_PUSH
         self._settings.ZEROMQ_MASTER_SUB = 'inproc://spyder-zmq-master-sub'
-        self._settings.ZEROMQ_WORKER_PROC_SCOPER_PUB = \
+        self._settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUB = \
             self._settings.ZEROMQ_MASTER_SUB
 
         self._settings.ZEROMQ_MGMT_MASTER = 'inproc://spyder-zmq-mgmt-master'
@@ -128,7 +128,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 
     def _setup_data_client(self):
         # address for worker -> master communication
-        data_worker_master = self._settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH
+        data_worker_master = self._settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUB
 
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")

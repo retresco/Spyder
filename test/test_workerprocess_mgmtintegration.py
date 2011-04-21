@@ -47,7 +47,7 @@ class WorkerProcessTestCase(unittest.TestCase):
         settings.ZEROMQ_WORKER_PROC_FETCHER_PULL = \
             settings.ZEROMQ_MASTER_PUSH
         settings.ZEROMQ_MASTER_SUB = 'inproc://spyder-zmq-master-sub'
-        settings.ZEROMQ_WORKER_PROC_SCOPER_PUB = \
+        settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUB = \
             settings.ZEROMQ_MASTER_SUB
 
         settings.ZEROMQ_MGMT_MASTER = 'inproc://spyder-zmq-mgmt-master'
@@ -68,7 +68,7 @@ class WorkerProcessTestCase(unittest.TestCase):
 
         def assert_quit_message(msg):
             self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg.data)
-            
+
         sub_stream.on_recv(assert_quit_message)
 
         death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
