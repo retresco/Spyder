@@ -67,10 +67,3 @@ class RegexScoper(object):
 
         curi.optional_vars[CURI_EXTRACTED_URLS] = "\n".join(urls)
         return curi
-
-
-def create_processor(settings):
-    """
-    Create a new :class:`RegexScoper`.
-    """
-    return RegexScoper(settings)

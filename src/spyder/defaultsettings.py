@@ -103,9 +103,9 @@ QUEUE_ASSIGNMENT_CLASS = 'spyder.core.queueassignment.HostBasedQueueAssignment'
 
 # The pipeline of link extractors
 SPYDER_EXTRACTOR_PIPELINE = [
-    'spyder.processor.limiter',
-    'spyder.processor.htmllinkextractor',
-    'spyder.processor.httpextractor',
+    'spyder.processor.limiter.DefaultLimiter',
+    'spyder.processor.htmllinkextractor.DefaultHtmlLinkExtractor',
+    'spyder.processor.httpextractor.HttpExtractor',
 ]
 
 
@@ -116,10 +116,9 @@ REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH = 64
 
 # The pipeline of scope processors
 SPYDER_SCOPER_PIPELINE = [
-    'spyder.processor.limiter',
-    'spyder.processor.scoper',
-    'spyder.processor.stripsessions',
-    'spyder.processor.cleanupquery',
+    'spyder.processor.scoper.RegexScoper',
+    'spyder.processor.stripsessions.StripSessionIds',
+    'spyder.processor.cleanupquery.CleanupQueryString',
 ]
 
 # List of positive regular expressions for the crawl scope

@@ -144,7 +144,7 @@ class WorkerExtractorTestCase(ZmqTornadoIntegrationTest):
 
     def test_that_creating_extractor_works(self):
 
-        self._settings.SPYDER_EXTRACTOR_PIPELINE = ['spyder.processor.limiter',]
+        self._settings.SPYDER_EXTRACTOR_PIPELINE = ['spyder.processor.limiter.DefaultLimiter',]
 
         extractor = workerprocess.create_worker_extractor(self._settings,
                 self._mgmt, self._ctx, StreamHandler(sys.stdout), self._io_loop)

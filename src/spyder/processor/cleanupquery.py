@@ -23,10 +23,6 @@ trailing '?' or '&' and optionally remove any anchors from it.
 from spyder.core.constants import CURI_EXTRACTED_URLS
 
 
-def create_processor(settings):
-    return CleanupQueryString(settings)
-
-
 class CleanupQueryString(object):
     """
     The processor for cleaning up the query string.

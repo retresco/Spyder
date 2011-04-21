@@ -24,19 +24,29 @@ Basically this will be used for ignoring any `robots.txt` for being processed.
 from spyder.core.constants import CURI_OPTIONAL_TRUE, CURI_EXTRACTION_FINISHED
 
 
-def create_processor(_settings):
+class DefaultLimiter(object):
     """
-    Create a new `do_not_process_robots` processor using the given `Settings`.
+    The default crawl limiter.
     """
-    return do_not_process_robots
 
+    def __init__(self, settings):
+        """
+        Initialize the limiter with the given settings.
+        """
+        pass
 
-def do_not_process_robots(curi):
-    """
-    Do not process `CrawlUris` if they are **robots.txt** files.
-    """
-    if CURI_EXTRACTION_FINISHED not in curi.optional_vars and \
-        curi.effective_url.endswith("robots.txt"):
-        curi.optional_vars[CURI_EXTRACTION_FINISHED] = CURI_OPTIONAL_TRUE
+    def __call__(self, curi):
+        """
+        Do the actual limiting.
+        """
+        return self._do_not_process_robots(curi)
 
-    return curi
+    def _do_not_process_robots(self, curi):
+        """
+        Do not process `CrawlUris` if they are **robots.txt** files.
+        """
+        if CURI_EXTRACTION_FINISHED not in curi.optional_vars and \
+            curi.effective_url.endswith("robots.txt"):
+            curi.optional_vars[CURI_EXTRACTION_FINISHED] = CURI_OPTIONAL_TRUE
+
+        return curi

@@ -247,10 +247,3 @@ class DefaultHtmlLinkExtractor(object):
                     pass
             return text
         return re.sub("&#?\w+;", fixup, link)
-
-
-def create_processor(settings):
-    """
-    Create a new :class:`DefaultHtmlLinkExtractor`.
-    """
-    return DefaultHtmlLinkExtractor(settings)

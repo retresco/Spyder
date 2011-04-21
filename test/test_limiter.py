@@ -25,18 +25,16 @@ from spyder.thrift.gen.ttypes import CrawlUri
 
 class LimiterTestCase(unittest.TestCase):
 
-    def test_create_processor_works(self):
-        proc = limiter.create_processor(None)
-        self.assertEqual(limiter.do_not_process_robots, proc)
-
     def test_do_not_process_robots_works(self):
 
         curi = CrawlUri()
         curi.effective_url = "http://127.0.0.1/robots.txt"
         curi.optional_vars = dict()
 
+        l = limiter.DefaultLimiter(None)
+
         for i in range(2):
-            limiter.do_not_process_robots(curi)
+            l._do_not_process_robots(curi)
             self.assertEqual(CURI_OPTIONAL_TRUE,
                     curi.optional_vars[CURI_EXTRACTION_FINISHED])
 
