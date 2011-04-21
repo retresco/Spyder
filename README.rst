@@ -4,39 +4,85 @@ Spyder
 `ALONG CAME A SPIDER`
 
 
-Spyder's communication
-======================
+*Spyder* is a scalable web-spider written in Python using the non-blocking
+*tornado* library and *ZeroMQ* as messaging layer. The messages are serialized
+using *Thrift*.
 
-Two different types of communication exist between the diffent Spyder
-components. The management layer simply follows a publish subscribe pattern.
-The `master` publishes messages and the `worker` processes react on them. In
-order to increase fault detection, every `worker` sends an ACK message to the
-publishing `master`.
+The architecture is very basic: a **Master** process contains the crawl
+**Frontier** that organises the *urls* that need to be crawled; several
+**Worker** processes actually download the content and extract new *urls* that
+should be crawled in the future. For storing the content you may attach a
+**Sink** to the **Master** and be informed about the interesting events for an
+*url*.
 
-Then there is the data layer. The `master` pushes data out to the `worker` in
-order to get them processed. When the data has been processed, i.e. all content
-has been saved and new URLs haven been extracted, the data is sent back to the
-sending `master`.
 
-Message Formats
-==============
+Getting Started
+===============
 
-Management messages have the following format:
+*Spyder* is just a library for creating web crawlers. In order to really crawl
+content, you first have to create a *Spyder* skeleton:
 
-    Part 1    Key           A Subscription Key
-    Part 2    Identity      The sender's identity
-    Part 3    Data          The message data
+   $ mkdir my-crawler && cd my-crawler
+   $ spyder start
+   $ ls
+   log logging.conf master.py settings.py sink.py spyder-ctrl.py
 
-For management messages `Data` will be some kind of instruction the `workers`
-are supposed to do, e.g. stop working. The `Key` helps in sending messages only
-to parts of the system, e.g. to all `workers`. The `Identity` is used to answer
-the specific sender that the instruction has been completed successfully.
+This will copy the skeleton into `my-crawler`. The main file is `settings.py`.
+In it, you can configure the logging level for **Masters** and **Workers** and
+define the **crawl scope**. In `master.py` you should manipulate the starting
+URLs and add your specific `sink.py` into the **Frontier**. `spyder-ctrl.py` is
+just a small control script that helps you start the **Log Sink**, **Master** and
+**Worker**.
 
-Data messages have the following format:
+In the skeleton everything is setup as if you would want to crawl Sailing
+related pages from **DMOZ**. That should give you a starting point for your own
+crawler.
 
-    Part 1    Identity      The sender's identity
-    Part 2    Data          The messages Data
+So, when you wrote your sink and have everything configured right, it's time to
+start crawling. First, on one of your nodes you start the logsink:
 
-Here no `Key` is needed as there are only `workers` listening on that specific
-socket. The `Data` is a `CrawlUri` that has been serialized using `Thrift`
-(see: *crawluri.thrift*).
+   $ spyder-ctrl.py logsink &
+
+Again on one node (the same as the logsink, e.g.) you start the **Master**:
+
+   $ spyder-ctrl.py master &
+
+Finally you can start as many **Workers** as you want:
+
+   $ spyder-ctrl.py worker &
+   $ spyder-ctrl.py worker &
+   $ spyder-ctrl.py worker &
+
+Here we started 3 workers since it is a powerful node having a quad core CPU.
+
+
+Scaling the Crawl
+=================
+
+With the default settings it is not possible to start workers on different
+nodes. Most of the time one node is powerful enough to crawl quite an amount of
+data. But there are times when you simply want to crawl using *many* nodes. This
+can be done by configuring the **ZeroMQ** transports to something like
+
+   
+    ZEROMQ_MASTER_PUSH = "tcp://NodeA:5005"
+    ZEROMQ_MASTER_SUB = "tcp://NodeA:5007"
+
+    ZEROMQ_MGMT_MASTER = "tcp://NodeA:5008"
+    ZEROMQ_MGMT_WORKER = "tcp://NodeA:5009"
+
+    ZEROMQ_LOGGING = "tcp://NodeA:5010"
+
+Basically we have setup a 2 node crawl cluster. **NodeA** acts as logging sink
+and controls the crawl via the **Master**. **NodeB** Is a pure **Worker** node.
+Only the **Master** actually *binds* **ZeroMQ** sockets, the **Worker** always
+*connect* to them so the **Master** does not have to know where the
+**Workers** are really running.
+
+
+From here
+=========
+
+There is plenty of room for improvement and development ahead. Everything will
+be handled by Github tickets from now on and, if there is interest, we may setup
+a Google Group.
