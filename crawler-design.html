@@ -1,0 +1,159 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Crawler Design &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="index.html" />
+    <link rel="next" title="Libraries used in Spyder" href="libraries.html" />
+    <link rel="prev" title="Getting Started" href="getting-started.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="libraries.html" title="Libraries used in Spyder"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="getting-started.html" title="Getting Started"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Spyder v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="crawler-design">
+<span id="seccrawlerdesign"></span><h1>Crawler Design<a class="headerlink" href="#crawler-design" title="Permalink to this headline">¶</a></h1>
+<p>The basic crawler design is simple and straight forward. You have a <em>Master</em>
+that collects the <em>URLs</em> that should be crawled and a number of <em>Worker</em> threads
+(or processes) that download the content and extract new links from it. In
+practice though there are a number of pitfalls you have to keep an eye on. Just
+to give one example: you really don&#8217;t want to excessively crawl <strong>one</strong> host as
+you might be doing a <em>Denial of Service</em> attack given enough workers. And even
+if the host survives, the site owner might not like you from now on.</p>
+<div class="section" id="some-science">
+<h2>Some Science<a class="headerlink" href="#some-science" title="Permalink to this headline">¶</a></h2>
+<p>Ok, really only a little bit. Basically there two papers describing effective
+crawler designs. The <em>Mercator</em> paper (<a class="reference external" href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.30.5342">Mercator: A Scalable, Extensible Web
+Crawler (1999)</a>)
+describes the architecture of the <em>Mercator</em> crawler. The crawler is split into
+several parts:</p>
+<ul class="simple">
+<li><em>Frontier</em> for keeping track of <em>URLs</em></li>
+<li><em>Scheduler</em> for scheduling the <em>URLs</em> to be crawled</li>
+<li><em>Downloader</em> for really downloading the content</li>
+<li><em>Link Extractors</em> for extracting new links from different kinds of content</li>
+<li><em>Unique Filter</em> for filtering known <em>URLs</em> from the extracted ones</li>
+<li><em>Host Splitter</em> for working with multiple <em>Frontiers</em></li>
+</ul>
+<p>The second important paper on crawler design is the <em>Ubi Crawler</em> (<a class="reference external" href="http://citeseer.ist.psu.edu/viewdoc/summary?doi=10.1.1.14.4239">UbiCrawler:
+a scalable fully distributed Web crawler (2003)</a>). In
+this paper the authors use a <em>Consistent Hashing</em> algorithm for splitting the
+hosts among several <em>Frontiers</em>.</p>
+<p>The <strong>Spyder</strong> is designed on the basis of these two papers.</p>
+</div>
+</div>
+<div class="section" id="references">
+<h1>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h1>
+<p>The <strong>Spyder</strong> is not only inspired by these two papers but also on <a class="reference external" href="http://crawler.archive.org">Heritrix</a> the <em>Internet Archive&#8217;s</em> open source crawler.
+<em>Heritrix</em> is designed just like <em>Mercator</em> except it lacks something like a
+<em>Host Splitter</em> that allows one to crawl using more than one <em>Frontier</em>.
+Additionally <em>Heritrix</em> does not provide any kind of <em>monitoring</em> or
+<em>revisiting</em> strategy, although this might be possible in Version <em>H3</em>.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Crawler Design</a><ul>
+<li><a class="reference internal" href="#some-science">Some Science</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="getting-started.html"
+                        title="previous chapter">Getting Started</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="libraries.html"
+                        title="next chapter">Libraries used in <strong>Spyder</strong></a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/crawler-design.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="libraries.html" title="Libraries used in Spyder"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="getting-started.html" title="Getting Started"
+             >previous</a> |</li>
+        <li><a href="index.html">Spyder v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

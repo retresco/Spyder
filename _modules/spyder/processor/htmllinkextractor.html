@@ -1,0 +1,369 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spyder.processor.htmllinkextractor &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="spyder" href="../../spyder.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" accesskey="U">spyder</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spyder.processor.htmllinkextractor</h1><div class="highlight"><pre>
+<span class="c">#</span>
+<span class="c"># Copyright (c) 2011 Daniel Truemper truemped@googlemail.com</span>
+<span class="c">#</span>
+<span class="c"># htmlextractor.py 21-Jan-2011</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+<span class="c">#</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The :class:`DefaultHtmlLinkExtractor` will try to extract new links from the</span>
+<span class="sd">``curi.content_body``. In order to find them two regular expressions are used.</span>
+
+<span class="sd">1. The ``RELEVANT_TAG_EXTRACTOR`` extracts the following tags:</span>
+<span class="sd">    - ``&lt;script&gt;..&lt;/script&gt;``</span>
+<span class="sd">    - ``&lt;style&gt;..&lt;/style&gt;``</span>
+<span class="sd">    - ``&lt;meta&gt;``</span>
+<span class="sd">    - or any other open tag with at least one attribute (e.g. not ``&lt;br&gt;``).</span>
+
+<span class="sd">2. The ``LINK_EXTRACTOR`` extracts links from tags using `href` or `src`</span>
+<span class="sd">attributes.</span>
+
+<span class="sd">If the link is relative, the appropriate prefix is automatically added here.</span>
+
+<span class="sd">The regular expressions have been adopted from Heritrix. See the Heritrix 3</span>
+<span class="sd">source code:</span>
+
+<span class="sd">``modules/src/main/java/org/archive/modules/extractor/ExtractorHTML.java``</span>
+
+<span class="sd">.. note:: Heritrix has a newer way of extracting links, i.e. with different</span>
+<span class="sd">    regular expressions. Since these are working for me at the moment, I am</span>
+<span class="sd">    fine with it.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">htmlentitydefs</span>
+
+<span class="kn">import</span> <span class="nn">urlparse</span>
+
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">CURI_EXTRACTED_URLS</span>
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">CURI_OPTIONAL_TRUE</span><span class="p">,</span> <span class="n">CURI_EXTRACTION_FINISHED</span>
+<span class="kn">from</span> <span class="nn">spyder.encoding</span> <span class="kn">import</span> <span class="n">get_content_type_encoding</span>
+
+<span class="c"># Maximum number of chars an element name may have</span>
+<span class="n">MAX_ELEMENT_REPLACE</span> <span class="o">=</span> <span class="s">&quot;MAX_ELEMENT_REPLACE&quot;</span>
+
+<span class="c"># Pattern for extracting relevant tags from HTML</span>
+<span class="c">#</span>
+<span class="c"># This pattern extracts:</span>
+<span class="c">#  1: &lt;script&gt;...&lt;/script&gt;</span>
+<span class="c">#  2: &lt;style&gt;...&lt;/style&gt;</span>
+<span class="c">#  3: &lt;meta...&gt;</span>
+<span class="c">#  4: any other open tag with at least one attribute</span>
+<span class="c">#     (eg matches &quot;&lt;a href=&#39;boo&#39;&gt;&quot; but not &quot;&lt;/a&gt;&quot; or &quot;&lt;br&gt;&quot;)</span>
+<span class="c">#</span>
+<span class="c"># Groups in this pattern:</span>
+<span class="c">#</span>
+<span class="c">#  1: script src=foo&gt;boo&lt;/script</span>
+<span class="c">#  2: just the script open tag</span>
+<span class="c">#  3: style type=moo&gt;zoo&lt;/style</span>
+<span class="c">#  4: just the style open tag</span>
+<span class="c">#  5: entire other tag, without &#39;&lt;&#39; &#39;&gt;&#39;</span>
+<span class="c">#  6: element</span>
+<span class="c">#  7: meta</span>
+<span class="c">#  8: !-- comment --</span>
+<span class="n">RELEVANT_TAG_EXTRACTOR</span> <span class="o">=</span> <span class="s">&quot;&lt;(?:((script[^&gt;]*)&gt;[^(&lt;/script)]*&lt;/script)&quot;</span> <span class="o">+</span> <span class="s">&quot;|&quot;</span> <span class="o">+</span> \
+    <span class="s">&quot;((style[^/]*)&gt;[^(&lt;/style)]*&lt;/style)&quot;</span> <span class="o">+</span> <span class="s">&quot;|&quot;</span> <span class="o">+</span> \
+    <span class="s">&quot;(((meta)|(?:</span><span class="se">\\</span><span class="s">w{1,MAX_ELEMENT_REPLACE}))</span><span class="se">\\</span><span class="s">s+[^&gt;]*)&quot;</span> <span class="o">+</span> <span class="s">&quot;|&quot;</span> <span class="o">+</span> \
+    <span class="s">&quot;(!--.*?--))&gt;&quot;</span>
+
+
+<span class="c"># The simpler pattern to extract links from tags</span>
+<span class="c">#</span>
+<span class="c"># Groups in this expression:</span>
+<span class="c">#</span>
+<span class="c">#  1: the attribute name</span>
+<span class="c">#  2: href | src</span>
+<span class="c">#  3: the url in quotes</span>
+<span class="n">LINK_EXTRACTOR</span> <span class="o">=</span> <span class="s">&quot;(\w+)[^&gt;]*?(?:(href|src))\s*=\s*&quot;</span> <span class="o">+</span> \
+    <span class="s">&quot;(?:(</span><span class="se">\&quot;</span><span class="s">[^</span><span class="se">\&quot;</span><span class="s">]+</span><span class="se">\&quot;</span><span class="s">|&#39;[^&#39;]+&#39;))&quot;</span>
+
+
+<div class="viewcode-block" id="DefaultHtmlLinkExtractor"><a class="viewcode-back" href="../../../api/extractor.html#spyder.processor.htmllinkextractor.DefaultHtmlLinkExtractor">[docs]</a><span class="k">class</span> <span class="nc">DefaultHtmlLinkExtractor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The default extractor for Links from HTML pages.</span>
+
+<span class="sd">    The internal regular expressions currently are not modifiable. Only the</span>
+<span class="sd">    maximum length of an opening tag can be configured using the</span>
+<span class="sd">    ``settings.REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the regular expressions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">max_size</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tag_extractor</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+                <span class="n">RELEVANT_TAG_EXTRACTOR</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">MAX_ELEMENT_REPLACE</span><span class="p">,</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">max_size</span><span class="p">)),</span> <span class="n">re</span><span class="o">.</span><span class="n">I</span> <span class="o">|</span> <span class="n">re</span><span class="o">.</span><span class="n">S</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_link_extractor</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">LINK_EXTRACTOR</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">I</span> <span class="o">|</span> <span class="n">re</span><span class="o">.</span><span class="n">S</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_base_url</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Actually extract links from the html content if the content type</span>
+<span class="sd">        matches.</span>
+
+<span class="sd">        @param curi: the :class:`CrawlUri`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_restrict_content_type</span><span class="p">(</span><span class="n">curi</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">curi</span>
+
+        <span class="k">if</span> <span class="n">CURI_EXTRACTION_FINISHED</span> <span class="ow">in</span> <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span> <span class="ow">and</span> \
+            <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_EXTRACTION_FINISHED</span><span class="p">]</span> <span class="o">==</span> <span class="n">CURI_OPTIONAL_TRUE</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">curi</span>
+
+        <span class="p">(</span><span class="n">_type</span><span class="p">,</span> <span class="n">encoding</span><span class="p">)</span> <span class="o">=</span> <span class="n">get_content_type_encoding</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">curi</span><span class="o">.</span><span class="n">content_body</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">curi</span><span class="o">.</span><span class="n">content_body</span>
+
+        <span class="n">parsed_url</span> <span class="o">=</span> <span class="n">urlparse</span><span class="o">.</span><span class="n">urlparse</span><span class="p">(</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_base_url</span> <span class="o">=</span> <span class="n">curi</span><span class="o">.</span><span class="n">url</span>
+
+        <span class="c"># iterate over all tags</span>
+        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tag_extractor</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">content</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="n">tag</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c"># a html comment, ignore</span>
+                <span class="k">continue</span>
+
+            <span class="k">elif</span> <span class="n">tag</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c"># a meta tag</span>
+                <span class="n">curi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_meta</span><span class="p">(</span><span class="n">curi</span><span class="p">,</span> <span class="n">parsed_url</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span>
+                        <span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">tag</span><span class="o">.</span><span class="n">end</span><span class="p">(</span><span class="mi">5</span><span class="p">)))</span>
+
+            <span class="k">elif</span> <span class="n">tag</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c"># generic &lt;whatever tag</span>
+                <span class="n">curi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_generic_tag</span><span class="p">(</span><span class="n">curi</span><span class="p">,</span> <span class="n">parsed_url</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span>
+                        <span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span> <span class="n">tag</span><span class="o">.</span><span class="n">end</span><span class="p">(</span><span class="mi">6</span><span class="p">)),</span>
+                        <span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">tag</span><span class="o">.</span><span class="n">end</span><span class="p">(</span><span class="mi">5</span><span class="p">)))</span>
+
+            <span class="k">elif</span> <span class="n">tag</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c"># &lt;script&gt; tag</span>
+                <span class="c"># TODO no script handling so far</span>
+                <span class="k">pass</span>
+
+            <span class="k">elif</span> <span class="n">tag</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c"># &lt;style&gt; tag</span>
+                <span class="c"># TODO no tag handling so far</span>
+                <span class="k">pass</span>
+
+        <span class="k">return</span> <span class="n">curi</span>
+
+    <span class="k">def</span> <span class="nf">_process_generic_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">,</span> <span class="n">parsed_url</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span>
+            <span class="n">element_name_tuple</span><span class="p">,</span> <span class="n">element_tuple</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Process a generic tag.</span>
+
+<span class="sd">        This can be anything but `meta`, `script` or `style` tags.</span>
+
+<span class="sd">        @param content: is the decoded content body.</span>
+<span class="sd">        @param element_name_tuple: is a tuple containing (start,end) integers of</span>
+<span class="sd">            the current tag name.</span>
+<span class="sd">        @param element_tuple: is a tuple containing (start,end) integers of the</span>
+<span class="sd">            current element</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span> <span class="o">=</span> <span class="n">element_name_tuple</span>
+        <span class="n">el_name</span> <span class="o">=</span> <span class="n">content</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s">&quot;a&quot;</span> <span class="o">==</span> <span class="n">el_name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="n">curi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_links</span><span class="p">(</span><span class="n">curi</span><span class="p">,</span> <span class="n">parsed_url</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span>
+                    <span class="n">element_tuple</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s">&quot;base&quot;</span> <span class="o">==</span> <span class="n">el_name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_base_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_links</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">element_tuple</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">curi</span>
+
+    <span class="k">def</span> <span class="nf">_get_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span> <span class="n">element_tuple</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the actual link extraction and return the list of links.</span>
+
+<span class="sd">        @param content: is the decoded content body.</span>
+<span class="sd">        @param element_tuple: is a tuple containing (start,end) integers of the</span>
+<span class="sd">            current element</span>
+<span class="sd">        @return: a list of links</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span> <span class="o">=</span> <span class="n">element_tuple</span>
+        <span class="n">element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unescape_html</span><span class="p">(</span><span class="n">content</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">link_candidate</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_link_extractor</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">element</span><span class="p">):</span>
+            <span class="n">link</span> <span class="o">=</span> <span class="n">link_candidate</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&quot;mailto:&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">link</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&quot;javascript:&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&quot;://&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">link</span> <span class="o">=</span> <span class="n">urlparse</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_base_url</span><span class="p">,</span> <span class="n">link</span><span class="p">)</span>
+            <span class="n">links</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">links</span>
+
+    <span class="k">def</span> <span class="nf">_extract_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">,</span> <span class="n">parsed_url</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span> <span class="n">element_tuple</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract links from an element, e.g. href=&quot;&quot; attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_links</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">element_tuple</span><span class="p">)</span>
+
+        <span class="n">linkstring</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">links</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;ascii&#39;</span><span class="p">,</span> <span class="s">&#39;replace&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">CURI_EXTRACTED_URLS</span> <span class="ow">in</span> <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">:</span>
+            <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_EXTRACTED_URLS</span><span class="p">]</span> <span class="o">=</span> <span class="n">linkstring</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_EXTRACTED_URLS</span><span class="p">]</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> <span class="n">linkstring</span>
+
+        <span class="k">return</span> <span class="n">curi</span>
+
+    <span class="k">def</span> <span class="nf">_process_meta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">,</span> <span class="n">_parsed_url</span><span class="p">,</span> <span class="n">_content</span><span class="p">,</span> <span class="n">_element_tuple</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Process a meta tag.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">curi</span>
+
+    <span class="k">def</span> <span class="nf">_restrict_content_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decide based on the `CrawlUri`s Content-Type whether we want to process</span>
+<span class="sd">        it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">allowed</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;text/html&quot;</span><span class="p">,</span> <span class="s">&quot;application/xhtml&quot;</span><span class="p">,</span> <span class="s">&quot;text/vnd.wap.wml&quot;</span><span class="p">,</span>
+            <span class="s">&quot;application/vnd.wap.wml&quot;</span><span class="p">,</span> <span class="s">&quot;application/vnd.wap.xhtm&quot;</span><span class="p">]</span>
+        <span class="p">(</span><span class="n">ctype</span><span class="p">,</span> <span class="n">_enc</span><span class="p">)</span> <span class="o">=</span> <span class="n">get_content_type_encoding</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ctype</span> <span class="ow">in</span> <span class="n">allowed</span>
+
+    <span class="k">def</span> <span class="nf">_unescape_html</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Unescape the link.</span>
+
+<span class="sd">        keep &amp;amp;, &amp;gt;, &amp;lt; in the source code.</span>
+
+<span class="sd">        http://effbot.org/zone/re-sub.htm#unescape-html</span>
+
+<span class="sd">        @param link: The HTML escaped link</span>
+<span class="sd">        @return: the unescaped link</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">fixup</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">text</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;&amp;#&quot;</span><span class="p">:</span>
+                <span class="c"># character reference</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">text</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;&amp;#x&quot;</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="nb">unichr</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">16</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="nb">unichr</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># named entity</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">text</span> <span class="o">=</span> <span class="nb">unichr</span><span class="p">(</span><span class="n">htmlentitydefs</span><span class="o">.</span><span class="n">name2codepoint</span><span class="p">[</span><span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="k">return</span> <span class="n">text</span>
+        <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&quot;&amp;#?\w+;&quot;</span><span class="p">,</span> <span class="n">fixup</span><span class="p">,</span> <span class="n">link</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="create_processor"><a class="viewcode-back" href="../../../api/extractor.html#spyder.processor.htmllinkextractor.create_processor">[docs]</a><span class="k">def</span> <span class="nf">create_processor</span><span class="p">(</span><span class="n">settings</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a new :class:`DefaultHtmlLinkExtractor`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">DefaultHtmlLinkExtractor</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" >spyder</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

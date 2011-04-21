@@ -1,0 +1,259 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Libraries used in Spyder &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="index.html" />
+    <link rel="next" title="Spyder API" href="api/spyderapi.html" />
+    <link rel="prev" title="Crawler Design" href="crawler-design.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="api/spyderapi.html" title="Spyder API"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="crawler-design.html" title="Crawler Design"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Spyder v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="libraries-used-in-spyder">
+<h1>Libraries used in <strong>Spyder</strong><a class="headerlink" href="#libraries-used-in-spyder" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="zeromq">
+<span id="seczmq"></span><h2>ZeroMQ<a class="headerlink" href="#zeromq" title="Permalink to this headline">¶</a></h2>
+<p>Not only with the emergence of multicore systems Python&#8217;s <a class="reference external" href="http://www.python.org/NEEDSLINK">Global Interpreter
+Lock</a> becomes a major issue for scaling
+across cores. Libraries like <a class="reference external" href="http://NEEDSLINK">multiprocess</a> try to
+circumvent the <cite>GIL</cite> by forking child processes and establishing a messaging
+layer between them. This enables Python programmers to scale with the number of
+available cores but scaling across node boundaries is not possible using plain
+<cite>multiprocess</cite>.</p>
+<p>At this point <a class="reference external" href="http://www.zeromq.org">ZeroMQ</a> comes to the rescue. As the name
+suggests, <em>ZeroMQ</em> is a message queue. But, unlike other more famous queues like
+<cite>AMQP</cite> or more lightweight ones like <cite>STOMP</cite> or <cite>XMPP</cite>, <em>ZeroMQ</em> does not need a
+global broker (that might act as <em>single point of failure</em>). It is instead a
+little bit of code around the plain <em>socket</em> interface that adds simple
+messaging patterns to them (it&#8217;s like <em>sockets on steroids</em>).</p>
+<p>The beauty of <em>ZeroMQ</em> lies in it&#8217;s simplicity. The programmer basically defines
+a <em>socket</em> to which one side <strong>binds</strong> and the other <strong>connects</strong> and a
+messaging pattern with which both sides communicate with each other. Once this
+is established, scaling across cores/nodes/data centers is simple as pie. Four
+types of <em>sockets</em> are supported by <em>ZeroMQ</em>:</p>
+<ol class="arabic">
+<li><dl class="first docutils">
+<dt><cite>inproc</cite> sockets can be used for <strong>intra-process</strong> communication (between</dt>
+<dd><p class="first last">threads, e.g.)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><cite>ipc</cite> sockets can be used for <strong>inter-process</strong> communication between</dt>
+<dd><p class="first last">different processes <em>on the same node</em>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><cite>tcp</cite> sockets can be used for <strong>inter-process</strong> communication between</dt>
+<dd><p class="first last">different processes <em>on different node</em>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><cite>pgn</cite> sockets can be used for <strong>inter-process</strong> communication between one and</dt>
+<dd><p class="first last">many other processes <em>on many other nodes</em>.</p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>So by simply changing the socket type from <cite>ipc</cite> to <cite>tcp</cite> the application can
+scale across node boundaries transparently for the programmer, i.e. by <strong>not
+changing a single line of code</strong>. Awesome!</p>
+<p>This leaves us with the different messaging patterns. <em>ZeroMQ</em> supports all well
+known (at least to me) messaging patterns. The first one that comes into mind is
+of course the <cite>PUB/SUB</cite> pattern that allows one publisher to send messages to
+many subscribers. The <cite>PUSH/PULL</cite> pattern allows one master to send messages to
+only one of the available clients (the common producer/consumer pattern). With
+<cite>REQ/REP</cite> a simple request and response pattern is possible. Most of the
+patterns have a <cite>non-blocking</cite> equivalent.</p>
+<div class="section" id="messaging-patterns-used-in-spyder">
+<h3>Messaging Patterns used in <strong>Spyder</strong><a class="headerlink" href="#messaging-patterns-used-in-spyder" title="Permalink to this headline">¶</a></h3>
+<p><em>ZeroMQ</em> is used as messaging layer to distribute the workload to an arbitrary
+number of worker processes which in return send the result back to the master.
+In the context of <strong>Spyder</strong> the master process controls the <em>URLs</em> that should be
+crawled and sends them to the worker processes when they are due. One of the
+worker processes then downloads the content and possibly extracts new links from
+it. When finished it sends the result back to the master.</p>
+<p>We do not use the <cite>REQ/REP</cite> pattern as it does not scale as easily as we need
+since we have to keep track of whom we sent the <em>URL</em> to and we would have to do
+the load balancing ourselves.</p>
+<p>Instead with the <em>PUSH/PULL</em> pattern we get the load balancing as a nice little
+gift. It comes with a <em>fair distribution policy</em> that simply distributes the
+messages to all workers in a <em>round-robin</em> way. In order to send the results
+back to the master we will use the <em>PUB/SUB</em> pattern where the <em>publisher</em> is the
+worker process and the <em>subscriber</em> is the master process.</p>
+<p>The <em>PUB/SUB</em> pattern is used to send the results back to the master process.</p>
+<p>Users familiar with <em>ZeroMQ</em> might already have noted that this messaging setup is
+shamelessly <em>adapted</em> from <a class="reference external" href="http://www.mongrel.org">Mongrel2</a>. In the case of
+a <em>Web Server</em> as well as for a crawler this is a perfect fit as it helps you to
+scale <strong>very</strong> easy.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">There is another way to do this type message pattern using
+<em>XPEQ/XREP</em>. Transition to this pattern is planned for the near future.</p>
+</div>
+<p>For a crawler there are two parts that we possibly want to scale: the worker
+<em>and</em> the master. While scaling the worker across several processes is somewhat
+obvious, scaling the master first seems to be of no relevance. But if you want
+to crawl large portions of the web (all German Internet pages, e.g.), you might
+experience difficulties as this are not only <strong>many</strong> <em>URLs</em> but also <strong>many</strong>
+hosts you possibly want to connect. While the number of <em>URLs</em> might not be the
+limiting part, the number of hosts can be as they require a lot of queue
+switching.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">For more info on this, see the <a class="reference internal" href="crawler-design.html#seccrawlerdesign"><em>Crawler Design</em></a> document.</p>
+</div>
+</div>
+<div class="section" id="what-does-all-that-mean-in-practice">
+<h3>What does all that mean in practice<a class="headerlink" href="#what-does-all-that-mean-in-practice" title="Permalink to this headline">¶</a></h3>
+<p>The master process binds to one socket with a <cite>PUSH</cite> type and to another socket
+using the <cite>SUB</cite> type. On the <cite>SUB</cite> socket the master registers a <em>ZeroMQ</em> filter to
+only receive messages with a certain <em>topic</em>: it&#8217;s identity.</p>
+<p>The worker in connects to the <cite>PUSH</cite> socket using a <cite>PULL</cite> type socket and
+receives the <em>URLs</em> from the master containing the master&#8217;s identity. When the
+<em>URL</em> has been processed it sends the result back to the master using the <cite>PUB</cite>
+socket it has connected to the <cite>SUB</cite> socket. By setting the message&#8217;s topic to
+the identity of the sending master, it is ensured that only the master process
+that sent this <em>URL</em> receives the answer.</p>
+<p>Future version of <strong>Spyder</strong> will thus be able to work with <strong>n</strong> master and <strong>m</strong>
+worker processes.</p>
+</div>
+</div>
+<div class="section" id="tornado">
+<span id="sectornado"></span><h2><em>Tornado</em><a class="headerlink" href="#tornado" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://github.com/facebook/tornado">Tornado</a> is a <em>non-blocking</em> or <em>evented
+IO</em> library developed at FriendFeed (now Facebook) to run their python front-end
+servers.  Basically this is a</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="n">callback_for_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>loop. The events are any <em>read</em> or <em>write</em> event on a number of sockets or files
+that are registered with the loop. So instead of starting one thread for each
+socket connection everything runs in one thread or even process. Although this
+might feel strange it has been shown to be <strong>alot</strong> faster for network intensive
+applications that potentially serve a large number of clients.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">For more info see the <a class="reference external" href="http://NEEDS-A-LINK">C10k Problem</a></p>
+</div>
+<p>An additional reason for choosing <em>Tornado</em> was the nice integration with <em>ZeroMQ</em>.
+This not only makes programming with <em>ZeroMQ</em> easier but also makes it possible to
+easily write <em>non-blocking, evented</em> IO programms with Python and <em>ZeroMQ</em>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Libraries used in <strong>Spyder</strong></a><ul>
+<li><a class="reference internal" href="#zeromq">ZeroMQ</a><ul>
+<li><a class="reference internal" href="#messaging-patterns-used-in-spyder">Messaging Patterns used in <strong>Spyder</strong></a></li>
+<li><a class="reference internal" href="#what-does-all-that-mean-in-practice">What does all that mean in practice</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tornado"><em>Tornado</em></a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="crawler-design.html"
+                        title="previous chapter">Crawler Design</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="api/spyderapi.html"
+                        title="next chapter">Spyder API</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/libraries.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="api/spyderapi.html" title="Spyder API"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="crawler-design.html" title="Crawler Design"
+             >previous</a> |</li>
+        <li><a href="index.html">Spyder v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,158 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Sink &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../index.html" />
+    <link rel="up" title="Spyder API" href="spyderapi.html" />
+    <link rel="next" title="Roadmap" href="../roadmap.html" />
+    <link rel="prev" title="Crawl Scoper" href="scoper.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../roadmap.html" title="Roadmap"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="scoper.html" title="Crawl Scoper"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" accesskey="U">Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-spyder.core.sink">
+<span id="sink"></span><h1>Sink<a class="headerlink" href="#module-spyder.core.sink" title="Permalink to this headline">¶</a></h1>
+<p>A sink of <tt class="xref py py-class docutils literal"><span class="pre">CrawlUri</span></tt>.</p>
+<dl class="class">
+<dt id="spyder.core.sink.AbstractCrawlUriSink">
+<em class="property">class </em><tt class="descclassname">spyder.core.sink.</tt><tt class="descname">AbstractCrawlUriSink</tt><a class="reference internal" href="../_modules/spyder/core/sink.html#AbstractCrawlUriSink"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sink.AbstractCrawlUriSink" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract sink. Only overwrite the methods you are interested in.</p>
+<dl class="method">
+<dt id="spyder.core.sink.AbstractCrawlUriSink.process_not_found">
+<tt class="descname">process_not_found</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sink.html#AbstractCrawlUriSink.process_not_found"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sink.AbstractCrawlUriSink.process_not_found" title="Permalink to this definition">¶</a></dt>
+<dd><p>The uri we should have crawled was not found, i.e. HTTP Error 404. Do
+something with that.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sink.AbstractCrawlUriSink.process_redirect">
+<tt class="descname">process_redirect</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sink.html#AbstractCrawlUriSink.process_redirect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sink.AbstractCrawlUriSink.process_redirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>There have been too many redirects, i.e. in the default config there
+have been more than 3 redirects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sink.AbstractCrawlUriSink.process_server_error">
+<tt class="descname">process_server_error</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sink.html#AbstractCrawlUriSink.process_server_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sink.AbstractCrawlUriSink.process_server_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>There has been a server error, i.e. HTTP Error 50x. Maybe we should try
+to crawl this uri again a little bit later.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sink.AbstractCrawlUriSink.process_successful_crawl">
+<tt class="descname">process_successful_crawl</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sink.html#AbstractCrawlUriSink.process_successful_crawl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sink.AbstractCrawlUriSink.process_successful_crawl" title="Permalink to this definition">¶</a></dt>
+<dd><p>We have crawled a uri successfully. If there are newly extracted links,
+add them alongside the original uri to the frontier.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spyder.core.sink.CouchDbSink">
+<em class="property">class </em><tt class="descclassname">spyder.core.sink.</tt><tt class="descname">CouchDbSink</tt><big>(</big><em>host_port='127.0.0.1:5984'</em>, <em>database='spyder'</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sink.html#CouchDbSink"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sink.CouchDbSink" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple sink that will store <tt class="xref py py-class docutils literal"><span class="pre">CrawlUri</span></tt> inside a CouchDB instance.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="scoper.html"
+                        title="previous chapter">Crawl Scoper</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../roadmap.html"
+                        title="next chapter">Roadmap</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/sink.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../roadmap.html" title="Roadmap"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="scoper.html" title="Crawl Scoper"
+             >previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" >Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

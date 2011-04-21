@@ -1,0 +1,218 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Workerprocess &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../index.html" />
+    <link rel="up" title="Spyder API" href="spyderapi.html" />
+    <link rel="next" title="Content Fetcher" href="fetcher.html" />
+    <link rel="prev" title="Queue Management" href="queues.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="fetcher.html" title="Content Fetcher"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="queues.html" title="Queue Management"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" accesskey="U">Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-spyder.workerprocess">
+<span id="workerprocess"></span><h1>Workerprocess<a class="headerlink" href="#module-spyder.workerprocess" title="Permalink to this headline">¶</a></h1>
+<p>This module contains the default architecture for worker processes. In order to
+start a new worker process you should simply call this modules <cite>main</cite> method.</p>
+<p>Communication between master -&gt; worker and inside the worker is as follows:</p>
+<p>Master              -&gt; PUSH -&gt;              Worker Fetcher</p>
+<p>Worker Fetcher      -&gt; PUSH -&gt;              Worker Extractor</p>
+<p>Worker Extractor    -&gt; PUB  -&gt;              Master</p>
+<p>Each Worker is a ZmqWorker (or ZmqAsyncWorker). The Master pushes new CrawlUris
+to the <cite>Worker Fetcher</cite>. This will download the content from the web and <cite>PUSH</cite>
+the resulting <cite>CrawlUri</cite> to the <cite>Worker Extractor</cite>. At this stage several
+Modules for extracting new URLs are running. The <cite>Worker Scoper</cite> will decide if
+the newly extracted URLs are within the scope of the crawl.</p>
+<dl class="function">
+<dt id="spyder.workerprocess.create_processing_function">
+<tt class="descclassname">spyder.workerprocess.</tt><tt class="descname">create_processing_function</tt><big>(</big><em>settings</em>, <em>pipeline</em><big>)</big><a class="reference internal" href="../_modules/spyder/workerprocess.html#create_processing_function"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.workerprocess.create_processing_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a processing method that iterates all processors over the incoming
+message.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spyder.workerprocess.create_worker_extractor">
+<tt class="descclassname">spyder.workerprocess.</tt><tt class="descname">create_worker_extractor</tt><big>(</big><em>settings</em>, <em>mgmt</em>, <em>zmq_context</em>, <em>log_handler</em>, <em>io_loop</em><big>)</big><a class="reference internal" href="../_modules/spyder/workerprocess.html#create_worker_extractor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.workerprocess.create_worker_extractor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create and return a new <cite>Worker Extractor</cite> that will combine all configured
+extractors to a single <tt class="xref py py-class docutils literal"><span class="pre">ZmqWorker</span></tt>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spyder.workerprocess.create_worker_fetcher">
+<tt class="descclassname">spyder.workerprocess.</tt><tt class="descname">create_worker_fetcher</tt><big>(</big><em>settings</em>, <em>mgmt</em>, <em>zmq_context</em>, <em>log_handler</em>, <em>io_loop</em><big>)</big><a class="reference internal" href="../_modules/spyder/workerprocess.html#create_worker_fetcher"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.workerprocess.create_worker_fetcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create and return a new <cite>Worker Fetcher</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spyder.workerprocess.create_worker_management">
+<tt class="descclassname">spyder.workerprocess.</tt><tt class="descname">create_worker_management</tt><big>(</big><em>settings</em>, <em>zmq_context</em>, <em>io_loop</em><big>)</big><a class="reference internal" href="../_modules/spyder/workerprocess.html#create_worker_management"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.workerprocess.create_worker_management" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create and return a new instance of the <cite>ZmqMgmt</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spyder.workerprocess.main">
+<tt class="descclassname">spyder.workerprocess.</tt><tt class="descname">main</tt><big>(</big><em>settings</em><big>)</big><a class="reference internal" href="../_modules/spyder/workerprocess.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.workerprocess.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <a class="reference internal" href="#spyder.workerprocess.main" title="spyder.workerprocess.main"><tt class="xref py py-meth docutils literal"><span class="pre">main()</span></tt></a> method for worker processes.</p>
+<p>Here we will:</p>
+<blockquote>
+<ul class="simple">
+<li>create a <tt class="xref py py-class docutils literal"><span class="pre">ZmqMgmt</span></tt> instance</li>
+<li>create a <tt class="xref py py-class docutils literal"><span class="pre">Fetcher</span></tt> instance</li>
+<li>initialize and instantiate the extractor chain</li>
+</ul>
+</blockquote>
+<p>The <cite>settings</cite> have to be loaded already.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-spyder.core.worker">
+<span id="zeromq-worker"></span><h1>ZeroMQ Worker<a class="headerlink" href="#module-spyder.core.worker" title="Permalink to this headline">¶</a></h1>
+<p>This module contains a ZeroMQ based Worker abstraction.</p>
+<p>The <cite>ZmqWorker</cite> class expects an incoming and one outgoing <cite>zmq.socket</cite> as well
+as an instance of the <cite>spyder.core.mgmt.ZmqMgmt</cite> class.</p>
+<dl class="class">
+<dt id="spyder.core.worker.AsyncZmqWorker">
+<em class="property">class </em><tt class="descclassname">spyder.core.worker.</tt><tt class="descname">AsyncZmqWorker</tt><big>(</big><em>insocket</em>, <em>outsocket</em>, <em>mgmt</em>, <em>processing</em>, <em>log_handler</em>, <em>log_level</em>, <em>io_loop=None</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/worker.html#AsyncZmqWorker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.worker.AsyncZmqWorker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronous version of the <cite>ZmqWorker</cite>.</p>
+<p>This worker differs in that the <cite>self._processing</cite> method should have two
+arguments: the message and the socket where the result should be sent to!</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spyder.core.worker.ZmqWorker">
+<em class="property">class </em><tt class="descclassname">spyder.core.worker.</tt><tt class="descname">ZmqWorker</tt><big>(</big><em>insocket</em>, <em>outsocket</em>, <em>mgmt</em>, <em>processing</em>, <em>log_handler</em>, <em>log_level</em>, <em>io_loop=None</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/worker.html#ZmqWorker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.worker.ZmqWorker" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the ZMQ worker implementation.</p>
+<p>The worker will register a <tt class="xref py py-class docutils literal"><span class="pre">ZMQStream</span></tt> with the configured
+<tt class="xref py py-class docutils literal"><span class="pre">zmq.Socket</span></tt> and <tt class="xref py py-class docutils literal"><span class="pre">zmq.eventloop.ioloop.IOLoop</span></tt> instance.</p>
+<p>Upon <cite>ZMQStream.on_recv</cite> the configured <cite>processors</cite> will be executed
+with the deserialized context and the result will be published through the
+configured <cite>zmq.socket</cite>.</p>
+<dl class="method">
+<dt id="spyder.core.worker.ZmqWorker.close">
+<tt class="descname">close</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/worker.html#ZmqWorker.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.worker.ZmqWorker.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close all open sockets.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.worker.ZmqWorker.start">
+<tt class="descname">start</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/worker.html#ZmqWorker.start"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.worker.ZmqWorker.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start the worker.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.worker.ZmqWorker.stop">
+<tt class="descname">stop</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/worker.html#ZmqWorker.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.worker.ZmqWorker.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stop the worker.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Workerprocess</a></li>
+<li><a class="reference internal" href="#module-spyder.core.worker">ZeroMQ Worker</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="queues.html"
+                        title="previous chapter">Queue Management</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="fetcher.html"
+                        title="next chapter">Content Fetcher</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/workerprocess.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="fetcher.html" title="Content Fetcher"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="queues.html" title="Queue Management"
+             >previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" >Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

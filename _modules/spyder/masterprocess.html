@@ -1,0 +1,232 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spyder.masterprocess &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../../index.html" />
+    <link rel="up" title="spyder" href="../spyder.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../spyder.html" accesskey="U">spyder</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spyder.masterprocess</h1><div class="highlight"><pre>
+<span class="c">#</span>
+<span class="c"># Copyright (c) 2011 Daniel Truemper truemped@googlemail.com</span>
+<span class="c">#</span>
+<span class="c"># masterprocess.py 31-Jan-2011</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+<span class="c">#</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains the default architecture for master process.</span>
+
+<span class="sd">The main task for masterprocesses is to create and run the **Frontier**.</span>
+<span class="sd">Starting a master involves the following steps:</span>
+
+<span class="sd">1. Bind to the configured |zmq| sockets</span>
+<span class="sd">2. Start the management interface</span>
+<span class="sd">3. Create the frontier</span>
+<span class="sd">4. Start the master</span>
+
+<span class="sd">Once the master is up and you have configured a ``settings.MASTER_CALLBACK``,</span>
+<span class="sd">this method will be called before the master is really started, i.e. before the</span>
+<span class="sd">``IOLoop.start()`` is called. This will allow you to insert *Seed* |urls|, e.g.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+
+<span class="kn">import</span> <span class="nn">zmq</span>
+<span class="kn">from</span> <span class="nn">zmq.core.error</span> <span class="kn">import</span> <span class="n">ZMQError</span>
+<span class="kn">from</span> <span class="nn">zmq.eventloop.ioloop</span> <span class="kn">import</span> <span class="n">IOLoop</span>
+<span class="kn">from</span> <span class="nn">zmq.log.handlers</span> <span class="kn">import</span> <span class="n">PUBHandler</span>
+
+<span class="kn">from</span> <span class="nn">spyder.import_util</span> <span class="kn">import</span> <span class="n">import_class</span>
+<span class="kn">from</span> <span class="nn">spyder.core.master</span> <span class="kn">import</span> <span class="n">ZmqMaster</span>
+<span class="kn">from</span> <span class="nn">spyder.core.mgmt</span> <span class="kn">import</span> <span class="n">ZmqMgmt</span>
+
+
+<div class="viewcode-block" id="create_master_management"><a class="viewcode-back" href="../../api/masterprocess.html#spyder.masterprocess.create_master_management">[docs]</a><span class="k">def</span> <span class="nf">create_master_management</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">zmq_context</span><span class="p">,</span> <span class="n">io_loop</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create the management interface for master processes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">listening_socket</span> <span class="o">=</span> <span class="n">zmq_context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">SUB</span><span class="p">)</span>
+    <span class="n">listening_socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">SUBSCRIBE</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">listening_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_MGMT_WORKER</span><span class="p">)</span>
+
+    <span class="n">publishing_socket</span> <span class="o">=</span> <span class="n">zmq_context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PUB</span><span class="p">)</span>
+    <span class="n">publishing_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_MGMT_MASTER</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ZmqMgmt</span><span class="p">(</span><span class="n">listening_socket</span><span class="p">,</span> <span class="n">publishing_socket</span><span class="p">,</span> <span class="n">io_loop</span><span class="o">=</span><span class="n">io_loop</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="create_frontier"><a class="viewcode-back" href="../../api/masterprocess.html#spyder.masterprocess.create_frontier">[docs]</a><span class="k">def</span> <span class="nf">create_frontier</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create the frontier to use.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">frontier</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_CLASS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">frontier</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../api/masterprocess.html#spyder.masterprocess.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">settings</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Main method for master processes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># create my own identity</span>
+    <span class="n">identity</span> <span class="o">=</span> <span class="s">&quot;master:</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">(),</span> <span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">())</span>
+
+    <span class="n">ctx</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+    <span class="n">io_loop</span> <span class="o">=</span> <span class="n">IOLoop</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
+
+    <span class="c"># initialize the logging subsystem</span>
+    <span class="n">log_pub</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PUB</span><span class="p">)</span>
+    <span class="n">log_pub</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_LOGGING</span><span class="p">)</span>
+    <span class="n">zmq_logging_handler</span> <span class="o">=</span> <span class="n">PUBHandler</span><span class="p">(</span><span class="n">log_pub</span><span class="p">)</span>
+    <span class="n">zmq_logging_handler</span><span class="o">.</span><span class="n">root_topic</span> <span class="o">=</span> <span class="s">&quot;spyder.master&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">zmq_logging_handler</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">LOG_LEVEL_MASTER</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;process::Starting up the master&quot;</span><span class="p">)</span>
+
+    <span class="n">mgmt</span> <span class="o">=</span> <span class="n">create_master_management</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">io_loop</span><span class="p">)</span>
+    <span class="n">frontier</span> <span class="o">=</span> <span class="n">create_frontier</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">zmq_logging_handler</span><span class="p">)</span>
+
+    <span class="n">publishing_socket</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PUSH</span><span class="p">)</span>
+    <span class="n">publishing_socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">HWM</span><span class="p">,</span> <span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_MASTER_PUSH_HWM</span><span class="p">)</span>
+    <span class="n">publishing_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_MASTER_PUSH</span><span class="p">)</span>
+
+    <span class="n">receiving_socket</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">SUB</span><span class="p">)</span>
+    <span class="n">receiving_socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">SUBSCRIBE</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">receiving_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">ZEROMQ_MASTER_SUB</span><span class="p">)</span>
+
+    <span class="n">master</span> <span class="o">=</span> <span class="n">ZmqMaster</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">identity</span><span class="p">,</span> <span class="n">receiving_socket</span><span class="p">,</span>
+            <span class="n">publishing_socket</span><span class="p">,</span> <span class="n">mgmt</span><span class="p">,</span> <span class="n">frontier</span><span class="p">,</span> <span class="n">zmq_logging_handler</span><span class="p">,</span>
+            <span class="n">settings</span><span class="o">.</span><span class="n">LOG_LEVEL_MASTER</span><span class="p">,</span> <span class="n">io_loop</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">handle_shutdown_signal</span><span class="p">(</span><span class="n">_sig</span><span class="p">,</span> <span class="n">_frame</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called from the os when a shutdown signal is fired.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">master</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+        <span class="c"># zmq 2.1 stops blocking calls, restart the ioloop</span>
+        <span class="n">io_loop</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="c"># handle kill signals</span>
+    <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">handle_shutdown_signal</span><span class="p">)</span>
+    <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">handle_shutdown_signal</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">MASTER_CALLBACK</span><span class="p">:</span>
+        <span class="n">callback</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">MASTER_CALLBACK</span><span class="p">)</span>
+        <span class="n">callback</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">io_loop</span><span class="p">,</span> <span class="n">frontier</span><span class="p">)</span>
+
+    <span class="n">mgmt</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">master</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="c"># this will block until the master stops</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">io_loop</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">ZMQError</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Caught a ZMQError. Hopefully during shutdown&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">())</span>
+
+    <span class="n">master</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">mgmt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;process::Master is down.&quot;</span><span class="p">)</span>
+    <span class="n">log_pub</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">ctx</span><span class="o">.</span><span class="n">term</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../spyder.html" >spyder</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

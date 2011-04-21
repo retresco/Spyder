@@ -1,0 +1,197 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Masterprocess &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../index.html" />
+    <link rel="up" title="Spyder API" href="spyderapi.html" />
+    <link rel="next" title="Frontier" href="frontier.html" />
+    <link rel="prev" title="Entrypoints" href="entrypoints.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="frontier.html" title="Frontier"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="entrypoints.html" title="Entrypoints"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" accesskey="U">Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-spyder.masterprocess">
+<span id="masterprocess"></span><h1>Masterprocess<a class="headerlink" href="#module-spyder.masterprocess" title="Permalink to this headline">¶</a></h1>
+<p>This module contains the default architecture for master process.</p>
+<p>The main task for masterprocesses is to create and run the <strong>Frontier</strong>.
+Starting a master involves the following steps:</p>
+<ol class="arabic simple">
+<li>Bind to the configured <em>ZeroMQ</em> sockets</li>
+<li>Start the management interface</li>
+<li>Create the frontier</li>
+<li>Start the master</li>
+</ol>
+<p>Once the master is up and you have configured a <tt class="docutils literal"><span class="pre">settings.MASTER_CALLBACK</span></tt>,
+this method will be called before the master is really started, i.e. before the
+<tt class="docutils literal"><span class="pre">IOLoop.start()</span></tt> is called. This will allow you to insert <em>Seed</em> <em>URLs</em>, e.g.</p>
+<dl class="function">
+<dt id="spyder.masterprocess.create_frontier">
+<tt class="descclassname">spyder.masterprocess.</tt><tt class="descname">create_frontier</tt><big>(</big><em>settings</em>, <em>log_handler</em><big>)</big><a class="reference internal" href="../_modules/spyder/masterprocess.html#create_frontier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.masterprocess.create_frontier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the frontier to use.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spyder.masterprocess.create_master_management">
+<tt class="descclassname">spyder.masterprocess.</tt><tt class="descname">create_master_management</tt><big>(</big><em>settings</em>, <em>zmq_context</em>, <em>io_loop</em><big>)</big><a class="reference internal" href="../_modules/spyder/masterprocess.html#create_master_management"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.masterprocess.create_master_management" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the management interface for master processes.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spyder.masterprocess.main">
+<tt class="descclassname">spyder.masterprocess.</tt><tt class="descname">main</tt><big>(</big><em>settings</em><big>)</big><a class="reference internal" href="../_modules/spyder/masterprocess.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.masterprocess.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main method for master processes.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-spyder.core.master">
+<span id="zeromq-master"></span><h1>ZeroMQ Master<a class="headerlink" href="#module-spyder.core.master" title="Permalink to this headline">¶</a></h1>
+<p>A ZeroMQ master, i.e. the producer of URIs.</p>
+<dl class="class">
+<dt id="spyder.core.master.ZmqMaster">
+<em class="property">class </em><tt class="descclassname">spyder.core.master.</tt><tt class="descname">ZmqMaster</tt><big>(</big><em>settings</em>, <em>identity</em>, <em>insocket</em>, <em>outsocket</em>, <em>mgmt</em>, <em>frontier</em>, <em>log_handler</em>, <em>log_level</em>, <em>io_loop</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/master.html#ZmqMaster"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.master.ZmqMaster" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the ZMQ Master implementation.</p>
+<p>The master will send <tt class="xref py py-class docutils literal"><span class="pre">DataMessage</span></tt> object to the workers and receive
+the processed messages. Unknown links will then be added to the frontier.</p>
+<dl class="method">
+<dt id="spyder.core.master.ZmqMaster.close">
+<tt class="descname">close</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/master.html#ZmqMaster.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.master.ZmqMaster.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close all open sockets.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.master.ZmqMaster.finished">
+<tt class="descname">finished</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/master.html#ZmqMaster.finished"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.master.ZmqMaster.finished" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return true if all uris have been processed and the master is ready to
+be shut down.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.master.ZmqMaster.shutdown">
+<tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/master.html#ZmqMaster.shutdown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.master.ZmqMaster.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shutdown the master and notify the workers.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.master.ZmqMaster.start">
+<tt class="descname">start</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/master.html#ZmqMaster.start"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.master.ZmqMaster.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start the master.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.master.ZmqMaster.stop">
+<tt class="descname">stop</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/master.html#ZmqMaster.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.master.ZmqMaster.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stop the master gracefully, i.e. stop sending more URIs that should get
+processed.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Masterprocess</a></li>
+<li><a class="reference internal" href="#module-spyder.core.master">ZeroMQ Master</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="entrypoints.html"
+                        title="previous chapter">Entrypoints</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="frontier.html"
+                        title="next chapter">Frontier</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/masterprocess.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="frontier.html" title="Frontier"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="entrypoints.html" title="Entrypoints"
+             >previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" >Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

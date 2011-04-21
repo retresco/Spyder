@@ -1,0 +1,253 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Frontier &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../index.html" />
+    <link rel="up" title="Spyder API" href="spyderapi.html" />
+    <link rel="next" title="Queue Management" href="queues.html" />
+    <link rel="prev" title="Masterprocess" href="masterprocess.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="queues.html" title="Queue Management"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="masterprocess.html" title="Masterprocess"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" accesskey="U">Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-spyder.core.frontier">
+<span id="frontier"></span><h1>Frontier<a class="headerlink" href="#module-spyder.core.frontier" title="Permalink to this headline">¶</a></h1>
+<p>Generic Frontier implementation.</p>
+<p>The <a class="reference internal" href="#spyder.core.frontier.SingleHostFrontier" title="spyder.core.frontier.SingleHostFrontier"><tt class="xref py py-class docutils literal"><span class="pre">SingleHostFrontier</span></tt></a> will only select URIs from the queues by
+iterating over all available queues and added into a priority queue.</p>
+<p>The priority is calculated based on the timestamp it should be crawled next.</p>
+<p>In contrast to the <a class="reference internal" href="queues.html#module-spyder.core.sqlitequeues" title="spyder.core.sqlitequeues"><tt class="xref py py-mod docutils literal"><span class="pre">spyder.core.sqlitequeues</span></tt></a> module, URIs in this module
+are represented as <tt class="xref py py-class docutils literal"><span class="pre">spyder.thrift.gen.ttypes.CrawlUri</span></tt>.</p>
+<dl class="class">
+<dt id="spyder.core.frontier.AbstractBaseFrontier">
+<em class="property">class </em><tt class="descclassname">spyder.core.frontier.</tt><tt class="descname">AbstractBaseFrontier</tt><big>(</big><em>settings</em>, <em>log_handler</em>, <em>front_end_queues</em>, <em>prioritizer</em>, <em>unique_hash='sha1'</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier" title="Permalink to this definition">¶</a></dt>
+<dd><p>A base class for implementing frontiers.</p>
+<p>Basically this class provides the different general methods and
+configuration parameters used for frontiers.</p>
+<dl class="method">
+<dt id="spyder.core.frontier.AbstractBaseFrontier.add_sink">
+<tt class="descname">add_sink</tt><big>(</big><em>sink</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier.add_sink"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier.add_sink" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a sink to the frontier. A sink will be responsible for the long
+term storage of the crawled contents.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.AbstractBaseFrontier.add_uri">
+<tt class="descname">add_uri</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier.add_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier.add_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the specified <tt class="xref py py-class docutils literal"><span class="pre">CrawlUri</span></tt> to the frontier.</p>
+<p><cite>next_date</cite> is a datetime object for the next time the uri should be
+crawled.</p>
+<p>Note: time based crawling is never strict, it is generally used as some
+kind of prioritization.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.AbstractBaseFrontier.close">
+<tt class="descname">close</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close the underlying frontend queues.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.AbstractBaseFrontier.get_next">
+<tt class="descname">get_next</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier.get_next"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier.get_next" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the next uri scheduled for crawling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.AbstractBaseFrontier.process_not_found">
+<tt class="descname">process_not_found</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier.process_not_found"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier.process_not_found" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called when an URL was not found.</p>
+<p>This could mean, that the URL has been removed from the server. If so,
+do something about it!</p>
+<p>Override this method in the actual frontier implementation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.AbstractBaseFrontier.process_redirect">
+<tt class="descname">process_redirect</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier.process_redirect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier.process_redirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called when there were too many redirects for an URL, or the site has
+note been updated since the last visit.</p>
+<p>In the latter case, update the internal uri and increase the priority
+level.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.AbstractBaseFrontier.process_server_error">
+<tt class="descname">process_server_error</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier.process_server_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier.process_server_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called when there was some kind of server error.</p>
+<p>Override this method in the actual frontier implementation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.AbstractBaseFrontier.process_successful_crawl">
+<tt class="descname">process_successful_crawl</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier.process_successful_crawl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier.process_successful_crawl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called when an URI has been crawled successfully.</p>
+<p><cite>curi</cite> is a <tt class="xref py py-class docutils literal"><span class="pre">CrawlUri</span></tt></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.AbstractBaseFrontier.update_uri">
+<tt class="descname">update_uri</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#AbstractBaseFrontier.update_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.AbstractBaseFrontier.update_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update a given uri.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spyder.core.frontier.MultipleHostFrontier">
+<em class="property">class </em><tt class="descclassname">spyder.core.frontier.</tt><tt class="descname">MultipleHostFrontier</tt><big>(</big><em>settings</em>, <em>log_handler</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#MultipleHostFrontier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.MultipleHostFrontier" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Frontier for crawling many hosts simultaneously.</p>
+<dl class="method">
+<dt id="spyder.core.frontier.MultipleHostFrontier.get_next">
+<tt class="descname">get_next</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#MultipleHostFrontier.get_next"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.MultipleHostFrontier.get_next" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the next URI that is ready to be crawled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.MultipleHostFrontier.process_not_found">
+<tt class="descname">process_not_found</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#MultipleHostFrontier.process_not_found"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.MultipleHostFrontier.process_not_found" title="Permalink to this definition">¶</a></dt>
+<dd><p>The page does not exist anymore!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.MultipleHostFrontier.process_redirect">
+<tt class="descname">process_redirect</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#MultipleHostFrontier.process_redirect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.MultipleHostFrontier.process_redirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>There was a redirect.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.MultipleHostFrontier.process_server_error">
+<tt class="descname">process_server_error</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#MultipleHostFrontier.process_server_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.MultipleHostFrontier.process_server_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Punish any server errors in the budget for this queue.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.MultipleHostFrontier.process_successful_crawl">
+<tt class="descname">process_successful_crawl</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#MultipleHostFrontier.process_successful_crawl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.MultipleHostFrontier.process_successful_crawl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Crawling was successful, now update the politeness rules.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spyder.core.frontier.SingleHostFrontier">
+<em class="property">class </em><tt class="descclassname">spyder.core.frontier.</tt><tt class="descname">SingleHostFrontier</tt><big>(</big><em>settings</em>, <em>log_handler</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#SingleHostFrontier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.SingleHostFrontier" title="Permalink to this definition">¶</a></dt>
+<dd><p>A frontier for crawling a single host.</p>
+<dl class="method">
+<dt id="spyder.core.frontier.SingleHostFrontier.get_next">
+<tt class="descname">get_next</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#SingleHostFrontier.get_next"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.SingleHostFrontier.get_next" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the next URI.</p>
+<p>Only return the next URI if  we have waited enough.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.frontier.SingleHostFrontier.process_successful_crawl">
+<tt class="descname">process_successful_crawl</tt><big>(</big><em>curi</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/frontier.html#SingleHostFrontier.process_successful_crawl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.frontier.SingleHostFrontier.process_successful_crawl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the timebased politeness to this frontier.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="masterprocess.html"
+                        title="previous chapter">Masterprocess</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="queues.html"
+                        title="next chapter">Queue Management</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/frontier.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="queues.html" title="Queue Management"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="masterprocess.html" title="Masterprocess"
+             >previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" >Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,253 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spyder.processor.fetcher &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="spyder" href="../../spyder.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" accesskey="U">spyder</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spyder.processor.fetcher</h1><div class="highlight"><pre>
+<span class="c">#</span>
+<span class="c"># Copyright (c) 2011 Daniel Truemper truemped@googlemail.com</span>
+<span class="c">#</span>
+<span class="c"># fetcher.py 14-Jan-2011</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+<span class="c">#</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for downloading content from the web.</span>
+
+<span class="sd">TODO: document pycurls features, i.e. what it can download.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">urlparse</span> <span class="kn">import</span> <span class="n">urlsplit</span>
+
+<span class="kn">from</span> <span class="nn">tornado.httpclient</span> <span class="kn">import</span> <span class="n">AsyncHTTPClient</span><span class="p">,</span> <span class="n">HTTPRequest</span>
+<span class="kn">from</span> <span class="nn">tornado.httputil</span> <span class="kn">import</span> <span class="n">HTTPHeaders</span>
+
+<span class="kn">from</span> <span class="nn">zmq.eventloop.ioloop</span> <span class="kn">import</span> <span class="n">IOLoop</span>
+
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">CURI_SITE_USERNAME</span>
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">CURI_SITE_PASSWORD</span>
+<span class="kn">from</span> <span class="nn">spyder.time</span> <span class="kn">import</span> <span class="n">deserialize_date_time</span>
+
+<span class="n">LOG</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;fetcher&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="FetchProcessor"><a class="viewcode-back" href="../../../api/fetcher.html#spyder.processor.fetcher.FetchProcessor">[docs]</a><span class="k">class</span> <span class="nc">FetchProcessor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A processing class for downloading all kinds of stuff from the web.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">io_loop</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the members.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_user_agent</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">USER_AGENT</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_user_agent</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_io_loop</span> <span class="o">=</span> <span class="n">io_loop</span> <span class="ow">or</span> <span class="n">IOLoop</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_follow_redirects</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FOLLOW_REDIRECTS</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_redirects</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">MAX_REDIRECTS</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gzip</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">USE_GZIP</span>
+
+        <span class="n">max_clients</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">MAX_CLIENTS</span>
+        <span class="n">max_simultaneous_connections</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">MAX_SIMULTANEOUS_CONNECTIONS</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">AsyncHTTPClient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_io_loop</span><span class="p">,</span>
+            <span class="n">max_clients</span><span class="o">=</span><span class="n">max_clients</span><span class="p">,</span>
+            <span class="n">max_simultaneous_connections</span><span class="o">=</span><span class="n">max_simultaneous_connections</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">out_stream</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Work on the current `DataMessage` and send the result to `out_stream`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># prepare the HTTPHeaders</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="n">prepare_headers</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">last_modified</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">req_header</span><span class="p">:</span>
+            <span class="c"># check if we have a date when the page was last crawled</span>
+            <span class="k">if</span> <span class="s">&quot;Last-Modified&quot;</span> <span class="ow">in</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">req_header</span><span class="p">:</span>
+                <span class="n">last_modified</span> <span class="o">=</span> <span class="n">deserialize_date_time</span><span class="p">(</span>
+                        <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">req_header</span><span class="p">[</span><span class="s">&quot;Last-Modified&quot;</span><span class="p">])</span>
+
+        <span class="c"># check if we have username and password present</span>
+        <span class="n">auth_username</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">auth_password</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span> <span class="ow">and</span> \
+            <span class="n">CURI_SITE_USERNAME</span> <span class="ow">in</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span> <span class="ow">and</span> \
+            <span class="n">CURI_SITE_PASSWORD</span> <span class="ow">in</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">:</span>
+
+            <span class="n">auth_username</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_SITE_USERNAME</span><span class="p">]</span>
+            <span class="n">auth_password</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_SITE_PASSWORD</span><span class="p">]</span>
+
+        <span class="c"># create the request</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="n">HTTPRequest</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">effective_url</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="s">&quot;GET&quot;</span><span class="p">,</span>
+                <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+                <span class="n">auth_username</span><span class="o">=</span><span class="n">auth_username</span><span class="p">,</span>
+                <span class="n">auth_password</span><span class="o">=</span><span class="n">auth_password</span><span class="p">,</span>
+                <span class="n">if_modified_since</span><span class="o">=</span><span class="n">last_modified</span><span class="p">,</span>
+                <span class="n">follow_redirects</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_follow_redirects</span><span class="p">,</span>
+                <span class="n">max_redirects</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_redirects</span><span class="p">,</span>
+                <span class="n">user_agent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_user_agent</span><span class="p">)</span>
+
+        <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;proc.fetch::request for </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">handle_response</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">out_stream</span><span class="p">))</span>
+
+</div>
+<div class="viewcode-block" id="prepare_headers"><a class="viewcode-back" href="../../../api/fetcher.html#spyder.processor.fetcher.prepare_headers">[docs]</a><span class="k">def</span> <span class="nf">prepare_headers</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construct the :class:`HTTPHeaders` with all the necessary information for</span>
+<span class="sd">    the request.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># construct the headers</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="n">HTTPHeaders</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">req_header</span><span class="p">:</span>
+        <span class="c"># check if we have a previous Etag</span>
+        <span class="k">if</span> <span class="s">&quot;Etag&quot;</span> <span class="ow">in</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">req_header</span><span class="p">:</span>
+            <span class="n">headers</span><span class="p">[</span><span class="s">&quot;If-None-Match&quot;</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">req_header</span><span class="p">[</span><span class="s">&quot;Etag&quot;</span><span class="p">]</span>
+
+    <span class="c"># manually set the Host header since we are requesting using an IP</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">urlsplit</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">hostname</span>
+    <span class="k">if</span> <span class="n">host</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;proc.fetch::cannot extract hostname from url &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span>
+                <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">headers</span><span class="p">[</span><span class="s">&quot;Host&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">host</span>
+
+    <span class="k">return</span> <span class="n">headers</span>
+
+</div>
+<div class="viewcode-block" id="handle_response"><a class="viewcode-back" href="../../../api/fetcher.html#spyder.processor.fetcher.handle_response">[docs]</a><span class="k">def</span> <span class="nf">handle_response</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">out_stream</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decorator for the actual callback function that will extract interesting</span>
+<span class="sd">    info and forward the response.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">handle_server_response</span><span class="p">(</span><span class="n">response</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The actual callback function.</span>
+
+<span class="sd">        Extract interesting info from the response using</span>
+<span class="sd">        :meth:`extract_info_from_response` and forward the result to the</span>
+<span class="sd">        `out_stream`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">extract_info_from_response</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;proc.fetch::response for </span><span class="si">%s</span><span class="s"> (took &#39;</span><span class="si">%s</span><span class="s">&#39;ms)&quot;</span> <span class="o">%</span>
+                <span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">request_time</span><span class="p">))</span>
+        <span class="n">out_stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">serialize</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">handle_server_response</span>
+
+</div>
+<div class="viewcode-block" id="extract_info_from_response"><a class="viewcode-back" href="../../../api/fetcher.html#spyder.processor.fetcher.extract_info_from_response">[docs]</a><span class="k">def</span> <span class="nf">extract_info_from_response</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract the interesting information from a HTTPResponse.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">status_code</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">code</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">req_header</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">headers</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">rep_header</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">req_time</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">request_time</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">queue_time</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">time_info</span><span class="p">[</span><span class="s">&quot;queue&quot;</span><span class="p">]</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">content_body</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">body</span>
+
+    <span class="k">return</span> <span class="n">msg</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" >spyder</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

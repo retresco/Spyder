@@ -1,0 +1,539 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spyder.core.sqlitequeues &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="spyder" href="../../spyder.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" accesskey="U">spyder</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spyder.core.sqlitequeues</h1><div class="highlight"><pre>
+<span class="c">#</span>
+<span class="c"># Copyright (c) 2011 Daniel Truemper truemped@googlemail.com</span>
+<span class="c">#</span>
+<span class="c"># sqlitequques.py 24-Jan-2011</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+<span class="c">#</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains the default queue storages backed by SQlite.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">sqlite3</span> <span class="kn">as</span> <span class="nn">sqlite</span>
+
+
+<div class="viewcode-block" id="QueueException"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.QueueException">[docs]</a><span class="k">class</span> <span class="nc">QueueException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base exception for errors in the queues.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="UriNotFound"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.UriNotFound">[docs]</a><span class="k">class</span> <span class="nc">UriNotFound</span><span class="p">(</span><span class="n">QueueException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Exception raised when an URI could not be found in the storage.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_url</span> <span class="o">=</span> <span class="n">url</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&quot;UriNotFound(</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_url</span><span class="p">,)</span>
+
+</div>
+<div class="viewcode-block" id="QueueNotFound"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.QueueNotFound">[docs]</a><span class="k">class</span> <span class="nc">QueueNotFound</span><span class="p">(</span><span class="n">QueueException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Exception raised when a ``queue`` could not be found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_identifier</span> <span class="o">=</span> <span class="n">identifier</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&quot;QueueNotFound(</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_identifier</span><span class="p">,)</span>
+
+</div>
+<div class="viewcode-block" id="SQLiteStore"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteStore">[docs]</a><span class="k">class</span> <span class="nc">SQLiteStore</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple base class for sqlite based queue storages. This class basically</span>
+<span class="sd">    creates the default pragmas and initializes all the unicode stuff.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the sqlite store.</span>
+
+<span class="sd">        `db_name` can be a filanem or `:memory:` for in-memory databases.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection</span> <span class="o">=</span> <span class="n">sqlite</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection</span><span class="o">.</span><span class="n">row_factory</span> <span class="o">=</span> <span class="n">sqlite</span><span class="o">.</span><span class="n">Row</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection</span><span class="o">.</span><span class="n">text_factory</span> <span class="o">=</span> <span class="n">sqlite</span><span class="o">.</span><span class="n">OptimizedUnicode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;PRAGMA encoding=</span><span class="se">\&quot;</span><span class="s">UTF-8</span><span class="se">\&quot;</span><span class="s">;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;PRAGMA locking_mode=EXCLUSIVE;&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SQLiteStore.close"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteStore.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close the SQLite connection.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="SQLiteStore.checkpoint"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteStore.checkpoint">[docs]</a>    <span class="k">def</span> <span class="nf">checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checkpoint the database, i.e. commit everything.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+</div></div>
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue">[docs]</a><span class="k">class</span> <span class="nc">SQLiteSingleHostUriQueue</span><span class="p">(</span><span class="n">SQLiteStore</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a queue that can be used for crawling a single host.</span>
+
+<span class="sd">    Internally there is only one queue for all URLs. Each URL is represented as</span>
+<span class="sd">    a tuple of the form: ``uri = (url, etag, mod_date, next_date, priority)``.</span>
+
+<span class="sd">    The queue is ordered using the ``next_date`` in ascending fashion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the simple uri queue.</span>
+
+<span class="sd">        This is a single queue working only with one host!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">SQLiteStore</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_name</span><span class="p">)</span>
+
+        <span class="c"># create the tables if they do not exist</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">executescript</span><span class="p">(</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">                CREATE TABLE IF NOT EXISTS queue(</span>
+<span class="s">                    url TEXT PRIMARY KEY ASC,</span>
+<span class="s">                    etag TEXT,</span>
+<span class="s">                    mod_date INTEGER,</span>
+<span class="s">                    next_date INTEGER,</span>
+<span class="s">                    priority INTEGER</span>
+<span class="s">                );</span>
+
+<span class="s">                CREATE INDEX IF NOT EXISTS queue_fifo ON queue(</span>
+<span class="s">                    next_date ASC,</span>
+<span class="s">                    priority ASC</span>
+<span class="s">                );</span>
+<span class="s">                &quot;&quot;&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue.add_uri"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.add_uri">[docs]</a>    <span class="k">def</span> <span class="nf">add_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uri</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a uri to the specified queue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;INSERT INTO queue</span>
+<span class="s">                (url, etag, mod_date, next_date, priority) VALUES</span>
+<span class="s">                (?, ?, ?, ?, ?)&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue.add_uris"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.add_uris">[docs]</a>    <span class="k">def</span> <span class="nf">add_uris</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">urls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a list of uris.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s">&quot;&quot;&quot;INSERT INTO queue</span>
+<span class="s">                (url, etag, mod_date, next_date, priority) VALUES</span>
+<span class="s">                (?, ?, ?, ?, ?)&quot;&quot;&quot;</span><span class="p">,</span> <span class="n">urls</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue.update_uri"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.update_uri">[docs]</a>    <span class="k">def</span> <span class="nf">update_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uri</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the uri.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;UPDATE queue SET</span>
+<span class="s">                etag=?, mod_date=?, next_date=?, priority=?</span>
+<span class="s">                WHERE url=?&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">,</span> <span class="n">url</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue.update_uris"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.update_uris">[docs]</a>    <span class="k">def</span> <span class="nf">update_uris</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uris</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the list of uris in the database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">update_uris</span> <span class="o">=</span> <span class="p">[(</span><span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">priority</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">priority</span><span class="p">)</span> <span class="ow">in</span> <span class="n">uris</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s">&quot;&quot;&quot;UPDATE queue SET</span>
+<span class="s">                etag=?, mod_date=?, next_date=?, priority=?</span>
+<span class="s">                WHERE url=?&quot;&quot;&quot;</span><span class="p">,</span> <span class="n">update_uris</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue.ignore_uri"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.ignore_uri">[docs]</a>    <span class="k">def</span> <span class="nf">ignore_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when an URI should be ignored. This is usually the case when</span>
+<span class="sd">        there is a HTTP 404 or recurring HTTP 500&#39;s.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_uri</span><span class="p">((</span><span class="n">url</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue.queue_head"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.queue_head">[docs]</a>    <span class="k">def</span> <span class="nf">queue_head</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the top `n` elements from the queue. By default, return the top</span>
+<span class="sd">        element from the queue.</span>
+
+<span class="sd">        If you specify `offset` the first `offset` entries are ignored.</span>
+
+<span class="sd">        Any entries with a `next_date` below `1000` are being ignored. This</span>
+<span class="sd">        enables the crawler to ignore URIs _and_ storing the status code.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT * FROM queue</span>
+<span class="s">                WHERE next_date &gt; 1000</span>
+<span class="s">                ORDER BY next_date ASC</span>
+<span class="s">                LIMIT ?</span>
+<span class="s">                OFFSET ?&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">offset</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;etag&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;mod_date&#39;</span><span class="p">],</span>
+                <span class="n">row</span><span class="p">[</span><span class="s">&#39;next_date&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;priority&#39;</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue.remove_uris"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.remove_uris">[docs]</a>    <span class="k">def</span> <span class="nf">remove_uris</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uris</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove all uris.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">del_uris</span> <span class="o">=</span> <span class="p">[(</span><span class="n">url</span><span class="p">,)</span> <span class="k">for</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">_etag</span><span class="p">,</span> <span class="n">_mod_date</span><span class="p">,</span> <span class="n">_next_date</span><span class="p">,</span> <span class="n">_priority</span><span class="p">)</span>
+            <span class="ow">in</span> <span class="n">uris</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s">&quot;DELETE FROM queue WHERE url=?&quot;</span><span class="p">,</span>
+                <span class="n">del_uris</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the number of known uris.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT count(url) FROM queue&quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue.all_uris"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.all_uris">[docs]</a>    <span class="k">def</span> <span class="nf">all_uris</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A generator for iterating over all available urls.</span>
+
+<span class="sd">        Note: does not return the full uri object, only the url. This will be</span>
+<span class="sd">        used to refill the unique uri filter upon restart.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT url FROM queue&quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="SQLiteSingleHostUriQueue.get_uri"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.get_uri">[docs]</a>    <span class="k">def</span> <span class="nf">get_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Mostly for debugging purposes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;SELECT * FROM queue WHERE url=?&quot;</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">url</span><span class="p">,))</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">row</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;etag&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;mod_date&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;next_date&#39;</span><span class="p">],</span>
+                    <span class="n">row</span><span class="p">[</span><span class="s">&#39;priority&#39;</span><span class="p">])</span>
+        <span class="k">raise</span> <span class="n">UriNotFound</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue">[docs]</a><span class="k">class</span> <span class="nc">SQLiteMultipleHostUriQueue</span><span class="p">(</span><span class="n">SQLiteStore</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A queue storage for multiple queues that can be used for crawling multiple</span>
+<span class="sd">    hosts simultaneously.</span>
+
+<span class="sd">    Internally all URLs are being stored in one table. Each queue has its own</span>
+<span class="sd">    INTEGER identifier.</span>
+
+<span class="sd">    Each URL is represented as a tuple of the form</span>
+<span class="sd">    ``uri = (url, queue, etag, mod_date, next_date, priority)``.</span>
+
+<span class="sd">    The queue is ordered using the ``next_date`` in ascending fashion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the simple uri queue.</span>
+
+<span class="sd">        This is a single queue working only with one host!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">SQLiteStore</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_name</span><span class="p">)</span>
+
+        <span class="c"># create the tables if they do not exist</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">executescript</span><span class="p">(</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">                CREATE TABLE IF NOT EXISTS queues(</span>
+<span class="s">                    url TEXT PRIMARY KEY ASC,</span>
+<span class="s">                    queue INTEGER,</span>
+<span class="s">                    etag TEXT,</span>
+<span class="s">                    mod_date INTEGER,</span>
+<span class="s">                    next_date INTEGER,</span>
+<span class="s">                    priority INTEGER</span>
+<span class="s">                );</span>
+
+<span class="s">                CREATE TABLE IF NOT EXISTS queue_identifiers(</span>
+<span class="s">                    queue INTEGER,</span>
+<span class="s">                    identifier TEXT,</span>
+<span class="s">                    PRIMARY KEY (queue, identifier)</span>
+<span class="s">                );</span>
+
+<span class="s">                CREATE INDEX IF NOT EXISTS queue_fifo ON queues(</span>
+<span class="s">                    queue,</span>
+<span class="s">                    next_date ASC</span>
+<span class="s">                );</span>
+<span class="s">                &quot;&quot;&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.add_uri"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_uri">[docs]</a>    <span class="k">def</span> <span class="nf">add_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uri</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the uri to the given queue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;INSERT INTO queues</span>
+<span class="s">                (url, queue, etag, mod_date, next_date, priority) VALUES</span>
+<span class="s">                (?, ?, ?, ?, ?, ?)&quot;&quot;&quot;</span><span class="p">,</span> <span class="n">uri</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.add_uris"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_uris">[docs]</a>    <span class="k">def</span> <span class="nf">add_uris</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uris</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the list of uris to the given queue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s">&quot;&quot;&quot;INSERT INTO queues</span>
+<span class="s">                (url, queue, etag, mod_date, next_date, priority) VALUES</span>
+<span class="s">                (?, ?,  ?, ?, ?, ?)&quot;&quot;&quot;</span><span class="p">,</span> <span class="n">uris</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.update_uri"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.update_uri">[docs]</a>    <span class="k">def</span> <span class="nf">update_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uri</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the uri.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;UPDATE queues SET queue=?,</span>
+<span class="s">                etag=?, mod_date=?, next_date=?, priority=?</span>
+<span class="s">                WHERE url=?&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">queue</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">,</span> <span class="n">url</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.update_uris"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.update_uris">[docs]</a>    <span class="k">def</span> <span class="nf">update_uris</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uris</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the list of uris in the database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">update_uris</span> <span class="o">=</span> <span class="p">[(</span><span class="n">queue</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">priority</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">priority</span><span class="p">)</span> <span class="ow">in</span> <span class="n">uris</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s">&quot;&quot;&quot;UPDATE queues SET queue=?,</span>
+<span class="s">                etag=?, mod_date=?, next_date=?, priority=?</span>
+<span class="s">                WHERE url=?&quot;&quot;&quot;</span><span class="p">,</span> <span class="n">update_uris</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.ignore_uri"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.ignore_uri">[docs]</a>    <span class="k">def</span> <span class="nf">ignore_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when an URI should be ignored. This is usually the case when</span>
+<span class="sd">        there is a HTTP 404 or recurring HTTP 500&#39;s.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_uri</span><span class="p">((</span><span class="n">url</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.queue_head"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.queue_head">[docs]</a>    <span class="k">def</span> <span class="nf">queue_head</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the top `n` elements from the `queue`. By default, return the top</span>
+<span class="sd">        element from the queue.</span>
+
+<span class="sd">        If you specify `offset` the first `offset` entries are ignored.</span>
+
+<span class="sd">        Any entries with a `next_date` below `1000` are being ignored. This</span>
+<span class="sd">        enables the crawler to ignore URIs _and_ storing the status code.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT * FROM queues</span>
+<span class="s">                WHERE queue = ?</span>
+<span class="s">                AND next_date &gt; 1000</span>
+<span class="s">                ORDER BY next_date ASC</span>
+<span class="s">                LIMIT ?</span>
+<span class="s">                OFFSET ?&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">queue</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">offset</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;queue&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;etag&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;mod_date&#39;</span><span class="p">],</span>
+                <span class="n">row</span><span class="p">[</span><span class="s">&#39;next_date&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;priority&#39;</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.remove_uris"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.remove_uris">[docs]</a>    <span class="k">def</span> <span class="nf">remove_uris</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uris</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove all uris.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">del_uris</span> <span class="o">=</span> <span class="p">[(</span><span class="n">url</span><span class="p">,)</span> <span class="k">for</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">_queue</span><span class="p">,</span> <span class="n">_etag</span><span class="p">,</span> <span class="n">_mod_date</span><span class="p">,</span> <span class="n">_queue</span><span class="p">,</span>
+                <span class="n">_next_date</span><span class="p">)</span> <span class="ow">in</span> <span class="n">uris</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s">&quot;DELETE FROM queues WHERE url=?&quot;</span><span class="p">,</span>
+                <span class="n">del_uris</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.qsize"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.qsize">[docs]</a>    <span class="k">def</span> <span class="nf">qsize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the number of known uris.</span>
+
+<span class="sd">        @param queue: if this is `None`, the size of all queues is returned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">queue</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT count(url) FROM queues</span>
+<span class="s">                    WHERE queue=?&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">queue</span><span class="p">,))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT count(url) FROM queues&quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.all_uris"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.all_uris">[docs]</a>    <span class="k">def</span> <span class="nf">all_uris</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A generator for iterating over all available urls.</span>
+
+<span class="sd">        Note: does not return the full uri object, only the url. This will be</span>
+<span class="sd">        used to refill the unique uri filter upon restart.</span>
+
+<span class="sd">        @param queue: int of the queue to use. If `None`, all URLs will be</span>
+<span class="sd">            returned.</span>
+<span class="sd">        @return: URL as str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">queue</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT url FROM queues WHERE queue=?&quot;&quot;&quot;</span><span class="p">,</span>
+                    <span class="n">queue</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT url FROM queues&quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.get_uri"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_uri">[docs]</a>    <span class="k">def</span> <span class="nf">get_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the *URI* tuple for the given ``URL``.</span>
+
+<span class="sd">        @return: (url, queue, etag, mod_date, next_date, priority)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;SELECT * FROM queues WHERE url=?&quot;</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">url</span><span class="p">,))</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">row</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;queue&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;etag&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;mod_date&#39;</span><span class="p">],</span>
+                    <span class="n">row</span><span class="p">[</span><span class="s">&#39;next_date&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;priority&#39;</span><span class="p">])</span>
+        <span class="k">raise</span> <span class="n">UriNotFound</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.get_all_queues"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_all_queues">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_queues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A generator for iterating over all available queues.</span>
+
+<span class="sd">        @return: (queue, identifier) as (int, str)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;SELECT * FROM queue_identifiers&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s">&#39;queue&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;identifier&#39;</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.get_queue_count"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_queue_count">[docs]</a>    <span class="k">def</span> <span class="nf">get_queue_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the number of available queues.</span>
+
+<span class="sd">        @return: the number of available queues.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;SELECT count(queue) as queues FROM queue_identifiers&quot;</span><span class="p">)</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;queues&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;queues&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.get_queue_for_ident"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_queue_for_ident">[docs]</a>    <span class="k">def</span> <span class="nf">get_queue_for_ident</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the ``queue`` for the given identifier if there is one.</span>
+<span class="sd">        Raises a `QueueNotFound` error if there is no queue with the</span>
+<span class="sd">        identifier.</span>
+
+<span class="sd">        @param identifier: str of the identifier</span>
+<span class="sd">        @return: the queue&#39;s id as int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;SELECT queue FROM queue_identifiers WHERE</span>
+<span class="s">                identifier=?&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">identifier</span><span class="p">,))</span>
+
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">row</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;queue&#39;</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="n">QueueNotFound</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SQLiteMultipleHostUriQueue.add_or_create_queue"><a class="viewcode-back" href="../../../api/queues.html#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_or_create_queue">[docs]</a>    <span class="k">def</span> <span class="nf">add_or_create_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a new queue with the ``identifier``. If the queue already exists,</span>
+<span class="sd">        it&#39;s id is returned.</span>
+
+<span class="sd">        @return: The new queue&#39;s id</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_queue_for_ident</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">QueueNotFound</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;SELECT MAX(queue) AS id FROM queue_identifiers&quot;</span><span class="p">)</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]:</span>
+            <span class="n">next_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">next_id</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;INSERT INTO queue_identifiers VALUES(?,?)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">next_id</span><span class="p">,</span> <span class="n">identifier</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">next_id</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" >spyder</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

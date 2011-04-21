@@ -1,0 +1,242 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spyder.core.worker &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="spyder" href="../../spyder.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" accesskey="U">spyder</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spyder.core.worker</h1><div class="highlight"><pre>
+<span class="c">#</span>
+<span class="c"># Copyright (c) 2011 Daniel Truemper truemped@googlemail.com</span>
+<span class="c">#</span>
+<span class="c"># worker.py 10-Jan-2011</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+<span class="c">#</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains a ZeroMQ based Worker abstraction.</span>
+
+<span class="sd">The `ZmqWorker` class expects an incoming and one outgoing `zmq.socket` as well</span>
+<span class="sd">as an instance of the `spyder.core.mgmt.ZmqMgmt` class.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+
+<span class="kn">from</span> <span class="nn">zmq.eventloop.ioloop</span> <span class="kn">import</span> <span class="n">IOLoop</span>
+<span class="kn">from</span> <span class="nn">zmq.eventloop.zmqstream</span> <span class="kn">import</span> <span class="n">ZMQStream</span>
+
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER</span>
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER_QUIT</span>
+<span class="kn">from</span> <span class="nn">spyder.core.log</span> <span class="kn">import</span> <span class="n">LoggingMixin</span>
+<span class="kn">from</span> <span class="nn">spyder.core.messages</span> <span class="kn">import</span> <span class="n">DataMessage</span>
+
+
+<div class="viewcode-block" id="ZmqWorker"><a class="viewcode-back" href="../../../api/workerprocess.html#spyder.core.worker.ZmqWorker">[docs]</a><span class="k">class</span> <span class="nc">ZmqWorker</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">LoggingMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is the ZMQ worker implementation.</span>
+
+<span class="sd">    The worker will register a :class:`ZMQStream` with the configured</span>
+<span class="sd">    :class:`zmq.Socket` and :class:`zmq.eventloop.ioloop.IOLoop` instance.</span>
+
+<span class="sd">    Upon `ZMQStream.on_recv` the configured `processors` will be executed</span>
+<span class="sd">    with the deserialized context and the result will be published through the</span>
+<span class="sd">    configured `zmq.socket`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">insocket</span><span class="p">,</span> <span class="n">outsocket</span><span class="p">,</span> <span class="n">mgmt</span><span class="p">,</span> <span class="n">processing</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">,</span>
+            <span class="n">log_level</span><span class="p">,</span> <span class="n">io_loop</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the `ZMQStream` with the `insocket` and `io_loop` and store</span>
+<span class="sd">        the `outsocket`.</span>
+
+<span class="sd">        `insocket` should be of the type `zmq.socket.PULL` `outsocket` should</span>
+<span class="sd">        be of the type `zmq.socket.PUB`</span>
+
+<span class="sd">        `mgmt` is an instance of `spyder.core.mgmt.ZmqMgmt` that handles</span>
+<span class="sd">        communication between master and worker processes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">LoggingMixin</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">,</span> <span class="n">log_level</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insocket</span> <span class="o">=</span> <span class="n">insocket</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_io_loop</span> <span class="o">=</span> <span class="n">io_loop</span> <span class="ow">or</span> <span class="n">IOLoop</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_outsocket</span> <span class="o">=</span> <span class="n">outsocket</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_processing</span> <span class="o">=</span> <span class="n">processing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mgmt</span> <span class="o">=</span> <span class="n">mgmt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_stream</span> <span class="o">=</span> <span class="n">ZMQStream</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_insocket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_io_loop</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_stream</span> <span class="o">=</span> <span class="n">ZMQStream</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_outsocket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_io_loop</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_quit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The worker is quitting, stop receiving messages.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER_QUIT</span> <span class="o">==</span> <span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_receive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        We have a message!</span>
+
+<span class="sd">        `msg` is a serialized version of a `DataMessage`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">DataMessage</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># this is the real work we want to do</span>
+            <span class="n">curi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_processing</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">curi</span><span class="p">)</span>
+            <span class="n">message</span><span class="o">.</span><span class="n">curi</span> <span class="o">=</span> <span class="n">curi</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c"># catch any uncaught exception and only log it as CRITICAL</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                    <span class="s">&quot;worker::Uncaught exception executing the worker for URL </span><span class="si">%s</span><span class="s">!&quot;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">,))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s">&quot;worker::</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),))</span>
+
+        <span class="c"># finished, now send the result back to the master</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">serialize</span><span class="p">())</span>
+
+<div class="viewcode-block" id="ZmqWorker.start"><a class="viewcode-back" href="../../../api/workerprocess.html#spyder.core.worker.ZmqWorker.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start the worker.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mgmt</span><span class="o">.</span><span class="n">add_callback</span><span class="p">(</span><span class="n">ZMQ_SPYDER_MGMT_WORKER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_quit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_stream</span><span class="o">.</span><span class="n">on_recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_receive</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ZmqWorker.stop"><a class="viewcode-back" href="../../../api/workerprocess.html#spyder.core.worker.ZmqWorker.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Stop the worker.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># stop receiving</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_stream</span><span class="o">.</span><span class="n">stop_on_recv</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mgmt</span><span class="o">.</span><span class="n">remove_callback</span><span class="p">(</span><span class="n">ZMQ_SPYDER_MGMT_WORKER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_quit</span><span class="p">)</span>
+        <span class="c"># but work on anything we might already have</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_stream</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_stream</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ZmqWorker.close"><a class="viewcode-back" href="../../../api/workerprocess.html#spyder.core.worker.ZmqWorker.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close all open sockets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_outsocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+</div></div>
+<div class="viewcode-block" id="AsyncZmqWorker"><a class="viewcode-back" href="../../../api/workerprocess.html#spyder.core.worker.AsyncZmqWorker">[docs]</a><span class="k">class</span> <span class="nc">AsyncZmqWorker</span><span class="p">(</span><span class="n">ZmqWorker</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Asynchronous version of the `ZmqWorker`.</span>
+
+<span class="sd">    This worker differs in that the _processing method should ahve two</span>
+<span class="sd">    arguments: the message and the socket where the result should be sen to!</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_receive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        We have a message!</span>
+
+<span class="sd">        Instead of the synchronous version we do not handle serializing and</span>
+<span class="sd">        sending the result to the `self._outsocket`. This has to be handled by</span>
+<span class="sd">        the `self._processing` method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">DataMessage</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_processing</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_stream</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c"># catch any uncaught exception and only log it as CRITICAL</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s">&quot;Uncaught exception executing the worker!&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">())</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" >spyder</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

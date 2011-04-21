@@ -1,0 +1,291 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spyder.core.master &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="spyder" href="../../spyder.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" accesskey="U">spyder</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spyder.core.master</h1><div class="highlight"><pre>
+<span class="c">#</span>
+<span class="c"># Copyright (c) 2011 Daniel Truemper truemped@googlemail.com</span>
+<span class="c">#</span>
+<span class="c"># master.py 31-Jan-2011</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+<span class="c">#</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A ZeroMQ master, i.e. the producer of URIs.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">from</span> <span class="nn">Queue</span> <span class="kn">import</span> <span class="n">Empty</span>
+
+<span class="kn">from</span> <span class="nn">zmq.eventloop.ioloop</span> <span class="kn">import</span> <span class="n">IOLoop</span><span class="p">,</span> <span class="n">PeriodicCallback</span>
+<span class="kn">from</span> <span class="nn">zmq.eventloop.zmqstream</span> <span class="kn">import</span> <span class="n">ZMQStream</span>
+
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER</span>
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER_AVAIL</span>
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER_QUIT</span>
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK</span>
+<span class="kn">from</span> <span class="nn">spyder.core.messages</span> <span class="kn">import</span> <span class="n">DataMessage</span>
+<span class="kn">from</span> <span class="nn">spyder.core.log</span> <span class="kn">import</span> <span class="n">LoggingMixin</span>
+
+
+<div class="viewcode-block" id="ZmqMaster"><a class="viewcode-back" href="../../../api/masterprocess.html#spyder.core.master.ZmqMaster">[docs]</a><span class="k">class</span> <span class="nc">ZmqMaster</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">LoggingMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is the ZMQ Master implementation.</span>
+
+<span class="sd">    The master will send :class:`DataMessage` object to the workers and receive</span>
+<span class="sd">    the processed messages. Unknown links will then be added to the frontier.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">identity</span><span class="p">,</span> <span class="n">insocket</span><span class="p">,</span> <span class="n">outsocket</span><span class="p">,</span> <span class="n">mgmt</span><span class="p">,</span> <span class="n">frontier</span><span class="p">,</span>
+            <span class="n">log_handler</span><span class="p">,</span> <span class="n">log_level</span><span class="p">,</span> <span class="n">io_loop</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the master.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">LoggingMixin</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">,</span> <span class="n">log_level</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_identity</span> <span class="o">=</span> <span class="n">identity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_io_loop</span> <span class="o">=</span> <span class="n">io_loop</span> <span class="ow">or</span> <span class="n">IOLoop</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_stream</span> <span class="o">=</span> <span class="n">ZMQStream</span><span class="p">(</span><span class="n">insocket</span><span class="p">,</span> <span class="n">io_loop</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_stream</span> <span class="o">=</span> <span class="n">ZMQStream</span><span class="p">(</span><span class="n">outsocket</span><span class="p">,</span> <span class="n">io_loop</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mgmt</span> <span class="o">=</span> <span class="n">mgmt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_frontier</span> <span class="o">=</span> <span class="n">frontier</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_running</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_available_workers</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c"># periodically check if there are pending URIs to crawl</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_update</span> <span class="o">=</span> <span class="n">PeriodicCallback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_send_next_uri</span><span class="p">,</span>
+                <span class="n">settings</span><span class="o">.</span><span class="n">MASTER_PERIODIC_UPDATE_INTERVAL</span><span class="p">,</span> <span class="n">io_loop</span><span class="o">=</span><span class="n">io_loop</span><span class="p">)</span>
+        <span class="c"># start this periodic callback when you are waiting for the workers to</span>
+        <span class="c"># finish</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_shutdown</span> <span class="o">=</span> <span class="n">PeriodicCallback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shutdown_wait</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span>
+                <span class="n">io_loop</span><span class="o">=</span><span class="n">io_loop</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shutdown_counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;zmqmaster::initialized&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ZmqMaster.start"><a class="viewcode-back" href="../../../api/masterprocess.html#spyder.core.master.ZmqMaster.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start the master.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mgmt</span><span class="o">.</span><span class="n">add_callback</span><span class="p">(</span><span class="n">ZMQ_SPYDER_MGMT_WORKER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_worker_msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_stream</span><span class="o">.</span><span class="n">on_recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_receive_processed_uri</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_update</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_running</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;zmqmaster::starting...&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ZmqMaster.stop"><a class="viewcode-back" href="../../../api/masterprocess.html#spyder.core.master.ZmqMaster.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Stop the master gracefully, i.e. stop sending more URIs that should get</span>
+<span class="sd">        processed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;zmqmaster::stopping...&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_running</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_update</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ZmqMaster.shutdown"><a class="viewcode-back" href="../../../api/masterprocess.html#spyder.core.master.ZmqMaster.shutdown">[docs]</a>    <span class="k">def</span> <span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Shutdown the master and notify the workers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;zmqmaster::shutdown...&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mgmt</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="n">ZMQ_SPYDER_MGMT_WORKER</span><span class="p">,</span>
+                <span class="n">identity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_identity</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">ZMQ_SPYDER_MGMT_WORKER_QUIT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_frontier</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_shutdown</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</div>
+    <span class="k">def</span> <span class="nf">_shutdown_wait</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Callback called from `self._periodic_shutdown` in order to wait for the</span>
+<span class="sd">        workers to finish.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shutdown_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="mi">0</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_available_workers</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shutdown_counter</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_shutdown</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;zmqmaster::bye bye...&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_io_loop</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ZmqMaster.close"><a class="viewcode-back" href="../../../api/masterprocess.html#spyder.core.master.ZmqMaster.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close all open sockets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ZmqMaster.finished"><a class="viewcode-back" href="../../../api/masterprocess.html#spyder.core.master.ZmqMaster.finished">[docs]</a>    <span class="k">def</span> <span class="nf">finished</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return true if all uris have been processed and the master is ready to</span>
+<span class="sd">        be shut down.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_running</span>
+</div>
+    <span class="k">def</span> <span class="nf">_worker_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when a worker has sent a :class:`MgmtMessage`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER_AVAIL</span> <span class="o">==</span> <span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_available_workers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">identity</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;zmqmaster::A new worker is available (</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span>
+                    <span class="n">msg</span><span class="o">.</span><span class="n">identity</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_send_next_uri</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK</span> <span class="o">==</span> <span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">identity</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_available_workers</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_available_workers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">identity</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;zmqmaster::Removing worker (</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span>
+                        <span class="n">msg</span><span class="o">.</span><span class="n">identity</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_send_next_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        See if there are more uris to process and send them to the workers if</span>
+<span class="sd">        there are any.</span>
+
+<span class="sd">        At this point there is a very small heuristic in order to maximize the</span>
+<span class="sd">        throughput: try to keep the `self._out_stream._send_queue` full.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_running</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Master is not running, not sending more uris&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">num_workers</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_available_workers</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_running</span> <span class="ow">and</span> <span class="n">num_workers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_stream</span><span class="o">.</span><span class="n">_send_queue</span><span class="o">.</span><span class="n">qsize</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">num_workers</span> <span class="o">*</span> <span class="mi">4</span><span class="p">:</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">next_curi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frontier</span><span class="o">.</span><span class="n">get_next</span><span class="p">()</span>
+                <span class="k">except</span> <span class="n">Empty</span><span class="p">:</span>
+                    <span class="c"># well, frontier has nothing to process right now</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;zmqmaster::Nothing to crawl right now&quot;</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;zmqmaster::Begin crawling next URL (</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span>
+                        <span class="n">next_curi</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="n">DataMessage</span><span class="p">(</span><span class="n">identity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_identity</span><span class="p">,</span> <span class="n">curi</span><span class="o">=</span><span class="n">next_curi</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_out_stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">serialize</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">_receive_processed_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw_msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive and reschedule an URI that has been processed. Additionally add</span>
+<span class="sd">        all extracted URLs to the frontier.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">DataMessage</span><span class="p">(</span><span class="n">raw_msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;zmqmaster::Crawling URL (</span><span class="si">%s</span><span class="s">) finished&quot;</span> <span class="o">%</span>
+                <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="mi">200</span> <span class="o">&lt;=</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&lt;</span> <span class="mi">300</span><span class="p">:</span>
+                <span class="c"># we have some kind of success code! yay</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_frontier</span><span class="o">.</span><span class="n">process_successful_crawl</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="mi">300</span> <span class="o">&lt;=</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&lt;</span> <span class="mi">400</span><span class="p">:</span>
+                <span class="c"># Some kind of redirect code. This will only happen if the number</span>
+                <span class="c"># of redirects exceeds settings.MAX_REDIRECTS</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_frontier</span><span class="o">.</span><span class="n">process_redirect</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="mi">400</span> <span class="o">&lt;=</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&lt;</span> <span class="mi">500</span><span class="p">:</span>
+                <span class="c"># some kind of error where the resource could not be found.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_frontier</span><span class="o">.</span><span class="n">process_not_found</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="mi">500</span> <span class="o">&lt;=</span> <span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&lt;</span> <span class="mi">600</span><span class="p">:</span>
+                <span class="c"># some kind of server error</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_frontier</span><span class="o">.</span><span class="n">process_server_error</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">curi</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s">&quot;zmqmaster::Uncaught exception in the sink&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s">&quot;zmqmaster::</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_send_next_uri</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" >spyder</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

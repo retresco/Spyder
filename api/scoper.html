@@ -1,0 +1,152 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Crawl Scoper &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../index.html" />
+    <link rel="up" title="Spyder API" href="spyderapi.html" />
+    <link rel="next" title="Sink" href="sink.html" />
+    <link rel="prev" title="Link Extractors" href="extractor.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sink.html" title="Sink"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="extractor.html" title="Link Extractors"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" accesskey="U">Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-spyder.processor.scoper">
+<span id="crawl-scoper"></span><h1>Crawl Scoper<a class="headerlink" href="#module-spyder.processor.scoper" title="Permalink to this headline">¶</a></h1>
+<p>The <em>Crawl Scope</em> defines which <em>URLs</em> the <em>Spyder</em> should process. The main
+usecases for them are:</p>
+<ul class="simple">
+<li>only spider content from the <em>Seed</em> Hosts</li>
+<li>do not spider images, css, videos</li>
+</ul>
+<p>and there are probably a lot of other reasons you want to have at least one the
+scoper configured, otherwise you might end up downloading the internet.</p>
+<p>So each scoper should iterate over the
+<tt class="docutils literal"><span class="pre">curi.optional_vars[CURI_EXTRACTED_URLS]</span></tt> and determine if it should be
+downloaded or not.</p>
+<p>The <a class="reference internal" href="#spyder.processor.scoper.RegexScoper" title="spyder.processor.scoper.RegexScoper"><tt class="xref py py-class docutils literal"><span class="pre">RegexScoper</span></tt></a> maintains a list of regular expressions that define
+the crawl scope. Two classes of expressions exist: positive and negative.
+The initial decision of the scoper is to not download its content. If a regex
+from the positive list matches, and no regex from the negative list matches,
+the <em>URL</em> is marked for downloading. In any other case, the <em>URL</em> will be
+abandoned.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">We should really split up the regex scoper and allow the user to
+configure more than just one scoper.</p>
+</div>
+<dl class="class">
+<dt id="spyder.processor.scoper.RegexScoper">
+<em class="property">class </em><tt class="descclassname">spyder.processor.scoper.</tt><tt class="descname">RegexScoper</tt><big>(</big><em>settings</em><big>)</big><a class="reference internal" href="../_modules/spyder/processor/scoper.html#RegexScoper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.processor.scoper.RegexScoper" title="Permalink to this definition">¶</a></dt>
+<dd><p>The scoper based on regular expressions.</p>
+<p>There are two settings that influence this scoper:</p>
+<ol class="arabic simple">
+<li><tt class="docutils literal"><span class="pre">settings.REGEX_SCOPE_POSITIVE</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">settings.REGEX_SCOPE_NEGATIVE</span></tt></li>
+</ol>
+<p>Both have to be a <tt class="docutils literal"><span class="pre">list</span></tt>. The scoper is executed in the
+<tt class="xref py py-meth docutils literal"><span class="pre">__call__()</span></tt> method.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="extractor.html"
+                        title="previous chapter">Link Extractors</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="sink.html"
+                        title="next chapter">Sink</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/scoper.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sink.html" title="Sink"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="extractor.html" title="Link Extractors"
+             >previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" >Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

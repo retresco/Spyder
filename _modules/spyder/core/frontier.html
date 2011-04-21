@@ -1,0 +1,747 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spyder.core.frontier &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="spyder" href="../../spyder.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" accesskey="U">spyder</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spyder.core.frontier</h1><div class="highlight"><pre>
+<span class="c">#</span>
+<span class="c"># Copyright (c) 2011 Daniel Truemper truemped@googlemail.com</span>
+<span class="c">#</span>
+<span class="c"># frontier.py 26-Jan-2011</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+<span class="c">#</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Generic Frontier implementation.</span>
+
+<span class="sd">The :class:`SingleHostFrontier` will only select URIs from the queues by</span>
+<span class="sd">iterating over all available queues and added into a priority queue.</span>
+
+<span class="sd">The priority is calculated based on the timestamp it should be crawled next.</span>
+
+<span class="sd">In contrast to the :mod:`spyder.core.sqlitequeues` module, URIs in this module</span>
+<span class="sd">are represented as :class:`spyder.thrift.gen.ttypes.CrawlUri`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">timedelta</span>
+
+<span class="kn">from</span> <span class="nn">Queue</span> <span class="kn">import</span> <span class="n">PriorityQueue</span><span class="p">,</span> <span class="n">Empty</span><span class="p">,</span> <span class="n">Full</span>
+<span class="kn">from</span> <span class="nn">urlparse</span> <span class="kn">import</span> <span class="n">urlparse</span>
+
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">CURI_SITE_USERNAME</span><span class="p">,</span> <span class="n">CURI_SITE_PASSWORD</span>
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">CURI_EXTRACTED_URLS</span>
+<span class="kn">from</span> <span class="nn">spyder.core.dnscache</span> <span class="kn">import</span> <span class="n">DnsCache</span>
+<span class="kn">from</span> <span class="nn">spyder.time</span> <span class="kn">import</span> <span class="n">serialize_date_time</span><span class="p">,</span> <span class="n">deserialize_date_time</span>
+<span class="kn">from</span> <span class="nn">spyder.core.log</span> <span class="kn">import</span> <span class="n">LoggingMixin</span>
+<span class="kn">from</span> <span class="nn">spyder.core.prioritizer</span> <span class="kn">import</span> <span class="n">SimpleTimestampPrioritizer</span>
+<span class="kn">from</span> <span class="nn">spyder.core.sqlitequeues</span> <span class="kn">import</span> <span class="n">SQLiteSingleHostUriQueue</span>
+<span class="kn">from</span> <span class="nn">spyder.core.sqlitequeues</span> <span class="kn">import</span> <span class="n">SQLiteMultipleHostUriQueue</span>
+<span class="kn">from</span> <span class="nn">spyder.core.uri_uniq</span> <span class="kn">import</span> <span class="n">UniqueUriFilter</span>
+<span class="kn">from</span> <span class="nn">spyder.thrift.gen.ttypes</span> <span class="kn">import</span> <span class="n">CrawlUri</span>
+<span class="kn">from</span> <span class="nn">spyder.import_util</span> <span class="kn">import</span> <span class="n">import_class</span>
+
+
+<span class="c"># some default port numbers as of /etc/services</span>
+<span class="n">PROTOCOLS_DEFAULT_PORT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&quot;http&quot;</span><span class="p">:</span> <span class="mi">80</span><span class="p">,</span>
+    <span class="s">&quot;https&quot;</span><span class="p">:</span> <span class="mi">443</span><span class="p">,</span>
+    <span class="s">&quot;ftp&quot;</span><span class="p">:</span> <span class="mi">21</span><span class="p">,</span>
+    <span class="s">&quot;ftps&quot;</span><span class="p">:</span> <span class="mi">990</span><span class="p">,</span>
+    <span class="s">&quot;sftp&quot;</span><span class="p">:</span> <span class="mi">115</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="AbstractBaseFrontier"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier">[docs]</a><span class="k">class</span> <span class="nc">AbstractBaseFrontier</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">LoggingMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A base class for implementing frontiers.</span>
+
+<span class="sd">    Basically this class provides the different general methods and</span>
+<span class="sd">    configuration parameters used for frontiers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">,</span> <span class="n">front_end_queues</span><span class="p">,</span> <span class="n">prioritizer</span><span class="p">,</span>
+        <span class="n">unique_hash</span><span class="o">=</span><span class="s">&#39;sha1&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the frontier and instantiate the</span>
+<span class="sd">        :class:`SQLiteSingleHostUriQueue`.</span>
+
+<span class="sd">        The default frontier we will use the `sha1` hash function for the</span>
+<span class="sd">        unique uri filter. For very large crawls you might want to use a</span>
+<span class="sd">        larger hash function (`sha512`, e.g.)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">LoggingMixin</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">,</span> <span class="n">settings</span><span class="o">.</span><span class="n">LOG_LEVEL_MASTER</span><span class="p">)</span>
+        <span class="c"># front end queue</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prioritizer</span> <span class="o">=</span> <span class="n">prioritizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span> <span class="o">=</span> <span class="n">front_end_queues</span>
+        <span class="c"># checkpointing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_checkpoint_interval</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_CHECKPOINTING</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_uris_added</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c"># the heap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_heap</span> <span class="o">=</span> <span class="n">PriorityQueue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_HEAP_SIZE</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_heap_min_size</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_HEAP_MIN</span>
+
+        <span class="c"># a list of uris currently being crawled.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_uris</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="c"># dns cache</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dns_cache</span> <span class="o">=</span> <span class="n">DnsCache</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
+        <span class="c"># unique uri filter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_unique_uri</span> <span class="o">=</span> <span class="n">UniqueUriFilter</span><span class="p">(</span><span class="n">unique_hash</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">all_uris</span><span class="p">():</span>
+            <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unique_uri</span><span class="o">.</span><span class="n">is_known</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">add_if_unknown</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="c"># the sinks</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sinks</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c"># timezone</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timezone</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">LOCAL_TIMEZONE</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;frontier::initialized&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AbstractBaseFrontier.add_sink"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier.add_sink">[docs]</a>    <span class="k">def</span> <span class="nf">add_sink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sink</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a sink to the frontier. A sink will be responsible for the long</span>
+<span class="sd">        term storage of the crawled contents.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sinks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sink</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AbstractBaseFrontier.add_uri"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier.add_uri">[docs]</a>    <span class="k">def</span> <span class="nf">add_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the specified :class:`CrawlUri` to the frontier.</span>
+
+<span class="sd">        `next_date` is a datetime object for the next time the uri should be</span>
+<span class="sd">        crawled.</span>
+
+<span class="sd">        Note: time based crawling is never strict, it is generally used as some</span>
+<span class="sd">        kind of prioritization.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unique_uri</span><span class="o">.</span><span class="n">is_known</span><span class="p">(</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">add_if_unknown</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+            <span class="c"># we already know this uri</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;frontier::Trying to update a known uri... &quot;</span> <span class="o">+</span> \
+                    <span class="s">&quot;(</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">,))</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;frontier::Adding &#39;</span><span class="si">%s</span><span class="s">&#39; to the frontier&quot;</span> <span class="o">%</span> <span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">add_uri</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_uri_from_curi</span><span class="p">(</span><span class="n">curi</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_maybe_checkpoint</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="AbstractBaseFrontier.update_uri"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier.update_uri">[docs]</a>    <span class="k">def</span> <span class="nf">update_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update a given uri.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">update_uri</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_uri_from_curi</span><span class="p">(</span><span class="n">curi</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_maybe_checkpoint</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="AbstractBaseFrontier.get_next"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier.get_next">[docs]</a>    <span class="k">def</span> <span class="nf">get_next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the next uri scheduled for crawling.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heap</span><span class="o">.</span><span class="n">qsize</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heap_min_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_heap</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">_next_date</span><span class="p">,</span> <span class="n">next_uri</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heap</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">Empty</span><span class="p">:</span>
+            <span class="c"># heap is empty, there is nothing to crawl right now!</span>
+            <span class="c"># maybe log this in the future</span>
+            <span class="k">raise</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crawluri_from_uri</span><span class="p">(</span><span class="n">next_uri</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AbstractBaseFrontier.close"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close the underlying frontend queues.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">checkpoint</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+    <span class="k">def</span> <span class="nf">_add_to_heap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uri</span><span class="p">,</span> <span class="n">next_date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add an URI to the heap that is ready to be crawled.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_heap</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">((</span><span class="n">next_date</span><span class="p">,</span> <span class="n">uri</span><span class="p">))</span>
+        <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">_etag</span><span class="p">,</span> <span class="n">_mod_date</span><span class="p">,</span> <span class="n">_next_date</span><span class="p">,</span> <span class="n">_prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_uris</span><span class="p">[</span><span class="n">url</span><span class="p">]</span> <span class="o">=</span> <span class="n">uri</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;frontier::Adding &#39;</span><span class="si">%s</span><span class="s">&#39; to the heap&quot;</span> <span class="o">%</span> <span class="n">url</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_reschedule_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the `next_crawl_date` for :class:`CrawlUri`s.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">prio</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prioritizer</span><span class="o">.</span><span class="n">calculate_priority</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_timezone</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">prio</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">((</span><span class="n">now</span> <span class="o">+</span> <span class="n">delta</span><span class="p">)</span><span class="o">.</span><span class="n">timetuple</span><span class="p">()))</span>
+
+    <span class="k">def</span> <span class="nf">_ignore_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Ignore a :class:`CrawlUri` from now on.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">ignore_uri</span><span class="p">(</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">curi</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_uri_from_curi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create the uri tuple from the :class:`CrawlUri` and calculate the</span>
+<span class="sd">        priority.</span>
+
+<span class="sd">        Overwrite this method in more specific frontiers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">etag</span> <span class="o">=</span> <span class="n">mod_date</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">curi</span><span class="o">.</span><span class="n">rep_header</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&quot;Etag&quot;</span> <span class="ow">in</span> <span class="n">curi</span><span class="o">.</span><span class="n">rep_header</span><span class="p">:</span>
+                <span class="n">etag</span> <span class="o">=</span> <span class="n">curi</span><span class="o">.</span><span class="n">rep_header</span><span class="p">[</span><span class="s">&quot;Etag&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s">&quot;Last-Modified&quot;</span> <span class="ow">in</span> <span class="n">curi</span><span class="o">.</span><span class="n">rep_header</span><span class="p">:</span>
+                <span class="n">mod_date</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">deserialize_date_time</span><span class="p">(</span>
+                    <span class="n">curi</span><span class="o">.</span><span class="n">rep_header</span><span class="p">[</span><span class="s">&quot;Last-Modified&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">timetuple</span><span class="p">())</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">mod_date</span> <span class="ow">and</span> <span class="s">&#39;Date&#39;</span> <span class="ow">in</span> <span class="n">curi</span><span class="o">.</span><span class="n">rep_header</span><span class="p">:</span>
+                <span class="n">mod_date</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">deserialize_date_time</span><span class="p">(</span>
+                    <span class="n">curi</span><span class="o">.</span><span class="n">rep_header</span><span class="p">[</span><span class="s">&quot;Date&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">timetuple</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="n">mod_date</span><span class="p">:</span>
+            <span class="c"># only reschedule if it has been crawled before</span>
+            <span class="p">(</span><span class="n">prio</span><span class="p">,</span> <span class="n">next_crawl_date</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reschedule_uri</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">prio</span><span class="p">,</span> <span class="n">next_crawl_date</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_timezone</span><span class="p">)</span><span class="o">.</span><span class="n">timetuple</span><span class="p">()))</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_crawl_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_crawluri_from_uri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uri</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert an URI tuple to a :class:`CrawlUri`.</span>
+
+<span class="sd">        Replace the hostname with the real IP in order to cache DNS queries.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">_next_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+
+        <span class="n">parsed_url</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="c"># dns resolution and caching</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">parsed_url</span><span class="o">.</span><span class="n">port</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">port</span><span class="p">:</span>
+            <span class="n">port</span> <span class="o">=</span> <span class="n">PROTOCOLS_DEFAULT_PORT</span><span class="p">[</span><span class="n">parsed_url</span><span class="o">.</span><span class="n">scheme</span><span class="p">]</span>
+
+        <span class="n">effective_netloc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dns_cache</span><span class="p">[</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parsed_url</span><span class="o">.</span><span class="n">hostname</span><span class="p">,</span>
+            <span class="n">port</span><span class="p">)]</span>
+
+        <span class="n">curi</span> <span class="o">=</span> <span class="n">CrawlUri</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">curi</span><span class="o">.</span><span class="n">effective_url</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">parsed_url</span><span class="o">.</span><span class="n">netloc</span><span class="p">,</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>
+                <span class="n">effective_netloc</span><span class="p">)</span>
+        <span class="n">curi</span><span class="o">.</span><span class="n">current_priority</span> <span class="o">=</span> <span class="n">prio</span>
+        <span class="n">curi</span><span class="o">.</span><span class="n">req_header</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">etag</span><span class="p">:</span>
+            <span class="n">curi</span><span class="o">.</span><span class="n">req_header</span><span class="p">[</span><span class="s">&quot;Etag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">etag</span>
+        <span class="k">if</span> <span class="n">mod_date</span><span class="p">:</span>
+            <span class="n">mod_date_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">mod_date</span><span class="p">)</span>
+            <span class="n">curi</span><span class="o">.</span><span class="n">req_header</span><span class="p">[</span><span class="s">&quot;Last-Modified&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serialize_date_time</span><span class="p">(</span>
+                    <span class="n">mod_date_time</span><span class="p">)</span>
+
+        <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">parsed_url</span><span class="o">.</span><span class="n">username</span> <span class="ow">and</span> <span class="n">parsed_url</span><span class="o">.</span><span class="n">password</span><span class="p">:</span>
+            <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_SITE_USERNAME</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">parsed_url</span><span class="o">.</span><span class="n">username</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+            <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_SITE_PASSWORD</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">parsed_url</span><span class="o">.</span><span class="n">password</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">curi</span>
+
+    <span class="k">def</span> <span class="nf">_update_heap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Abstract method. Implement this in the actual Frontier.</span>
+
+<span class="sd">        The implementation should really only add uris to the heap if they can</span>
+<span class="sd">        be downloaded right away.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_maybe_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">force_checkpoint</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Periodically checkpoint the state db.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_uris_added</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_uris_added</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_checkpoint_interval</span> <span class="ow">or</span> <span class="n">force_checkpoint</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">checkpoint</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_uris_added</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="AbstractBaseFrontier.process_successful_crawl"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier.process_successful_crawl">[docs]</a>    <span class="k">def</span> <span class="nf">process_successful_crawl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when an URI has been crawled successfully.</span>
+
+<span class="sd">        `curi` is a :class:`CrawlUri`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_uri</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span> <span class="ow">and</span> <span class="n">CURI_EXTRACTED_URLS</span> <span class="ow">in</span> <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_EXTRACTED_URLS</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unique_uri</span><span class="o">.</span><span class="n">is_known</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_uri</span><span class="p">(</span><span class="n">CrawlUri</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
+
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_uris</span><span class="p">[</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">sink</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sinks</span><span class="p">:</span>
+            <span class="n">sink</span><span class="o">.</span><span class="n">process_successful_crawl</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AbstractBaseFrontier.process_not_found"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier.process_not_found">[docs]</a>    <span class="k">def</span> <span class="nf">process_not_found</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when an URL was not found.</span>
+
+<span class="sd">        This could mean, that the URL has been removed from the server. If so,</span>
+<span class="sd">        do something about it!</span>
+
+<span class="sd">        Override this method in the actual frontier implementation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_uris</span><span class="p">[</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ignore_uri</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">sink</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sinks</span><span class="p">:</span>
+            <span class="n">sink</span><span class="o">.</span><span class="n">process_not_found</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AbstractBaseFrontier.process_redirect"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier.process_redirect">[docs]</a>    <span class="k">def</span> <span class="nf">process_redirect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when there were too many redirects for an URL, or the site has</span>
+<span class="sd">        note been updated since the last visit.</span>
+
+<span class="sd">        In the latter case, update the internal uri and increase the priority</span>
+<span class="sd">        level.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_uris</span><span class="p">[</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">curi</span><span class="o">.</span><span class="n">status_code</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">301</span><span class="p">,</span> <span class="mi">302</span><span class="p">]:</span>
+            <span class="c"># simply ignore the URL. The URL that is being redirected to is</span>
+            <span class="c"># extracted and added in the processing</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ignore_uri</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">curi</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">304</span><span class="p">:</span>
+            <span class="c"># the page has not been modified since the last visit! Update it</span>
+            <span class="c"># NOTE: prio increasing happens in the prioritizer</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_uri</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">sink</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sinks</span><span class="p">:</span>
+            <span class="n">sink</span><span class="o">.</span><span class="n">process_redirect</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AbstractBaseFrontier.process_server_error"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.AbstractBaseFrontier.process_server_error">[docs]</a>    <span class="k">def</span> <span class="nf">process_server_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when there was some kind of server error.</span>
+
+<span class="sd">        Override this method in the actual frontier implementation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_uris</span><span class="p">[</span><span class="n">curi</span><span class="o">.</span><span class="n">url</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ignore_uri</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">sink</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sinks</span><span class="p">:</span>
+            <span class="n">sink</span><span class="o">.</span><span class="n">process_server_error</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="SingleHostFrontier"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.SingleHostFrontier">[docs]</a><span class="k">class</span> <span class="nc">SingleHostFrontier</span><span class="p">(</span><span class="n">AbstractBaseFrontier</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A frontier for crawling a single host.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the base frontier.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">prio_clazz</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">PRIORITIZER_CLASS</span><span class="p">)</span>
+        <span class="n">AbstractBaseFrontier</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">,</span>
+                <span class="n">SQLiteSingleHostUriQueue</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_STATE_FILE</span><span class="p">),</span>
+                <span class="n">prio_clazz</span><span class="p">(</span><span class="n">settings</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_crawl_delay</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_CRAWL_DELAY_FACTOR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_min_delay</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_MIN_DELAY</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_next_possible_crawl</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+<div class="viewcode-block" id="SingleHostFrontier.get_next"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.SingleHostFrontier.get_next">[docs]</a>    <span class="k">def</span> <span class="nf">get_next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the next URI.</span>
+
+<span class="sd">        Only return the next URI if  we have waited enough.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heap</span><span class="o">.</span><span class="n">qsize</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heap_min_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_heap</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_next_possible_crawl</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">next_date</span><span class="p">,</span> <span class="n">next_uri</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heap</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+
+            <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_timezone</span><span class="p">)</span>
+            <span class="n">localized_next_date</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timezone</span><span class="o">.</span><span class="n">fromutc</span><span class="p">(</span>
+                    <span class="n">datetime</span><span class="o">.</span><span class="n">utcfromtimestamp</span><span class="p">(</span><span class="n">next_date</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">now</span> <span class="o">&lt;</span> <span class="n">localized_next_date</span><span class="p">:</span>
+                <span class="c"># reschedule the uri for crawling</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_heap</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">((</span><span class="n">next_date</span><span class="p">,</span> <span class="n">next_uri</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="n">Empty</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_next_possible_crawl</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_min_delay</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crawluri_from_uri</span><span class="p">(</span><span class="n">next_uri</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="n">Empty</span><span class="p">()</span>
+</div>
+    <span class="k">def</span> <span class="nf">_update_heap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the heap with URIs we should crawl.</span>
+
+<span class="sd">        Note: it is possible that the heap is not full after it was updated!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;frontier::Updating heap&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">uri</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">queue_head</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">50</span><span class="p">):</span>
+
+            <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">_etag</span><span class="p">,</span> <span class="n">_mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">_prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+
+            <span class="k">if</span> <span class="n">url</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_uris</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_to_heap</span><span class="p">(</span><span class="n">uri</span><span class="p">,</span> <span class="n">next_date</span><span class="p">)</span>
+                <span class="k">except</span> <span class="n">Full</span><span class="p">:</span>
+                    <span class="c"># heap is full, return to the caller</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;singlehostfrontier::Heap is full &quot;</span> <span class="o">+</span> \
+                            <span class="s">&quot;during update&quot;</span><span class="p">)</span>
+                    <span class="k">return</span>
+
+<div class="viewcode-block" id="SingleHostFrontier.process_successful_crawl"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.SingleHostFrontier.process_successful_crawl">[docs]</a>    <span class="k">def</span> <span class="nf">process_successful_crawl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the timebased politeness to this frontier.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">AbstractBaseFrontier</span><span class="o">.</span><span class="n">process_successful_crawl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">)</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_next_possible_crawl</span> <span class="o">=</span> <span class="n">now</span> <span class="o">+</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_crawl_delay</span> <span class="o">*</span>
+                <span class="n">curi</span><span class="o">.</span><span class="n">req_time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_min_delay</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;singlehostfrontier::Next possible crawl: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_next_possible_crawl</span><span class="p">,))</span>
+
+</div></div>
+<div class="viewcode-block" id="MultipleHostFrontier"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.MultipleHostFrontier">[docs]</a><span class="k">class</span> <span class="nc">MultipleHostFrontier</span><span class="p">(</span><span class="n">AbstractBaseFrontier</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A Frontier for crawling many hosts simultaneously.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the abstract base frontier and this implementation with the</span>
+<span class="sd">        different configuration parameters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">prio_clazz</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">PRIORITIZER_CLASS</span><span class="p">)</span>
+        <span class="n">AbstractBaseFrontier</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">log_handler</span><span class="p">,</span>
+                <span class="n">SQLiteMultipleHostUriQueue</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_STATE_FILE</span><span class="p">),</span>
+                <span class="n">prio_clazz</span><span class="p">(</span><span class="n">settings</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_delay_factor</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_CRAWL_DELAY_FACTOR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_min_delay</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_MIN_DELAY</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_num_active_queues</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_ACTIVE_QUEUES</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_queue_budget</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_QUEUE_BUDGET</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_budget_punishment</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">FRONTIER_QUEUE_BUDGET_PUNISH</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_queue_ids</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">queue</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">get_all_queues</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_queue_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">queue</span><span class="p">)</span>
+
+        <span class="n">qs_clazz</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">QUEUE_SELECTOR_CLASS</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_backend_selector</span> <span class="o">=</span> <span class="n">qs_clazz</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue_ids</span><span class="p">))</span>
+
+        <span class="n">qa_clazz</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">QUEUE_ASSIGNMENT_CLASS</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_backend_assignment</span> <span class="o">=</span> <span class="n">qa_clazz</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dns_cache</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_queues</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_queues_in_heap</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_time_politeness</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_budget_politeness</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_uri_from_curi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Override the uri creation in order to assign the queue to it. Otherwise</span>
+<span class="sd">        the uri would not end up in the correct queue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">uri</span> <span class="o">=</span> <span class="n">AbstractBaseFrontier</span><span class="o">.</span><span class="n">_uri_from_curi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_crawl_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+        <span class="n">ident</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">_backend_assignment</span><span class="o">.</span><span class="n">get_identifier</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">add_or_create_queue</span><span class="p">(</span><span class="n">ident</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">queue</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue_ids</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_queue_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">queue</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_backend_selector</span><span class="o">.</span><span class="n">reset_queues</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue_ids</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_crawl_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_to_heap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uri</span><span class="p">,</span> <span class="n">next_date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Override the base method since it only accepts the smaller tuples.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_crawl_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+        <span class="n">queue_free_uri</span> <span class="o">=</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_crawl_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">AbstractBaseFrontier</span><span class="o">.</span><span class="n">_add_to_heap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue_free_uri</span><span class="p">,</span>
+                <span class="n">next_date</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MultipleHostFrontier.get_next"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.MultipleHostFrontier.get_next">[docs]</a>    <span class="k">def</span> <span class="nf">get_next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the next URI that is ready to be crawled.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heap</span><span class="o">.</span><span class="n">qsize</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heap_min_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_heap</span><span class="p">()</span>
+
+        <span class="p">(</span><span class="n">_date</span><span class="p">,</span> <span class="n">uri</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heap</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crawluri_from_uri</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_update_heap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the heap from the currently used queues. Respect the time based</span>
+<span class="sd">        politeness and the queue&#39;s budget.</span>
+
+<span class="sd">        The algorithm is as follows:</span>
+
+<span class="sd">          1. Remove queues that are out of budget and add new ones</span>
+
+<span class="sd">          2. Add all URIs to the heap that are crawlable with respect to the</span>
+<span class="sd">              time based politeness</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_maybe_add_queues</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cleanup_budget_politeness</span><span class="p">()</span>
+
+        <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_timezone</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_time_politeness</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">now</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_time_politeness</span><span class="p">[</span><span class="n">q</span><span class="p">]</span> <span class="ow">and</span> \
+                <span class="n">q</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_queues_in_heap</span><span class="p">:</span>
+
+                <span class="c"># we may crawl from this queue!</span>
+                <span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_queues</span><span class="p">[</span><span class="n">q</span><span class="p">]</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="p">(</span><span class="n">localized_next_date</span><span class="p">,</span> <span class="n">next_uri</span><span class="p">)</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+                <span class="k">except</span> <span class="n">Empty</span><span class="p">:</span>
+                    <span class="c"># this queue is empty! Remove it and check the next queue</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_remove_queue_from_memory</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">now</span> <span class="o">&lt;</span> <span class="n">localized_next_date</span><span class="p">:</span>
+                    <span class="c"># reschedule the uri for crawling</span>
+                    <span class="n">queue</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">((</span><span class="n">localized_next_date</span><span class="p">,</span> <span class="n">next_uri</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c"># add this uri to the heap, i.e. it can be crawled</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_to_heap</span><span class="p">(</span><span class="n">next_uri</span><span class="p">,</span> <span class="n">localized_next_date</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_current_queues_in_heap</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_maybe_add_queues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If there are free queue slots available, add inactive queues from the</span>
+<span class="sd">        backend.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">qcount</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">get_queue_count</span><span class="p">()</span>
+        <span class="n">acount</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_queues</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_active_queues</span> <span class="o">&gt;</span> <span class="n">acount</span> <span class="ow">and</span> <span class="n">acount</span> <span class="o">&lt;</span> <span class="n">qcount</span><span class="p">:</span>
+            <span class="n">next_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_next_queue</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">next_queue</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_queue_from_storage</span><span class="p">(</span><span class="n">next_queue</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;multifrontier::Adding queue with id=</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>
+                        <span class="p">(</span><span class="n">next_queue</span><span class="p">,))</span>
+                <span class="n">acount</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_queues</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span> <span class="nf">_cleanup_budget_politeness</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check if any queue has reached the `self._max_queue_budget` and replace</span>
+<span class="sd">        those with queues from the storage.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">removeable</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_budget_politeness</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_budget_politeness</span><span class="p">[</span><span class="n">q</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">removeable</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">rm_queue</span> <span class="ow">in</span> <span class="n">removeable</span><span class="p">:</span>
+            <span class="n">next_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_next_queue</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">next_queue</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_queue_from_storage</span><span class="p">(</span><span class="n">next_queue</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_remove_queue_from_memory</span><span class="p">(</span><span class="n">rm_queue</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;multifrontier::Removing queue with id=</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>
+                    <span class="n">rm_queue</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_next_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the next queue candidate.</span>
+
+<span class="sd">        @return: The next queue id from the storage.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">):</span>
+            <span class="n">next_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backend_selector</span><span class="o">.</span><span class="n">get_queue</span><span class="p">()</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue_ids</span><span class="p">[</span><span class="n">next_id</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">q</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_budget_politeness</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">return</span> <span class="n">q</span>
+
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_get_queue_for_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        @param url: The url</span>
+<span class="sd">        @return: The queue id for the url.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ident</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">_backend_assignment</span><span class="o">.</span><span class="n">get_identifier</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">get_queue_for_ident</span><span class="p">(</span><span class="n">ident</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_queue_from_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove a queue from the internal memory buffers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_time_politeness</span><span class="p">[</span><span class="n">queue</span><span class="p">]</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_budget_politeness</span><span class="p">[</span><span class="n">queue</span><span class="p">]</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_queues</span><span class="p">[</span><span class="n">queue</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_add_queue_from_storage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">next_queue</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when a queue should be crawled from now on.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_budget_politeness</span><span class="p">[</span><span class="n">next_queue</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_queue_budget</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_time_politeness</span><span class="p">[</span><span class="n">next_queue</span><span class="p">]</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_timezone</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_queues</span><span class="p">[</span><span class="n">next_queue</span><span class="p">]</span> <span class="o">=</span> \
+            <span class="n">PriorityQueue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_queue_budget</span><span class="p">)</span>
+
+        <span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_queues</span><span class="p">[</span><span class="n">next_queue</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">uri</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_front_end_queues</span><span class="o">.</span><span class="n">queue_head</span><span class="p">(</span><span class="n">next_queue</span><span class="p">,</span>
+                <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_queue_budget</span><span class="p">):</span>
+
+            <span class="p">(</span><span class="n">_url</span><span class="p">,</span> <span class="n">_queue</span><span class="p">,</span> <span class="n">_etag</span><span class="p">,</span> <span class="n">_mod_date</span><span class="p">,</span> <span class="n">next_date</span><span class="p">,</span> <span class="n">_prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+            <span class="n">localized_next_date</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timezone</span><span class="o">.</span><span class="n">fromutc</span><span class="p">(</span>
+                    <span class="n">datetime</span><span class="o">.</span><span class="n">utcfromtimestamp</span><span class="p">(</span><span class="n">next_date</span><span class="p">))</span>
+            <span class="n">queue</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">((</span><span class="n">localized_next_date</span><span class="p">,</span> <span class="n">uri</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_update_politeness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update all politeness rules.</span>
+
+<span class="sd">        @param curi: :class:`CrawlUri`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">uri</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_uri_from_curi</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">etag</span><span class="p">,</span> <span class="n">mod_date</span><span class="p">,</span> <span class="n">next_crawl_date</span><span class="p">,</span> <span class="n">prio</span><span class="p">)</span> <span class="o">=</span> <span class="n">uri</span>
+
+        <span class="k">if</span> <span class="mi">200</span> <span class="o">&lt;=</span> <span class="n">curi</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&lt;</span> <span class="mi">500</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_budget_politeness</span><span class="p">[</span><span class="n">queue</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="mi">500</span> <span class="o">&lt;=</span> <span class="n">curi</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&lt;</span> <span class="mi">600</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_budget_politeness</span><span class="p">[</span><span class="n">queue</span><span class="p">]</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_budget_punishment</span>
+
+        <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_timezone</span><span class="p">)</span>
+        <span class="n">delta_seconds</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_delay_factor</span> <span class="o">*</span> <span class="n">curi</span><span class="o">.</span><span class="n">req_time</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_min_delay</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_time_politeness</span><span class="p">[</span><span class="n">queue</span><span class="p">]</span> <span class="o">=</span> <span class="n">now</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">delta_seconds</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_queues_in_heap</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">queue</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MultipleHostFrontier.process_successful_crawl"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.MultipleHostFrontier.process_successful_crawl">[docs]</a>    <span class="k">def</span> <span class="nf">process_successful_crawl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Crawling was successful, now update the politeness rules.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_politeness</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+        <span class="n">AbstractBaseFrontier</span><span class="o">.</span><span class="n">process_successful_crawl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MultipleHostFrontier.process_not_found"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.MultipleHostFrontier.process_not_found">[docs]</a>    <span class="k">def</span> <span class="nf">process_not_found</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The page does not exist anymore!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_politeness</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+        <span class="n">AbstractBaseFrontier</span><span class="o">.</span><span class="n">process_not_found</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MultipleHostFrontier.process_redirect"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.MultipleHostFrontier.process_redirect">[docs]</a>    <span class="k">def</span> <span class="nf">process_redirect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        There was a redirect.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_politeness</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+        <span class="n">AbstractBaseFrontier</span><span class="o">.</span><span class="n">process_server_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MultipleHostFrontier.process_server_error"><a class="viewcode-back" href="../../../api/frontier.html#spyder.core.frontier.MultipleHostFrontier.process_server_error">[docs]</a>    <span class="k">def</span> <span class="nf">process_server_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Punish any server errors in the budget for this queue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_politeness</span><span class="p">(</span><span class="n">curi</span><span class="p">)</span>
+        <span class="n">AbstractBaseFrontier</span><span class="o">.</span><span class="n">process_server_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" >spyder</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

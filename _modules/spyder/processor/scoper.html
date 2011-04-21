@@ -1,0 +1,194 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spyder.processor.scoper &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="spyder" href="../../spyder.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" accesskey="U">spyder</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spyder.processor.scoper</h1><div class="highlight"><pre>
+<span class="c">#</span>
+<span class="c"># Copyright (c) 2011 Daniel Truemper truemped@googlemail.com</span>
+<span class="c">#</span>
+<span class="c"># scoper.py 24-Jan-2011</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at</span>
+<span class="c">#</span>
+<span class="c">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+<span class="c">#</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The *Crawl Scope* defines which *URLs* the *Spyder* should process. The main</span>
+<span class="sd">usecases for them are:</span>
+
+<span class="sd">- only spider content from the *Seed* Hosts</span>
+<span class="sd">- do not spider images, css, videos</span>
+
+<span class="sd">and there are probably a lot of other reasons you want to have at least one the</span>
+<span class="sd">scoper configured, otherwise you might end up downloading the internet.</span>
+
+<span class="sd">So each scoper should iterate over the</span>
+<span class="sd">``curi.optional_vars[CURI_EXTRACTED_URLS]`` and determine if it should be</span>
+<span class="sd">downloaded or not.</span>
+
+<span class="sd">The :class:`RegexScoper` maintains a list of regular expressions that define</span>
+<span class="sd">the crawl scope. Two classes of expressions exist: positive and negative.</span>
+<span class="sd">The initial decision of the scoper is to not download its content. If a regex</span>
+<span class="sd">from the positive list matches, and no regex from the negative list matches,</span>
+<span class="sd">the *URL* is marked for downloading. In any other case, the *URL* will be</span>
+<span class="sd">abandoned.</span>
+
+<span class="sd">.. note:: We should really split up the regex scoper and allow the user to</span>
+<span class="sd">    configure more than just one scoper.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">from</span> <span class="nn">spyder.core.constants</span> <span class="kn">import</span> <span class="n">CURI_EXTRACTED_URLS</span>
+
+
+<div class="viewcode-block" id="RegexScoper"><a class="viewcode-back" href="../../../api/scoper.html#spyder.processor.scoper.RegexScoper">[docs]</a><span class="k">class</span> <span class="nc">RegexScoper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The scoper based on regular expressions.</span>
+
+<span class="sd">    There are two settings that influence this scoper:</span>
+
+<span class="sd">    1. ``settings.REGEX_SCOPE_POSITIVE``</span>
+<span class="sd">    2. ``settings.REGEX_SCOPE_NEGATIVE``</span>
+
+<span class="sd">    Both have to be a ``list``. The scoper is executed in the</span>
+<span class="sd">    :meth:`__call__` method.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compile the regular expressions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_positive_regex</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">regex</span> <span class="ow">in</span> <span class="n">settings</span><span class="o">.</span><span class="n">REGEX_SCOPE_POSITIVE</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_positive_regex</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">regex</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_negative_regex</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">regex</span> <span class="ow">in</span> <span class="n">settings</span><span class="o">.</span><span class="n">REGEX_SCOPE_NEGATIVE</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_negative_regex</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">regex</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Filter all newly extracted URLs for those we want in this crawl.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">CURI_EXTRACTED_URLS</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">curi</span>
+
+        <span class="n">urls</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_EXTRACTED_URLS</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">):</span>
+            <span class="n">add_url</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">for</span> <span class="n">regex</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_positive_regex</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">regex</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+                    <span class="n">add_url</span> <span class="o">=</span> <span class="bp">True</span>
+
+            <span class="k">for</span> <span class="n">regex</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_negative_regex</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">regex</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+                    <span class="n">add_url</span> <span class="o">=</span> <span class="bp">False</span>
+
+            <span class="k">if</span> <span class="n">add_url</span><span class="p">:</span>
+                <span class="n">urls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="n">curi</span><span class="o">.</span><span class="n">optional_vars</span><span class="p">[</span><span class="n">CURI_EXTRACTED_URLS</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">urls</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">curi</span>
+
+</div>
+<div class="viewcode-block" id="create_processor"><a class="viewcode-back" href="../../../api/scoper.html#spyder.processor.scoper.create_processor">[docs]</a><span class="k">def</span> <span class="nf">create_processor</span><span class="p">(</span><span class="n">settings</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a new :class:`RegexScoper`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">RegexScoper</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../spyder.html" >spyder</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>

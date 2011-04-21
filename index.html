@@ -1,77 +1,170 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset='utf-8'>
 
-  <title>retresco/Spyder @ GitHub</title>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-  <style type="text/css">
-    body {
-      margin-top: 1.0em;
-      background-color: #fa85eb;
-      font-family: Helvetica, Arial, FreeSans, san-serif;
-      color: #000000;
-    }
-    #container {
-      margin: 0 auto;
-      width: 700px;
-    }
-    h1 { font-size: 3.8em; color: #057a14; margin-bottom: 3px; }
-    h1 .small { font-size: 0.4em; }
-    h1 a { text-decoration: none }
-    h2 { font-size: 1.5em; color: #057a14; }
-    h3 { text-align: center; color: #057a14; }
-    a { color: #057a14; }
-    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
-    .download { float: right; }
-    pre { background: #000; color: #fff; padding: 15px;}
-    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
-    .footer { text-align:center; padding-top:30px; font-style: italic; }
-  </style>
-</head>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to Spyder &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="#" />
+    <link rel="next" title="Release Notes" href="release-notes.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="release-notes.html" title="Release Notes"
+             accesskey="N">next</a> |</li>
+        <li><a href="#">Spyder v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
 
-<body>
-  <a href="http://github.com/retresco/Spyder"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="welcome-to-spyder">
+<h1>Welcome to <strong>Spyder</strong><a class="headerlink" href="#welcome-to-spyder" title="Permalink to this headline">¶</a></h1>
+<p><strong>Spyder</strong> is a scalable web-spider written in Python using the non-blocking
+<em>Tornado</em> library and <em>ZeroMQ</em> as messaging layer. The messages are serialized
+using <em>Thrift</em>.</p>
+<p>The architecture is very basic: a <strong>Master</strong> process contains the crawl
+<strong>Frontier</strong> that organises the <em>URLs</em> that need to be crawled; several
+<strong>Worker</strong> processes actually download the content and extract new <em>URLs</em> that
+should be crawled in the future. For storing the content you may attach a
+<strong>Sink</strong> to the <strong>Master</strong> and be informed about the interesting events for an
+<em>URL</em>.</p>
+</div>
+<div class="section" id="table-of-contents">
+<h1>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release Notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#version-0-1">Version 0.1</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="crawler-design.html">Crawler Design</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="crawler-design.html#some-science">Some Science</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="crawler-design.html#references">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="libraries.html">Libraries used in <strong>Spyder</strong></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="libraries.html#zeromq">ZeroMQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="libraries.html#tornado"><em>Tornado</em></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/spyderapi.html">Spyder API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/entrypoints.html">Entrypoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/masterprocess.html">Masterprocess</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/masterprocess.html#module-spyder.core.master">ZeroMQ Master</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/frontier.html">Frontier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/queues.html">Queue Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/workerprocess.html">Workerprocess</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/workerprocess.html#module-spyder.core.worker">ZeroMQ Worker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/fetcher.html">Content Fetcher</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/extractor.html">Link Extractors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/scoper.html">Crawl Scoper</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/sink.html">Sink</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="roadmap.html#version-0-3">Version 0.3</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
 
-  <div id="container">
 
-    <div class="download">
-      <a href="http://github.com/retresco/Spyder/zipball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
-      <a href="http://github.com/retresco/Spyder/tarball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
-    </div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to <strong>Spyder</strong></a></li>
+<li><a class="reference internal" href="#table-of-contents">Table of Contents</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
 
-    <h1><a href="http://github.com/retresco/Spyder">Spyder</a>
-      <span class="small">by <a href="http://github.com/retresco">retresco</a></span></h1>
-
-    <div class="description">
-      A Python web crawler using Tornado and ZeroMQ
-    </div>
-
-    <h2>Authors</h2>
-<p>Daniel Truemper (truemper@retresco.de)<br/><br/>      </p>
-<h2>Contact</h2>
-<p>Retresco (truemper@retresco.de)<br/>      </p>
-
-
-    <h2>Download</h2>
-    <p>
-      You can download this project in either
-      <a href="http://github.com/retresco/Spyder/zipball/master">zip</a> or
-      <a href="http://github.com/retresco/Spyder/tarball/master">tar</a> formats.
+  <h4>Next topic</h4>
+  <p class="topless"><a href="release-notes.html"
+                        title="next chapter">Release Notes</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
     </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
-      <pre>$ git clone git://github.com/retresco/Spyder</pre>
-    </p>
-
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="release-notes.html" title="Release Notes"
+             >next</a> |</li>
+        <li><a href="#">Spyder v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
     <div class="footer">
-      get the source code on GitHub : <a href="http://github.com/retresco/Spyder">retresco/Spyder</a>
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
     </div>
-
-  </div>
-
-  
-</body>
+  </body>
 </html>

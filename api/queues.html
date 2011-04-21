@@ -1,0 +1,333 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Queue Management &mdash; Spyder v0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Spyder v0.1 documentation" href="../index.html" />
+    <link rel="up" title="Spyder API" href="spyderapi.html" />
+    <link rel="next" title="Workerprocess" href="workerprocess.html" />
+    <link rel="prev" title="Frontier" href="frontier.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="workerprocess.html" title="Workerprocess"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="frontier.html" title="Frontier"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" accesskey="U">Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-spyder.core.sqlitequeues">
+<span id="queue-management"></span><h1>Queue Management<a class="headerlink" href="#module-spyder.core.sqlitequeues" title="Permalink to this headline">¶</a></h1>
+<p>This module contains the default queue storages backed by SQlite.</p>
+<dl class="exception">
+<dt id="spyder.core.sqlitequeues.QueueException">
+<em class="property">exception </em><tt class="descclassname">spyder.core.sqlitequeues.</tt><tt class="descname">QueueException</tt><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#QueueException"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.QueueException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base exception for errors in the queues.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="spyder.core.sqlitequeues.QueueNotFound">
+<em class="property">exception </em><tt class="descclassname">spyder.core.sqlitequeues.</tt><tt class="descname">QueueNotFound</tt><big>(</big><em>identifier</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#QueueNotFound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.QueueNotFound" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception raised when a <tt class="docutils literal"><span class="pre">queue</span></tt> could not be found.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue">
+<em class="property">class </em><tt class="descclassname">spyder.core.sqlitequeues.</tt><tt class="descname">SQLiteMultipleHostUriQueue</tt><big>(</big><em>db_name</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue" title="Permalink to this definition">¶</a></dt>
+<dd><p>A queue storage for multiple queues that can be used for crawling multiple
+hosts simultaneously.</p>
+<p>Internally all URLs are being stored in one table. Each queue has its own
+INTEGER identifier.</p>
+<p>Each URL is represented as a tuple of the form
+<tt class="docutils literal"><span class="pre">uri</span> <span class="pre">=</span> <span class="pre">(url,</span> <span class="pre">queue,</span> <span class="pre">etag,</span> <span class="pre">mod_date,</span> <span class="pre">next_date,</span> <span class="pre">priority)</span></tt>.</p>
+<p>The queue is ordered using the <tt class="docutils literal"><span class="pre">next_date</span></tt> in ascending fashion.</p>
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_or_create_queue">
+<tt class="descname">add_or_create_queue</tt><big>(</big><em>identifier</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.add_or_create_queue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_or_create_queue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new queue with the <tt class="docutils literal"><span class="pre">identifier</span></tt>. If the queue already exists,
+it&#8217;s <cite>id</cite> is returned, otherwise the <cite>id</cite> of the newly created queue.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_uri">
+<tt class="descname">add_uri</tt><big>(</big><em>uri</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.add_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the uri to the given queue.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_uris">
+<tt class="descname">add_uris</tt><big>(</big><em>uris</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.add_uris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.add_uris" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the list of uris to the given queue.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.all_uris">
+<tt class="descname">all_uris</tt><big>(</big><em>queue=None</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.all_uris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.all_uris" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator for iterating over all available urls.</p>
+<p>Note: does not return the full uri object, only the url. This will be
+used to refill the unique uri filter upon restart.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_all_queues">
+<tt class="descname">get_all_queues</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.get_all_queues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_all_queues" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator for iterating over all available queues.</p>
+<p>This will return <cite>(queue, identifier)</cite> as <cite>(int, str)</cite></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_queue_count">
+<tt class="descname">get_queue_count</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.get_queue_count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_queue_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the number of available queues.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_queue_for_ident">
+<tt class="descname">get_queue_for_ident</tt><big>(</big><em>identifier</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.get_queue_for_ident"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_queue_for_ident" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the <tt class="docutils literal"><span class="pre">queue</span></tt> for the given <cite>identifier</cite> if there is one.
+Raises a <cite>QueueNotFound</cite> error if there is no queue with the
+identifier.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_uri">
+<tt class="descname">get_uri</tt><big>(</big><em>url</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.get_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.get_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the <em>URI</em> tuple for the given <tt class="docutils literal"><span class="pre">URL</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.ignore_uri">
+<tt class="descname">ignore_uri</tt><big>(</big><em>url</em>, <em>status</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.ignore_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.ignore_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called when an URI should be ignored. This is usually the case when
+there is a HTTP 404 or recurring HTTP 500&#8217;s.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.qsize">
+<tt class="descname">qsize</tt><big>(</big><em>queue=None</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.qsize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.qsize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the number of known uris. If <cite>queue</cite> is given, only return
+the size of this queue, otherwise the size of all queues is returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.queue_head">
+<tt class="descname">queue_head</tt><big>(</big><em>queue</em>, <em>n=1</em>, <em>offset=0</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.queue_head"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.queue_head" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the top <cite>n</cite> elements from the <cite>queue</cite>. By default, return the top
+element from the queue.</p>
+<p>If you specify <cite>offset</cite> the first <cite>offset</cite> entries are ignored.</p>
+<p>Any entries with a <cite>next_date</cite> below <cite>1000</cite> are being ignored. This
+enables the crawler to ignore URIs _and_ storing the status code.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.remove_uris">
+<tt class="descname">remove_uris</tt><big>(</big><em>uris</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.remove_uris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.remove_uris" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove all uris.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.update_uri">
+<tt class="descname">update_uri</tt><big>(</big><em>uri</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.update_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.update_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the uri.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.update_uris">
+<tt class="descname">update_uris</tt><big>(</big><em>uris</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteMultipleHostUriQueue.update_uris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteMultipleHostUriQueue.update_uris" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the list of uris in the database.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue">
+<em class="property">class </em><tt class="descclassname">spyder.core.sqlitequeues.</tt><tt class="descname">SQLiteSingleHostUriQueue</tt><big>(</big><em>db_name</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a queue that can be used for crawling a single host.</p>
+<p>Internally there is only one queue for all URLs. Each URL is represented as
+a tuple of the form: <tt class="docutils literal"><span class="pre">uri</span> <span class="pre">=</span> <span class="pre">(url,</span> <span class="pre">etag,</span> <span class="pre">mod_date,</span> <span class="pre">next_date,</span> <span class="pre">priority)</span></tt>.</p>
+<p>The queue is ordered using the <tt class="docutils literal"><span class="pre">next_date</span></tt> in ascending fashion.</p>
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.add_uri">
+<tt class="descname">add_uri</tt><big>(</big><em>uri</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue.add_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.add_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a uri to the specified queue.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.add_uris">
+<tt class="descname">add_uris</tt><big>(</big><em>urls</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue.add_uris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.add_uris" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a list of uris.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.all_uris">
+<tt class="descname">all_uris</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue.all_uris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.all_uris" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator for iterating over all available urls.</p>
+<p>Note: does not return the full uri object, only the url. This will be
+used to refill the unique uri filter upon restart.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.get_uri">
+<tt class="descname">get_uri</tt><big>(</big><em>url</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue.get_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.get_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mostly for debugging purposes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.ignore_uri">
+<tt class="descname">ignore_uri</tt><big>(</big><em>url</em>, <em>status</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue.ignore_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.ignore_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called when an URI should be ignored. This is usually the case when
+there is a HTTP 404 or recurring HTTP 500&#8217;s.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.queue_head">
+<tt class="descname">queue_head</tt><big>(</big><em>n=1</em>, <em>offset=0</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue.queue_head"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.queue_head" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the top <cite>n</cite> elements from the queue. By default, return the top
+element from the queue.</p>
+<p>If you specify <cite>offset</cite> the first <cite>offset</cite> entries are ignored.</p>
+<p>Any entries with a <cite>next_date</cite> below <cite>1000</cite> are being ignored. This
+enables the crawler to ignore URIs _and_ storing the status code.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.remove_uris">
+<tt class="descname">remove_uris</tt><big>(</big><em>uris</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue.remove_uris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.remove_uris" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove all uris.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.update_uri">
+<tt class="descname">update_uri</tt><big>(</big><em>uri</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue.update_uri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.update_uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the uri.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.update_uris">
+<tt class="descname">update_uris</tt><big>(</big><em>uris</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteSingleHostUriQueue.update_uris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteSingleHostUriQueue.update_uris" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the list of uris in the database.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spyder.core.sqlitequeues.SQLiteStore">
+<em class="property">class </em><tt class="descclassname">spyder.core.sqlitequeues.</tt><tt class="descname">SQLiteStore</tt><big>(</big><em>db_name</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteStore"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteStore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple base class for sqlite based queue storages. This class basically
+creates the default pragmas and initializes all the unicode stuff.</p>
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteStore.checkpoint">
+<tt class="descname">checkpoint</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteStore.checkpoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteStore.checkpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checkpoint the database, i.e. commit everything.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spyder.core.sqlitequeues.SQLiteStore.close">
+<tt class="descname">close</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#SQLiteStore.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.SQLiteStore.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close the SQLite connection.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="spyder.core.sqlitequeues.UriNotFound">
+<em class="property">exception </em><tt class="descclassname">spyder.core.sqlitequeues.</tt><tt class="descname">UriNotFound</tt><big>(</big><em>url</em><big>)</big><a class="reference internal" href="../_modules/spyder/core/sqlitequeues.html#UriNotFound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spyder.core.sqlitequeues.UriNotFound" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception raised when an URI could not be found in the storage.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="frontier.html"
+                        title="previous chapter">Frontier</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="workerprocess.html"
+                        title="next chapter">Workerprocess</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/queues.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="workerprocess.html" title="Workerprocess"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="frontier.html" title="Frontier"
+             >previous</a> |</li>
+        <li><a href="../index.html">Spyder v0.1 documentation</a> &raquo;</li>
+          <li><a href="spyderapi.html" >Spyder API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Daniel Truemper.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.6.
+    </div>
+  </body>
+</html>
