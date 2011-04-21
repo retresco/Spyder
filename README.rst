@@ -49,17 +49,13 @@ start crawling. First, on one of your nodes you start the logsink:
 
 Again on one node (the same as the logsink, e.g.) you start the **Master**:
 
-.. code-block:: bash
-
-   $ spyder-ctrl.py master &
+    $ spyder-ctrl.py master &
 
 Finally you can start as many **Workers** as you want:
 
-.. code-block:: bash
-
-   $ spyder-ctrl.py worker &
-   $ spyder-ctrl.py worker &
-   $ spyder-ctrl.py worker &
+    $ spyder-ctrl.py worker &
+    $ spyder-ctrl.py worker &
+    $ spyder-ctrl.py worker &
 
 Here we started 3 workers since it is a powerful node having a quad core CPU.
 
@@ -73,8 +69,6 @@ data. But there are times when you simply want to crawl using *many* nodes. This
 can be done by configuring the **ZeroMQ** transports to something like
 
    
-.. code-block:: python
-
     ZEROMQ_MASTER_PUSH = "tcp://NodeA:5005"
     ZEROMQ_MASTER_SUB = "tcp://NodeA:5007"
 
