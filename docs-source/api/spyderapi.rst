@@ -17,6 +17,7 @@ with bugfixing.
     entrypoints
     masterprocess
     frontier
+    queues
     workerprocess
     fetcher
     extractor

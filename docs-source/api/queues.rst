@@ -2,8 +2,8 @@
 .. vim: set tw=80 :
 .. include:: ../globals.rst
 
-Frontier
-========
+Queue Management
+================
 
-.. automodule:: spyder.core.frontier
+.. automodule:: spyder.core.sqlitequeues
     :members:
