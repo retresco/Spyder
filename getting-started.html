@@ -54,11 +54,12 @@
 <span id="secgettingstarted"></span><h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
 <p><em>Spyder</em> is just a library for creating web crawlers. In order to really crawl
 content, you first have to create a <em>Spyder</em> skeleton:</p>
-<blockquote>
-$ mkdir my-crawler &amp;&amp; cd my-crawler
-$ spyder start
-$ ls
-log logging.conf master.py settings.py sink.py spyder-ctrl.py</blockquote>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>mkdir my-crawler <span class="o">&amp;&amp;</span> <span class="nb">cd </span>my-crawler
+<span class="nv">$ </span>spyder start
+<span class="nv">$ </span>ls
+log logging.conf master.py settings.py sink.py spyder-ctrl.py
+</pre></div>
+</div>
 <p>This will copy the skeleton into <cite>my-crawler</cite>. The main file is <cite>settings.py</cite>.
 In it, you can configure the logging level for <strong>Masters</strong> and <strong>Workers</strong> and
 define the <strong>crawl scope</strong>. In <cite>master.py</cite> you should manipulate the starting
@@ -70,31 +71,35 @@ related pages from <strong>DMOZ</strong>. That should give you a starting point 
 crawler.</p>
 <p>So, when you wrote your sink and have everything configured right, it&#8217;s time to
 start crawling. First, on one of your nodes you start the logsink:</p>
-<blockquote>
-$ spyder-ctrl.py logsink &amp;</blockquote>
-<p>Again on one node (the same as the logsink, e.g.) you start the <strong>Master</strong>:</p>
-<blockquote>
-$ spyder-ctrl.py master &amp;</blockquote>
-<p>Finally you can start as many <strong>Workers</strong> as you want:</p>
-<blockquote>
-$ spyder-ctrl.py worker &amp;
-$ spyder-ctrl.py worker &amp;
-$ spyder-ctrl.py worker &amp;</blockquote>
-<p>Here we started 3 workers since it is a powerful node having a quad core CPU.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>spyder-ctrl.py logsink &amp;
+</pre></div>
 </div>
+<p>Again on one node (the same as the logsink, e.g.) you start the <strong>Master</strong>:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>spyder-ctrl.py master &amp;
+</pre></div>
+</div>
+<p>Finally you can start as many <strong>Workers</strong> as you want:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>spyder-ctrl.py worker &amp;
+<span class="nv">$ </span>spyder-ctrl.py worker &amp;
+<span class="nv">$ </span>spyder-ctrl.py worker &amp;
+</pre></div>
+</div>
+<p>Here we started 3 workers since it is a powerful node having a quad core CPU.</p>
 <div class="section" id="scaling-the-crawl">
-<h1>Scaling the Crawl<a class="headerlink" href="#scaling-the-crawl" title="Permalink to this headline">¶</a></h1>
+<h2>Scaling the Crawl<a class="headerlink" href="#scaling-the-crawl" title="Permalink to this headline">¶</a></h2>
 <p>With the default settings it is not possible to start workers on different
 nodes. Most of the time one node is powerful enough to crawl quite an amount of
 data. But there are times when you simply want to crawl using <em>many</em> nodes. This
 can be done by configuring the <strong>ZeroMQ</strong> transports to something like</p>
-<blockquote>
-<p>ZEROMQ_MASTER_PUSH = &#8220;<a class="reference external" href="tcp://NodeA:5005">tcp://NodeA:5005</a>&#8221;
-ZEROMQ_MASTER_SUB = &#8220;<a class="reference external" href="tcp://NodeA:5007">tcp://NodeA:5007</a>&#8220;</p>
-<p>ZEROMQ_MGMT_MASTER = &#8220;<a class="reference external" href="tcp://NodeA:5008">tcp://NodeA:5008</a>&#8221;
-ZEROMQ_MGMT_WORKER = &#8220;<a class="reference external" href="tcp://NodeA:5009">tcp://NodeA:5009</a>&#8220;</p>
-<p>ZEROMQ_LOGGING = &#8220;<a class="reference external" href="tcp://NodeA:5010">tcp://NodeA:5010</a>&#8220;</p>
-</blockquote>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">ZEROMQ_MASTER_PUSH</span> <span class="o">=</span> <span class="s">&quot;tcp://NodeA:5005&quot;</span>
+<span class="n">ZEROMQ_MASTER_SUB</span> <span class="o">=</span> <span class="s">&quot;tcp://NodeA:5007&quot;</span>
+
+<span class="n">ZEROMQ_MGMT_MASTER</span> <span class="o">=</span> <span class="s">&quot;tcp://NodeA:5008&quot;</span>
+<span class="n">ZEROMQ_MGMT_WORKER</span> <span class="o">=</span> <span class="s">&quot;tcp://NodeA:5009&quot;</span>
+
+<span class="n">ZEROMQ_LOGGING</span> <span class="o">=</span> <span class="s">&quot;tcp://NodeA:5010&quot;</span>
+</pre></div>
+</div>
 <p>Basically we have setup a 2 node crawl cluster. <strong>NodeA</strong> acts as logging sink
 and controls the crawl via the <strong>Master</strong>. <strong>NodeB</strong> Is a pure <strong>Worker</strong> node.
 Only the <strong>Master</strong> actually <em>binds</em> <strong>ZeroMQ</strong> sockets, the <strong>Worker</strong> always
@@ -102,10 +107,11 @@ Only the <strong>Master</strong> actually <em>binds</em> <strong>ZeroMQ</strong>
 <strong>Workers</strong> are really running.</p>
 </div>
 <div class="section" id="from-here">
-<h1>From here<a class="headerlink" href="#from-here" title="Permalink to this headline">¶</a></h1>
+<h2>From here<a class="headerlink" href="#from-here" title="Permalink to this headline">¶</a></h2>
 <p>There is plenty of room for improvement and development ahead. Everything will
 be handled by Github tickets from now on and, if there is interest, we may setup
 a Google Group.</p>
+</div>
 </div>
 
 
@@ -116,9 +122,11 @@ a Google Group.</p>
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Getting Started</a></li>
+<li><a class="reference internal" href="#">Getting Started</a><ul>
 <li><a class="reference internal" href="#scaling-the-crawl">Scaling the Crawl</a></li>
 <li><a class="reference internal" href="#from-here">From here</a></li>
+</ul>
+</li>
 </ul>
 
   <h4>Previous topic</h4>
