@@ -217,7 +217,7 @@ def main(settings):
         logger.debug("Caught a ZMQError. Hopefully during shutdown")
         logger.debug(traceback.format_exc())
 
-    for mod in [fetcher, extractor, scoper, mgmt]:
+    for mod in [fetcher, extractor, mgmt]:
         mod.close()
 
     logger.info("process::Houston: Worker down")
