@@ -103,6 +103,116 @@ class HtmlLinkExtractorTest(unittest.TestCase):
         self.assertEqual("http://www.bmg.bund.de/test/evenmorerelative.html",
                 links[2])
 
+    def test_extraction_with_credentials_works(self):
+        src = "<a href='http://www.google.de' title='ups'> viel text</a>" + \
+            "<a title='ups i did it again' href ='/relative.html'>und " + \
+            "noch mehr!</a><a href='evenmorerelative.html'/>" + \
+            "<a href='&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#117;&#115;&#116;&#101;&#114;&#64;&#98;&#102;&#97;&#114;&#109;&#46;&#100;&#101;'/>"
+
+        curi = CrawlUri()
+        curi.rep_header = dict()
+        curi.rep_header["Content-Type"] = "text/html; charset=utf-8"
+        curi.url = "http://user:password@www.bmg.bund.de/test/"
+        curi.content_body = src
+        curi.optional_vars = dict()
+
+        xtor = DefaultHtmlLinkExtractor(Settings())
+        curi = xtor(curi)
+
+        links = curi.optional_vars[CURI_EXTRACTED_URLS].split("\n")
+        self.assertEqual("http://www.google.de", links[0])
+        self.assertEqual("http://user:password@www.bmg.bund.de/relative.html", links[1])
+        self.assertEqual("http://user:password@www.bmg.bund.de/test/evenmorerelative.html",
+                links[2])
+
+    def test_extraction_with_credentials_works_with_a_different_path(self):
+        src = "<a href='http://www.google.de' title='ups'> viel text</a>" + \
+            "<a title='ups i did it again' href ='/relative.html'>und " + \
+            "noch mehr!</a><a href='evenmorerelative.html'/>" + \
+            "<a href='&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#117;&#115;&#116;&#101;&#114;&#64;&#98;&#102;&#97;&#114;&#109;&#46;&#100;&#101;'/>"
+
+        curi = CrawlUri()
+        curi.rep_header = dict()
+        curi.rep_header["Content-Type"] = "text/html; charset=utf-8"
+        curi.url = "http://user:password@www.bmg.bund.de/test/"
+        curi.content_body = src
+        curi.optional_vars = dict()
+
+        xtor = DefaultHtmlLinkExtractor(Settings())
+        curi = xtor(curi)
+
+        links = curi.optional_vars[CURI_EXTRACTED_URLS].split("\n")
+        self.assertEqual("http://www.google.de", links[0])
+        self.assertEqual("http://www.bmg.bund.de/relative.html", links[1])
+        self.assertEqual("http://user:password@www.bmg.bund.de/test/evenmorerelative.html",
+                links[2])
+
+    def test_extraction_with_credentials_and_base_links_works(self):
+        src = "<base href='http://www.bing.com' /><a href='http://www.google.de' title='ups'> viel text</a>" + \
+            "<a title='ups i did it again' href ='/relative.html'>und " + \
+            "noch mehr!</a><a href='http://www.bmg.bund.de/test/evenmorerelative.html'/>" + \
+            "<a href='&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#117;&#115;&#116;&#101;&#114;&#64;&#98;&#102;&#97;&#114;&#109;&#46;&#100;&#101;'/>"
+
+        curi = CrawlUri()
+        curi.rep_header = dict()
+        curi.rep_header["Content-Type"] = "text/html; charset=utf-8"
+        curi.url = "http://user:password@www.bmg.bund.de/test/"
+        curi.content_body = src
+        curi.optional_vars = dict()
+
+        xtor = DefaultHtmlLinkExtractor(Settings())
+        curi = xtor(curi)
+
+        links = curi.optional_vars[CURI_EXTRACTED_URLS].split("\n")
+        self.assertEqual("http://www.google.de", links[0])
+        self.assertEqual("http://www.bing.com/relative.html", links[1])
+        self.assertEqual("http://user:password@www.bmg.bund.de/test/evenmorerelative.html",
+                links[2])
+
+    def test_extraction_with_credentials_and_absolute_links_works(self):
+        src = "<a href='http://www.google.de' title='ups'> viel text</a>" + \
+            "<a title='ups i did it again' href ='/relative.html'>und " + \
+            "noch mehr!</a><a href='http://www.bmg.bund.de/test/absolute.html'/>" + \
+            "<a href='&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#117;&#115;&#116;&#101;&#114;&#64;&#98;&#102;&#97;&#114;&#109;&#46;&#100;&#101;'/>"
+
+        curi = CrawlUri()
+        curi.rep_header = dict()
+        curi.rep_header["Content-Type"] = "text/html; charset=utf-8"
+        curi.url = "http://user:password@www.bmg.bund.de/test/"
+        curi.content_body = src
+        curi.optional_vars = dict()
+
+        xtor = DefaultHtmlLinkExtractor(Settings())
+        curi = xtor(curi)
+
+        links = curi.optional_vars[CURI_EXTRACTED_URLS].split("\n")
+        self.assertEqual("http://www.google.de", links[0])
+        self.assertEqual("http://user:password@www.bmg.bund.de/relative.html", links[1])
+        self.assertEqual("http://user:password@www.bmg.bund.de/test/absolute.html",
+                links[2])
+
+    def test_extraction_with_credentials_base_and_absolute_links_works(self):
+        src = "<base href='http://www.bing.com' /><a href='http://www.google.de' title='ups'> viel text</a>" + \
+            "<a title='ups i did it again' href ='/relative.html'>und " + \
+            "noch mehr!</a><a href='http://www.bmg.bund.de/test/absolute.html'/>" + \
+            "<a href='&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#117;&#115;&#116;&#101;&#114;&#64;&#98;&#102;&#97;&#114;&#109;&#46;&#100;&#101;'/>"
+
+        curi = CrawlUri()
+        curi.rep_header = dict()
+        curi.rep_header["Content-Type"] = "text/html; charset=utf-8"
+        curi.url = "http://user:password@www.bmg.bund.de/test/"
+        curi.content_body = src
+        curi.optional_vars = dict()
+
+        xtor = DefaultHtmlLinkExtractor(Settings())
+        curi = xtor(curi)
+
+        links = curi.optional_vars[CURI_EXTRACTED_URLS].split("\n")
+        self.assertEqual("http://www.google.de", links[0])
+        self.assertEqual("http://www.bing.com/relative.html", links[1])
+        self.assertEqual("http://user:password@www.bmg.bund.de/test/absolute.html",
+                links[2])
+
 
 if __name__ == '__main__':
     unittest.main()
