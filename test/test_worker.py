@@ -147,6 +147,7 @@ class ZmqWorkerIntegrationTest(ZmqTornadoIntegrationTest):
             self._mgmt,
             self.echo_processing,
             StreamHandler(sys.stdout),
+            logging.DEBUG,
             self._io_loop)
 
         worker.start()

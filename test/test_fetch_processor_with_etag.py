@@ -167,6 +167,7 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
             self._mgmt,
             fetcher,
             StreamHandler(sys.stdout),
+            logging.DEBUG,
             self._io_loop)
         worker.start()
 
