@@ -27,7 +27,7 @@ assert __version__
 long_description = open("README.rst").read()
 assert long_description
 
-tests_require = ['coverage>=3.4']
+tests_require = ['coverage>=3.4', 'nose==1.1.2']
 
 setup(
     name = "spyder",
