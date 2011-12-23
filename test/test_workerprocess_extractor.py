@@ -1,25 +1,19 @@
 #
-# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # test_workerprocess_extractor.py 19-Jan-2011
 #
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-# 
-#   http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 import sys
 import logging
@@ -59,7 +53,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         self._settings.ZEROMQ_WORKER_PROC_FETCHER_PULL = \
             self._settings.ZEROMQ_MASTER_PUSH
         self._settings.ZEROMQ_MASTER_SUB = 'inproc://spyder-zmq-master-sub'
-        self._settings.ZEROMQ_WORKER_PROC_SCOPER_PUB = \
+        self._settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUB = \
             self._settings.ZEROMQ_MASTER_SUB
 
         self._settings.ZEROMQ_MGMT_MASTER = 'inproc://spyder-zmq-mgmt-master'
@@ -80,8 +74,6 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
     def tearDown(self):
         # stop the mgmt
         self._mgmt.stop()
-        self._mgmt._in_stream.close()
-        self._mgmt._out_stream.close()
 
         # close all sockets
         for socket in self._mgmt_sockets.itervalues():
@@ -103,6 +95,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         # the master is a ZMQStream because we are sending msgs from the test
         sock = self._ctx.socket(zmq.PUB)
         sock.bind(mgmt_master_worker)
+        self._mgmt_sockets['tmp1'] = sock
         self._mgmt_sockets['master_pub'] = ZMQStream(sock, self._io_loop)
         # the worker stream is created inside the ZmqMgmt class
         self._mgmt_sockets['worker_sub'] = self._ctx.socket(zmq.SUB)
@@ -118,6 +111,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
         sock.connect(mgmt_worker_master)
+        self._mgmt_sockets['tmp2'] = sock
         self._mgmt_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
     def _setup_data_servers(self):
@@ -129,15 +123,16 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 
         sock = self._ctx.socket(zmq.PUSH)
         sock.bind(data_master_worker)
+        self._worker_sockets['tmp3'] = sock
         self._worker_sockets['master_push'] = ZMQStream(sock, self._io_loop)
 
-    def _setup_data_client(self):
         # address for worker -> master communication
-        data_worker_master = self._settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUSH
+        data_worker_master = self._settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUB
 
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
-        sock.connect(data_worker_master)
+        sock.bind(data_worker_master)
+        self._worker_sockets['tmp4'] = sock
         self._worker_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
     def on_mgmt_end(self, _msg):
@@ -148,13 +143,11 @@ class WorkerExtractorTestCase(ZmqTornadoIntegrationTest):
 
     def test_that_creating_extractor_works(self):
 
-        self._settings.SPYDER_EXTRACTOR_PIPELINE = ['spyder.processor.limiter',]
+        self._settings.SPYDER_EXTRACTOR_PIPELINE = ['spyder.processor.limiter.DefaultLimiter',]
 
         extractor = workerprocess.create_worker_extractor(self._settings,
                 self._mgmt, self._ctx, StreamHandler(sys.stdout), self._io_loop)
         extractor.start()
-
-        self._setup_data_client()
 
         curi = CrawlUri(url="http://localhost:80/robots.txt",
                 effective_url="http://127.0.0.1:%s/robots.txt",
@@ -184,7 +177,9 @@ class WorkerExtractorTestCase(ZmqTornadoIntegrationTest):
         self._io_loop.start()
 
         extractor._out_stream.close()
+        extractor._outsocket.close()
         extractor._in_stream.close()
+        extractor._insocket.close()
 
 
 if __name__ == '__main__':

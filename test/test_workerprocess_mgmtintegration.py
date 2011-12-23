@@ -1,25 +1,19 @@
 #
-# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # test_workerprocess.py 18-Jan-2011
 #
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-# 
-#   http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 
 import unittest
@@ -53,7 +47,7 @@ class WorkerProcessTestCase(unittest.TestCase):
         settings.ZEROMQ_WORKER_PROC_FETCHER_PULL = \
             settings.ZEROMQ_MASTER_PUSH
         settings.ZEROMQ_MASTER_SUB = 'inproc://spyder-zmq-master-sub'
-        settings.ZEROMQ_WORKER_PROC_SCOPER_PUB = \
+        settings.ZEROMQ_WORKER_PROC_EXTRACTOR_PUB = \
             settings.ZEROMQ_MASTER_SUB
 
         settings.ZEROMQ_MGMT_MASTER = 'inproc://spyder-zmq-mgmt-master'
@@ -74,7 +68,7 @@ class WorkerProcessTestCase(unittest.TestCase):
 
         def assert_quit_message(msg):
             self.assertEqual(ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK, msg.data)
-            
+
         sub_stream.on_recv(assert_quit_message)
 
         death = MgmtMessage(topic=ZMQ_SPYDER_MGMT_WORKER,
@@ -85,8 +79,12 @@ class WorkerProcessTestCase(unittest.TestCase):
 
         mgmt._out_stream.close()
         mgmt._in_stream.close()
+        mgmt._publisher.close()
+        mgmt._subscriber.close()
         pub_stream.close()
+        pubsocket.close()
         sub_stream.close()
+        subsocket.close()
         ctx.term()
 
 

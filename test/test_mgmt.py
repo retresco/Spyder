@@ -1,25 +1,19 @@
 #
-# Copyright (c) 2008 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # test_mgmt.py 10-Jan-2011
 #
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-# 
-#   http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 
 import unittest
@@ -44,6 +38,7 @@ class ManagementIntegrationTest(unittest.TestCase):
 
         sock = self._ctx.socket(zmq.PUB)
         sock.bind('inproc://master/worker/coordination')
+        self._master_pub_sock = sock
         self._master_pub = ZMQStream(sock, self._io_loop)
 
         self._worker_sub = self._ctx.socket(zmq.SUB)
@@ -56,15 +51,18 @@ class ManagementIntegrationTest(unittest.TestCase):
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
         sock.connect( 'inproc://worker/master/coordination' )
+        self._master_sub_sock = sock
         self._master_sub = ZMQStream(sock, self._io_loop)
 
         self._topic = ZMQ_SPYDER_MGMT_WORKER + 'testtopic'
 
     def tearDown(self):
         self._master_pub.close()
+        self._master_pub_sock.close()
         self._worker_sub.close()
         self._worker_pub.close()
         self._master_sub.close()
+        self._master_sub_sock.close()
         self._ctx.term()
 
     def call_me(self, msg):

@@ -1,25 +1,19 @@
 #
-# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # test_fetch_processor.py 17-Jan-2011
 #
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-# 
-#   http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 import logging
 from logging import StreamHandler
@@ -97,6 +91,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         # the master is a ZMQStream because we are sending msgs from the test
         sock = self._ctx.socket(zmq.PUB)
         sock.bind(mgmt_master_worker)
+        self._mgmt_sockets['tmp1'] = sock
         self._mgmt_sockets['master_pub'] = ZMQStream(sock, self._io_loop)
         # the worker stream is created inside the ZmqMgmt class
         self._mgmt_sockets['worker_sub'] = self._ctx.socket(zmq.SUB)
@@ -112,6 +107,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
         sock.connect(mgmt_worker_master)
+        self._mgmt_sockets['tmp2'] = sock
         self._mgmt_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
     def _setup_data_sockets(self):
@@ -123,6 +119,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
 
         sock = self._ctx.socket(zmq.PUSH)
         sock.bind(data_master_worker)
+        self._worker_sockets['tmp3'] = sock
         self._worker_sockets['master_push'] = ZMQStream(sock, self._io_loop)
         self._worker_sockets['worker_pull'] = self._ctx.socket(zmq.PULL)
         self._worker_sockets['worker_pull'].connect(data_master_worker)
@@ -135,6 +132,7 @@ class ZmqTornadoIntegrationTest(unittest.TestCase):
         sock = self._ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.SUBSCRIBE, "")
         sock.connect(data_worker_master)
+        self._worker_sockets['tmp4'] = sock
         self._worker_sockets['master_sub'] = ZMQStream(sock, self._io_loop)
 
     def on_mgmt_end(self, _msg):
@@ -177,6 +175,7 @@ class SimpleFetcherTestCase(ZmqTornadoIntegrationTest):
             self._mgmt,
             fetcher,
             StreamHandler(sys.stdout),
+            logging.DEBUG,
             self._io_loop)
         worker.start()
 

@@ -1,37 +1,48 @@
 #
-# Copyright (c) 2010 Daniel Truemper truemped@googlemail.com
+# Copyright (c) 2011 Daniel Truemper truemped@googlemail.com
 #
 # htmlextractor.py 21-Jan-2011
 #
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 #   http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 """
-Module for the default HTML Link extractor.
+The :class:`DefaultHtmlLinkExtractor` will try to extract new links from the
+``curi.content_body``. In order to find them two regular expressions are used.
 
-Most of the regular expressions have been adopted from Heritrix. See:
-Heritrix 3:
-    modules/src/main/java/org/archive/modules/extractor/ExtractorHTML.java
+1. The ``RELEVANT_TAG_EXTRACTOR`` extracts the following tags:
+    - ``<script>..</script>``
+    - ``<style>..</style>``
+    - ``<meta>``
+    - or any other open tag with at least one attribute (e.g. not ``<br>``).
+
+2. The ``LINK_EXTRACTOR`` extracts links from tags using `href` or `src`
+attributes.
+
+If the link is relative, the appropriate prefix is automatically added here.
+
+The regular expressions have been adopted from Heritrix. See the Heritrix 3
+source code:
+
+``modules/src/main/java/org/archive/modules/extractor/ExtractorHTML.java``
+
+.. note:: Heritrix has a newer way of extracting links, i.e. with different
+    regular expressions. Since these are working for me at the moment, I am
+    fine with it.
 """
-
 import re
+import htmlentitydefs
 
-from urlparse import urlparse
+import urlparse
 
 from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.constants import CURI_OPTIONAL_TRUE, CURI_EXTRACTION_FINISHED
@@ -79,6 +90,10 @@ LINK_EXTRACTOR = "(\w+)[^>]*?(?:(href|src))\s*=\s*" + \
 class DefaultHtmlLinkExtractor(object):
     """
     The default extractor for Links from HTML pages.
+
+    The internal regular expressions currently are not modifiable. Only the
+    maximum length of an opening tag can be configured using the
+    ``settings.REGEX_LINK_XTRACTOR_MAX_ELEMENT_LENGTH``.
     """
 
     def __init__(self, settings):
@@ -91,12 +106,12 @@ class DefaultHtmlLinkExtractor(object):
                     str(max_size)), re.I | re.S)
 
         self._link_extractor = re.compile(LINK_EXTRACTOR, re.I | re.S)
+        self._base_url = ""
 
     def __call__(self, curi):
         """
-        Actually extract links from the html content.
-
-        But: only if the content type allows us to do so.
+        Actually extract links from the html content if the content type
+        matches.
         """
         if not self._restrict_content_type(curi):
             return curi
@@ -112,7 +127,8 @@ class DefaultHtmlLinkExtractor(object):
         except Exception:
             content = curi.content_body
 
-        parsed_url = urlparse(curi.url)
+        parsed_url = urlparse.urlparse(curi.url)
+        self._base_url = curi.url
 
         # iterate over all tags
         for tag in self._tag_extractor.finditer(content):
@@ -152,41 +168,50 @@ class DefaultHtmlLinkExtractor(object):
         This can be anything but `meta`, `script` or `style` tags.
 
         `content` is the decoded content body.
-        `element_name` is a tuple containing (start,end) integers of the
-            current tag name.
-        `element` is a tuple containing (start,end) integers of the current
-            element
+        `element_name_tuple` is a tuple containing (start,end) integers of
+            the current tag name.
+        `element_tuple` is a tuple containing (start,end) integers of the
+            current element
         """
         (start, end) = element_name_tuple
         el_name = content[start:end]
         if "a" == el_name.lower():
             curi = self._extract_links(curi, parsed_url, content,
                     element_tuple)
+        elif "base" == el_name.lower():
+            self._base_url = self._get_links(content, element_tuple)[0]
 
         return curi
+
+    def _get_links(self, content, element_tuple):
+        """
+        Do the actual link extraction and return the list of links.
+
+        `content` is the decoded content body.
+        `element_tuple` is a tuple containing (start,end) integers of the
+            current element
+        """
+        links = []
+        (start, end) = element_tuple
+        element = self._unescape_html(content[start:end])
+
+        for link_candidate in self._link_extractor.finditer(element):
+            link = link_candidate.group(3)[1:-1]
+            if link.find("mailto:") > -1 or link.find("javascript:") > -1:
+                continue
+            if link.find("://") == -1:
+                link = urlparse.urljoin(self._base_url, link)
+            links.append(link)
+
+        return links
 
     def _extract_links(self, curi, parsed_url, content, element_tuple):
         """
         Extract links from an element, e.g. href="" attributes.
         """
-        links = []
-        (start, end) = element_tuple
-        element = content[start:end]
-        for link_candidate in self._link_extractor.finditer(element):
-            link = link_candidate.group(3)[1:-1]
-            try:
-                if link.find("://") == -1:
-                    link = "%s://%s%s" % (parsed_url.scheme, parsed_url.netloc,
-                        adapt_relative_link(link, parsed_url.path))
-                links.append(link)
-            except ValueError:
-                # the value error might be raised within the
-                # adapt_relative_link method, if the link happens to have more
-                # ".." modifiers than path levels are available. At this point
-                # we simply want to ignore this link!
-                pass
+        links = self._get_links(content, element_tuple)
 
-        linkstring = "\n".join(links)
+        linkstring = "\n".join(links).encode('ascii', 'replace')
         if not CURI_EXTRACTED_URLS in curi.optional_vars:
             curi.optional_vars[CURI_EXTRACTED_URLS] = linkstring
         else:
@@ -210,43 +235,30 @@ class DefaultHtmlLinkExtractor(object):
         (ctype, _enc) = get_content_type_encoding(curi)
         return ctype in allowed
 
+    def _unescape_html(self, link):
+        """
+        Unescape the link.
 
-def adapt_relative_link(link, curpath):
-    """
-    Adapt a relative link and make it absolute. Take into consideration any of
-    the following cases:
+        keep &amp;, &gt;, &lt; in the source code.
 
-    * test/
-    * /test/
-    * /../test/
-    * /../test/../mehrtest/
-    * ../test/
-    * ./../test/
-    """
-    if len(link) == 0:
-        return curpath
-    elif link[0] == '/':
-        # remove everything from the curpath
-        return adapt_relative_link(link[1:], "/")
-    elif link[:2] == '..':
-        # go up one level
-        return adapt_relative_link(link[3:], curpath[:curpath.rfind('/')])
-    elif link[0] == '.':
-        # stay on the path
-        return adapt_relative_link(link[2:], curpath)
-    elif link.find('/') != -1:
-        # copy the next path element from link to curpath
-        seperator = link.find('/')
-        path_element = link[:seperator]
-        return adapt_relative_link(link[seperator+1:],
-                curpath + '/' + path_element)
-    else:
-        l = curpath + '/' + link
-        return l.replace('//', '/')
-
-
-def create_processor(settings):
-    """
-    Create a new :class:`DefaultHtmlLinkExtractor`.
-    """
-    return DefaultHtmlLinkExtractor(settings)
+        http://effbot.org/zone/re-sub.htm#unescape-html
+        """
+        def fixup(m):
+            text = m.group(0)
+            if text[:2] == "&#":
+                # character reference
+                try:
+                    if text[:3] == "&#x":
+                        return unichr(int(text[3:-1], 16))
+                    else:
+                        return unichr(int(text[2:-1]))
+                except ValueError:
+                    pass
+            else:
+                # named entity
+                try:
+                    text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
+                except KeyError:
+                    pass
+            return text
+        return re.sub("&#?\w+;", fixup, link)

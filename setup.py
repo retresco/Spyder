@@ -18,7 +18,7 @@
 #
 #
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import re
 
 __version__ = re.search( "__version__\s*=\s*'(.*)'", open('src/spyder/__init__.py').read(), re.M).group(1)
@@ -27,7 +27,7 @@ assert __version__
 long_description = open("README.rst").read()
 assert long_description
 
-tests_require = ['mockito>=0.5.1', 'coverage>=3.4']
+tests_require = ['coverage>=3.4', 'nose==1.1.2']
 
 setup(
     name = "spyder",
@@ -39,11 +39,7 @@ setup(
     url = "",
     license = "Apache 2.0",
     package_dir = { '' : 'src' },
-    packages = ['spyder', 'spyder.core', 'spyder.processor', 'spyder.thrift',
-        'spyder.thrift.gen', 'spyder.spyder_template'],
-    data_files = [ ("spyder/spyder_template",
-        ["src/spyder/spyder_template/logging.conf"]),
-        ("spyder/spyder_template/log", ["src/spyder/spyder_template/log/.keep"])],
+    packages = find_packages('src'),
     include_package_data = True,
     test_suite = 'nose.collector',
     install_requires = [
@@ -72,4 +68,3 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search',
     ]
 )
-
