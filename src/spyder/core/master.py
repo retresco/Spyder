@@ -28,6 +28,7 @@ from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_AVAIL
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT
 from spyder.core.constants import ZMQ_SPYDER_MGMT_WORKER_QUIT_ACK
+from spyder.core.constants import CURI_EUNCAUGHT_EXCEPTION
 from spyder.core.messages import DataMessage
 from spyder.core.log import LoggingMixin
 
@@ -190,10 +191,11 @@ class ZmqMaster(object, LoggingMixin):
                 self._frontier.process_not_found(msg.curi)
             elif 500 <= msg.curi.status_code < 600:
                 # some kind of server error
-                    self._frontier.process_server_error(msg.curi)
+                self._frontier.process_server_error(msg.curi)
         except:
             self._logger.critical("zmqmaster::Uncaught exception in the sink")
             self._logger.critical("zmqmaster::%s" % (traceback.format_exc(),))
-            self.stop()
+            msg.curi.status_code = CURI_EUNCAUGHT_EXCEPTION
+            self._frontier.process_server_error(msg.curi)
 
         self._send_next_uri()
