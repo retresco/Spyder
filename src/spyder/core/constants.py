@@ -46,3 +46,6 @@ CURI_EXTRACTION_FINISHED = "extraction_finished".encode()
 
 # extracted urls field
 CURI_EXTRACTED_URLS = "extracted_urls".encode()
+
+# Some internal error states
+CURI_EUNCAUGHT_EXCEPTION = 710
