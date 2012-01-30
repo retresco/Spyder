@@ -497,7 +497,7 @@ class MultipleHostFrontier(AbstractBaseFrontier):
         self._maybe_add_queues()
         self._cleanup_budget_politeness()
 
-        now = datetime.now(self._timezone)
+        now = time.mktime(datetime.now(self._timezone).timetuple())
         for q in self._time_politeness.keys():
             if now >= self._time_politeness[q] and \
                 q not in self._current_queues_in_heap:
@@ -588,7 +588,7 @@ class MultipleHostFrontier(AbstractBaseFrontier):
         Called when a queue should be crawled from now on.
         """
         self._budget_politeness[next_queue] = self._max_queue_budget
-        self._time_politeness[next_queue] = datetime.now(self._timezone)
+        self._time_politeness[next_queue] = time.mktime(datetime.now(self._timezone).timetuple())
         self._current_queues[next_queue] = \
             PriorityQueue(maxsize=self._max_queue_budget)
 
@@ -600,7 +600,7 @@ class MultipleHostFrontier(AbstractBaseFrontier):
             (_url, _queue, _etag, _mod_date, next_date, _prio) = uri
             localized_next_date = self._timezone.fromutc(
                     datetime.utcfromtimestamp(next_date))
-            queue.put_nowait((localized_next_date, uri))
+            queue.put_nowait((time.mktime(localized_next_date.timetuple()), uri))
 
     def _update_politeness(self, curi):
         """
@@ -617,7 +617,7 @@ class MultipleHostFrontier(AbstractBaseFrontier):
         now = datetime.now(self._timezone)
         delta_seconds = max(self._delay_factor * curi.req_time,
                 self._min_delay)
-        self._time_politeness[queue] = now + timedelta(seconds=delta_seconds)
+        self._time_politeness[queue] = time.mktime((now + timedelta(seconds=delta_seconds)).timetuple())
 
         self._current_queues_in_heap.remove(queue)
 
