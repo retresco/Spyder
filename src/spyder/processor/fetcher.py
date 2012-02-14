@@ -120,16 +120,6 @@ class FetchProcessor(object):
             request.proxy_password = \
                     self._proxy_configuration.get('password', None)
 
-
-        if hasattr(self, '_proxy_configuration'):
-            request.proxy_host = self._proxy_configuration['host']
-            request.proxy_port = self._proxy_configuration['port']
-            request.proxy_username = \
-                    self._proxy_configuration.get('user', None)
-            request.proxy_password = \
-                    self._proxy_configuration.get('password', None)
-
-
         LOG.info("proc.fetch::request for %s" % msg.curi.url)
         self._client.fetch(request, handle_response(msg, out_stream))
 
