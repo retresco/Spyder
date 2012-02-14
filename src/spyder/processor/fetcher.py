@@ -55,6 +55,18 @@ class FetchProcessor(object):
         self._max_redirects = settings.MAX_REDIRECTS
         self._gzip = settings.USE_GZIP
 
+        if settings.PROXY_HOST:
+            proxy_port = settings.PROXY_PORT
+            assert proxy_port
+            assert isinstance(proxy_port, int)
+
+            self._proxy_configuration = dict(
+                    host = settings.PROXY_HOST,
+                    port = settings.PROXY_PORT,
+                    user = settings.PROXY_USERNAME,
+                    password = settings.PROXY_PASSWORD
+                    )
+
         max_clients = settings.MAX_CLIENTS
         max_simultaneous_connections = settings.MAX_SIMULTANEOUS_CONNECTIONS
 
@@ -96,6 +108,15 @@ class FetchProcessor(object):
                 follow_redirects=self._follow_redirects,
                 max_redirects=self._max_redirects,
                 user_agent=self._user_agent)
+
+        if hasattr(self, '_proxy_configuration'):
+            request.proxy_host = self._proxy_configuration['host']
+            request.proxy_port = self._proxy_configuration['port']
+            request.proxy_username = \
+                    self._proxy_configuration.get('user', None)
+            request.proxy_password = \
+                    self._proxy_configuration.get('password', None)
+
 
         LOG.info("proc.fetch::request for %s" % msg.curi.url)
         self._client.fetch(request, handle_response(msg, out_stream))
