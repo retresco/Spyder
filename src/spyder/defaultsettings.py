@@ -42,7 +42,7 @@ FOLLOW_REDIRECTS = False
 MAX_REDIRECTS = 3
 USE_GZIP = True
 
-# Proxy configuration. Both PROXY_HOST and PROXY_PORT must be set! 
+# Proxy configuration. Both PROXY_HOST and PROXY_PORT must be set!
 # PROXY_USERNAME and PROXY_PASSWORD are optional
 PROXY_HOST = ''
 PROXY_PORT = None
