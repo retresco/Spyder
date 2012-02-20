@@ -44,7 +44,7 @@ USE_GZIP = True
 
 # Proxy configuration. Both PROXY_HOST and PROXY_PORT must be set! 
 # PROXY_USERNAME and PROXY_PASSWORD are optional
-PROXY_HOST = ''
+PROXY_HOST = None
 PROXY_PORT = None
 PROXY_USERNAME = ''
 PROXY_PASSWORD = ''
