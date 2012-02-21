@@ -68,6 +68,7 @@ class FetchProcessor(object):
                     )
 
         self._request_timeout = settings.REQUEST_TIMEOUT
+        self._connect_timeout = settings.CONNECT_TIMEOUT
 
         max_clients = settings.MAX_CLIENTS
         max_simultaneous_connections = settings.MAX_SIMULTANEOUS_CONNECTIONS
@@ -110,7 +111,8 @@ class FetchProcessor(object):
                 follow_redirects=self._follow_redirects,
                 max_redirects=self._max_redirects,
                 user_agent=self._user_agent,
-                request_timeout = self._request_timeout)
+                request_timeout = self._request_timeout,
+                connect_timeout = self._connect_timeout)
 
         if hasattr(self, '_proxy_configuration'):
             request.proxy_host = self._proxy_configuration['host']

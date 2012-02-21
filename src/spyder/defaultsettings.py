@@ -52,7 +52,7 @@ PROXY_PASSWORD = ''
 # Timeout settings for requests. See tornado HTTPRequest class for explanation
 # defaults to 20.0 (float)
 REQUEST_TIMEOUT = 20.0
-INITIAL_TIMEOUT = REQUEST_TIMEOUT
+CONNECT_TIMEOUT = REQUEST_TIMEOUT
 
 #
 # static dns mappings. Mapping has to be like this:
