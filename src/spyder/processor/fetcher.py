@@ -167,6 +167,8 @@ def handle_response(msg, out_stream):
         extract_info_from_response(response, msg)
         LOG.info("proc.fetch::response for %s (took '%s'ms)" %
                 (msg.curi.url, response.request_time))
+        if response.code >= 400:
+            LOG.error("proc.fetch::response error: %s", response)
         out_stream.send_multipart(msg.serialize())
 
     return handle_server_response
