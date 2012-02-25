@@ -54,6 +54,8 @@ PROXY_PASSWORD = ''
 REQUEST_TIMEOUT = 20.0
 CONNECT_TIMEOUT = REQUEST_TIMEOUT
 
+VALIDATE_CERTIFICATES = True
+
 #
 # static dns mappings. Mapping has to be like this:
 #    "hostname:port" => ("xxx.xxx.xxx.xxx", port)

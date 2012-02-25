@@ -67,6 +67,7 @@ class FetchProcessor(object):
                     password = settings.PROXY_PASSWORD
                     )
 
+        self._validate_cert = settings.VALIDATE_CERTIFICATES
         self._request_timeout = settings.REQUEST_TIMEOUT
         self._connect_timeout = settings.CONNECT_TIMEOUT
 
@@ -112,7 +113,8 @@ class FetchProcessor(object):
                 max_redirects=self._max_redirects,
                 user_agent=self._user_agent,
                 request_timeout = self._request_timeout,
-                connect_timeout = self._connect_timeout)
+                connect_timeout = self._connect_timeout,
+                validate_cert = self._validate_cert)
 
         if hasattr(self, '_proxy_configuration'):
             request.proxy_host = self._proxy_configuration['host']
