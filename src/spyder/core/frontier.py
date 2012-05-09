@@ -39,7 +39,6 @@ from spyder.core.constants import CURI_EXTRACTED_URLS
 from spyder.core.dnscache import DnsCache
 from spyder.time import serialize_date_time, deserialize_date_time
 from spyder.core.log import LoggingMixin
-from spyder.core.prioritizer import SimpleTimestampPrioritizer
 from spyder.core.sqlitequeues import SQLiteSingleHostUriQueue
 from spyder.core.sqlitequeues import SQLiteMultipleHostUriQueue
 from spyder.core.uri_uniq import UniqueUriFilter
@@ -159,6 +158,12 @@ class AbstractBaseFrontier(object, LoggingMixin):
         """
         self._front_end_queues.checkpoint()
         self._front_end_queues.close()
+
+    def _crawl_now(self, uri):
+        """
+        Convinience method for crawling an uri right away.
+        """
+        self._add_to_heap(uri, 3000)
 
     def _add_to_heap(self, uri, next_date):
         """
