@@ -55,6 +55,22 @@ class FetchProcessor(object):
         self._max_redirects = settings.MAX_REDIRECTS
         self._gzip = settings.USE_GZIP
 
+        if settings.PROXY_HOST:
+            proxy_port = settings.PROXY_PORT
+            assert proxy_port
+            assert isinstance(proxy_port, int)
+
+            self._proxy_configuration = dict(
+                    host = settings.PROXY_HOST,
+                    port = settings.PROXY_PORT,
+                    user = settings.PROXY_USERNAME,
+                    password = settings.PROXY_PASSWORD
+                    )
+
+        self._validate_cert = settings.VALIDATE_CERTIFICATES
+        self._request_timeout = settings.REQUEST_TIMEOUT
+        self._connect_timeout = settings.CONNECT_TIMEOUT
+
         max_clients = settings.MAX_CLIENTS
         max_simultaneous_connections = settings.MAX_SIMULTANEOUS_CONNECTIONS
 
@@ -95,7 +111,18 @@ class FetchProcessor(object):
                 if_modified_since=last_modified,
                 follow_redirects=self._follow_redirects,
                 max_redirects=self._max_redirects,
-                user_agent=self._user_agent)
+                user_agent=self._user_agent,
+                request_timeout = self._request_timeout,
+                connect_timeout = self._connect_timeout,
+                validate_cert = self._validate_cert)
+
+        if hasattr(self, '_proxy_configuration'):
+            request.proxy_host = self._proxy_configuration['host']
+            request.proxy_port = self._proxy_configuration['port']
+            request.proxy_username = \
+                    self._proxy_configuration.get('user', None)
+            request.proxy_password = \
+                    self._proxy_configuration.get('password', None)
 
         LOG.info("proc.fetch::request for %s" % msg.curi.url)
         self._client.fetch(request, handle_response(msg, out_stream))
@@ -142,6 +169,8 @@ def handle_response(msg, out_stream):
         extract_info_from_response(response, msg)
         LOG.info("proc.fetch::response for %s (took '%s'ms)" %
                 (msg.curi.url, response.request_time))
+        if response.code >= 400:
+            LOG.error("proc.fetch::response error: %s", response)
         out_stream.send_multipart(msg.serialize())
 
     return handle_server_response

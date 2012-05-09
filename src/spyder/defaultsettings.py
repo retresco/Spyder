@@ -42,6 +42,19 @@ FOLLOW_REDIRECTS = False
 MAX_REDIRECTS = 3
 USE_GZIP = True
 
+# Proxy configuration. Both PROXY_HOST and PROXY_PORT must be set!
+# PROXY_USERNAME and PROXY_PASSWORD are optional
+PROXY_HOST = None
+PROXY_PORT = None
+PROXY_USERNAME = ''
+PROXY_PASSWORD = ''
+
+# Timeout settings for requests. See tornado HTTPRequest class for explanation
+# defaults to 20.0 (float)
+REQUEST_TIMEOUT = 20.0
+CONNECT_TIMEOUT = REQUEST_TIMEOUT
+
+VALIDATE_CERTIFICATES = True
 
 #
 # static dns mappings. Mapping has to be like this:
