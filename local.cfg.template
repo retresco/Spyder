@@ -1,0 +1,7 @@
+[local]
+parts =
+    ${zmq:sharedzmq}
+#    ${zmq:localzmq}
+
+#[environment]
+#ZMQ_DIR = /usr/local
